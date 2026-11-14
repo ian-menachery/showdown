@@ -513,3 +513,66 @@ entry before the push/fold solver first runs.
 - Rebuilding the exact matrix with anything other than integer sums.
 - Loading b-inary's table at runtime. It is a test oracle only, like OpenSpiel
   and phevaluator (DECISIONS 6).
+
+---
+
+### 22. Gate D's comparison rule and the pre-registered solve (2026-11-14)
+
+**Decided:** Ian approved this rule on 2026-11-14. It is recorded before the
+push/fold solver's first real run, and it completes DECISIONS 20.
+
+- **Depths and seats.** Every integer depth from 1 to 20 bb (the grid in
+  DECISIONS 8), for the pusher and for the caller: 40 comparisons.
+- **Pure and mixed.**
+  - A class with a play probability of at least 0.99 counts as playing.
+  - At 0.01 or below, it counts as folding.
+  - Anything in between is mixed. The same rule applies to our solution and to
+    HoldemResources'.
+  - A class that either side mixes is excluded from that comparison. The number
+    excluded is printed with every result.
+  - If more than 10% of classes are excluded at any depth, that is reported as
+    a finding, not folded into the score.
+- **Pass.** At least 95% agreement among the compared classes, in every one of
+  the 40 comparisons.
+- **The reference row.** The one whose stack equals d (`np.isclose`) in
+  `holdemresources_hu_push.csv` or `holdemresources_hu_call.csv`.
+- **Exploitability.** At most 0.001 bb per hand at every one of the 20 depths
+  (SCOPE). It is measured by `showdown.cfr.exploitability` on the compiled
+  push/fold tree.
+- **The solve, fixed in advance.**
+  - `cfr_plus`, exactly 1,000 iterations at every depth, average policy.
+  - Payoffs come from `data/preflop_169_exact.npz` (DECISIONS 21).
+  - No stopping early, no changing the iteration count per depth, and no
+    re-running until the answer matches.
+- **The stack (this pins DECISIONS 8).**
+  - S is the effective stack *before* the blinds are posted. This is the
+    definition HoldemResources and b-inary/poker-cfr use.
+  - SB folds: the SB loses 0.5.
+  - BB folds to a jam: the SB wins 1.
+  - Call: the SB nets S·(2E − 1), where E is the class pair's exact equity.
+
+**Disclosure.** Before this entry, a timing benchmark ran `cfr_plus` at 10 bb on
+an in-memory copy of the game, to size the work. It printed speed,
+exploitability and value only. Nothing was compared against the reference.
+- **Speed:** 142,806 nodes and 338 infosets. Compiling took 0.3 s, and one
+  iteration about 0.23 s.
+- **Exploitability:** 6.0e-4 bb after 50 iterations, 4.4e-5 after 200, and
+  7.3e-6 after 500.
+- **SB value:** -0.0454 bb.
+
+**Why:**
+- **All 20 depths.** Checking every depth on the solve grid leaves no room to
+  pick favourable ones.
+- **Excluding mixed classes.** A mixed class has no right pure answer, so
+  comparing it would score noise.
+- **A fixed iteration count.** Setting it in advance means the solution cannot
+  be tuned toward the reference.
+- **The generic solver.** It was proven on Kuhn and Leduc against OpenSpiel, and
+  the benchmark shows it is fast enough. There is no special push/fold solver
+  and no performance work (SCOPE).
+
+**Rules out:**
+- Changing any number above after the solver's results are seen, except by a
+  dated amendment.
+- Comparing at other depths in place of these.
+- Scoring a class that is mixed on either side.
