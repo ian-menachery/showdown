@@ -249,3 +249,72 @@ analysis is allowed (SCOPE, Open question 6).
 - Any feature meant to be used during a ClubWPT session.
 
 This tightens DECISIONS 9; it does not replace it.
+
+---
+
+### 14. Solvers run on a compiled, preorder-numbered tree (2026-11-14)
+
+**Decided:** `compile_game` walks a game once and stores the result in flat
+lists: player, children, chance probabilities, infoset id and terminal utility
+per node. Nodes are numbered in preorder, so a forward loop sees parents first
+and a reverse loop sees children first. A policy is a list of per-infoset
+probability lists in `Tree.infoset_actions` order. Compiling also checks that:
+
+- every terminal is zero-sum;
+- chance probabilities sum to 1;
+- every node sharing an infoset key has the same player and the same actions.
+
+**Why:** OpenSpiel's Python CFR+ spends about 0.5 s per Leduc iteration walking
+`pyspiel` state objects. On flat lists, a CFR pass is two loops with no
+recursion and no object creation. Payoffs are stored only for player 0, which
+is sound because the zero-sum check guarantees player 1's is the negation.
+
+**Rules out:**
+- Three or more players, and general-sum games. `compile_game` raises instead.
+- Solvers that call `State` methods during iteration.
+
+---
+
+### 15. Our CFR has OpenSpiel's exact semantics, and is tested for equality (2026-11-14)
+
+**Decided:** `CFRSolver` takes OpenSpiel's three flags (alternating updates,
+linear averaging, regret matching+) and copies its update order:
+
+- regrets are weighted by counterfactual reach, including chance;
+- average-policy sums are weighted by own reach (times t when linear);
+- after each pass, regrets are clipped (for RM+) and every infoset's current
+  policy is recomputed;
+- a node where both players' reach is 0 is skipped.
+
+`cfr()` and `cfr_plus()` are OpenSpiel's `CFRSolver` and `CFRPlusSolver`.
+
+**Why:** Gate B only requires our exploitability to be within 1.10× of
+OpenSpiel's. With identical semantics, a much stronger test is possible: the
+average and current policies match OpenSpiel's at fixed iterations to 1e-10.
+That holds on Kuhn for all four flag combinations tested.
+
+**Rules out:** Quietly swapping in a different CFR variant, such as discounted
+CFR, delayed averaging or sampling, under the `cfr_plus` name. Other variants
+get their own names and are compared against their own references.
+
+---
+
+### 16. Slow tests are gate evidence; GATES.md records every gate run (2026-11-14)
+
+**Decided:** Tests that take more than about 10 s carry `@pytest.mark.slow`.
+pyproject deselects them by default, and `py gate.py --full` runs them too.
+Every gate run is written up in `GATES.md` with:
+
+- the date;
+- each measured number next to its pre-registered bar;
+- PASS or FAIL;
+- the command that reproduces it.
+
+**Why:** Some gate checks are slow by nature. OpenSpiel's 200-iteration Leduc
+reference alone takes 101 s, and exact preflop enumeration takes about 5 s per
+matchup. Keeping them out of the default run keeps `py gate.py` quick enough to
+run after every change. The slow checks still run before any gate is declared.
+
+**Rules out:**
+- Declaring a gate PASS from the fast suite when that gate has slow checks.
+- Gate results that live only in a terminal scrollback.

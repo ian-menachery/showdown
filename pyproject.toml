@@ -24,6 +24,9 @@ dev = [
   "ruff>=0.6",
 ]
 
+[project.scripts]
+showdown = "showdown.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -33,7 +36,13 @@ packages = ["src/showdown"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# Slow tests (over ~10 s) are gate evidence, run with `py gate.py --full`.
+addopts = "-q -m 'not slow'"
+markers = ["slow: gate evidence that takes more than ~10 s; run with py gate.py --full"]
+filterwarnings = [
+  # eval7's range parser (which we never call) uses deprecated pyparsing names.
+  "ignore::DeprecationWarning:eval7.*",
+]
 
 [tool.coverage.run]
 source = ["showdown"]

@@ -35,14 +35,21 @@ def ruff_format() -> tuple[bool, str]:
     return proc.returncode == 0, _output(proc)
 
 
+FULL = "--full" in sys.argv[1:]
+
+
 def pytest_with_coverage() -> tuple[bool, str]:
     """Tests plus the coverage floor.
 
     The floor lives in pyproject's `fail_under`, so pytest's exit code already
     carries it. `-rs` prints skip reasons: a skipped oracle test never counts
-    toward a gate pass (DECISIONS 6).
+    toward a gate pass (DECISIONS 6). `--full` adds the slow gate-evidence
+    tests, which pyproject deselects by default.
     """
-    proc = _run([PY, "-m", "pytest", "-rs", "--cov=showdown", "--cov-report=term-missing"])
+    command = [PY, "-m", "pytest", "-rs", "--cov=showdown", "--cov-report=term-missing"]
+    if FULL:
+        command += ["-m", "slow or not slow"]
+    proc = _run(command)
     return proc.returncode == 0, _output(proc)
 
 
@@ -78,7 +85,10 @@ def clean_tree() -> tuple[bool, str]:
 TARGETS = (
     ("ruff check src tests", ruff_check),
     ("ruff format --check src tests", ruff_format),
-    ("pytest --cov=showdown (floor 80%)", pytest_with_coverage),
+    (
+        "pytest --cov=showdown (floor 80%)" + (", including slow" if FULL else ""),
+        pytest_with_coverage,
+    ),
     ("clean-tree", clean_tree),
 )
 
