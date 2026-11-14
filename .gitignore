@@ -16,3 +16,7 @@ venv/
 # Real hand histories are personal data and are never committed.
 /data/hh/*
 !/data/hh/.gitkeep
+
+# Third-party reference data (docs/gate-d-reference.md). No redistribution licence
+# for the HRC file, so neither is committed; tests pin their SHA-256.
+/data/external/

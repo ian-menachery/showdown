@@ -215,13 +215,14 @@ The spike script and its output are in `spikes/2026-11-14-deps.py`.
 
 ## Open questions
 
-Questions 1 to 3 were settled on 2026-11-14 (amendments A1 to A3).
+Questions 1 to 3 were settled on 2026-11-14 (amendments A1 to A3). Question 4
+was settled on 2026-11-14 by DECISIONS 20.
 
-4. **Push/fold reference chart** for Gate D: which published source? Settle
-   before Phase 4. Researched 2026-11-14 in `docs/gate-d-reference.md`. The
-   recommendation is HoldemResources.net's no-ante heads-up solution, with its
-   unsimplified raw data as the reference and its chart as the fallback. Not
-   settled until Ian picks.
+4. **Push/fold reference chart** for Gate D: which published source? *Settled:*
+   HoldemResources.net's no-ante heads-up raw data (DECISIONS 20; research in
+   `docs/gate-d-reference.md`). Still open: the depths checked and the scoring
+   rule. They are proposed in that note and are fixed in DECISIONS before the
+   solver first runs.
 5. **Going public.** Make the repo public at the end, and under which license?
    Settle at Phase 7.
 6. **ClubWPT Gold.** Does the client let you download your own hand histories,

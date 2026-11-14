@@ -4,7 +4,16 @@ Written 2026-11-14 for SCOPE Open question 4. Gate D requires the push/fold
 solution to match "a published reference chart on at least 95% of the 169
 classes at every depth checked", and the source has to be chosen and recorded
 in DECISIONS before the solver first runs. This note lists what exists, what
-each source assumes, and recommends one. The choice is Ian's.
+each source assumes, and recommends one.
+
+**Outcome (2026-11-14):**
+- Ian chose the HoldemResources raw data, and approved downloading it and
+  b-inary's exact equity table. This is recorded in DECISIONS 20.
+- He did not approve the proposed depths and scoring at the end of this note.
+  They stay a proposal.
+- The two sections at the end, "What the files turned out to contain" and "Our
+  own error, measured", were added after the downloads. They replace the
+  guesses written before the files were opened.
 
 ## What the reference has to match
 
@@ -61,8 +70,9 @@ That bears directly on Gate D:
   either one mixes. That is the comparison Gate D's wording already describes.
 
 So the recommendation is the **raw data as the gate reference**, if its format
-is readable, with the chart as the fallback. Nobody has opened the zip yet,
-because downloading it needs Ian's approval.
+is readable, with the chart as the fallback. When this was written the zip had
+not been opened. What it contains is below, under "What the files turned out to
+contain".
 
 ## Our own error
 
@@ -99,6 +109,50 @@ It is optional, and the download also needs approval.
   than skips, if the file is missing when the gate runs. No licence covers
   redistributing the data, and keeping it out of git keeps Open question 5
   (going public) simple.
+
+## What the files turned out to contain
+
+Checked by `spikes/2026-11-14-reference-data.py`. To fetch both files on a
+fresh clone, run these from the repo root. The spike checks every SHA-256
+before it reads anything.
+
+```
+mkdir -p data/external/hrc/raw data/external/b-inary
+curl -sSfL -o data/external/hrc/holdemresources_hu_equilibrium.zip https://www.holdemresources.net/hrdata/holdemresources_hu_equilibrium.zip
+curl -sSfL -o data/external/b-inary/heads_up_pre_flop_equity.bin https://raw.githubusercontent.com/b-inary/poker-cfr/a5347082007ba1eda7932ef2fe7fad43cb3be2a1/static/heads_up_pre_flop_equity.bin
+```
+
+Then extract `holdemresources_hu_push.csv` and `holdemresources_hu_call.csv`
+from the zip, by name, into `data/external/hrc/raw/`.
+
+- **The HoldemResources raw data.** The zip holds two CSVs, push and call.
+  - Each has one row per stack, from 1.00 to 200.00 bb in steps of 0.05 (3,981
+    rows), and one column per class.
+  - The class names are the same 169 names we use.
+  - Each value is a play probability, rounded to 0.01.
+- **It matches the chart.** At the chart's thresholds the raw data agrees within
+  0.05 bb on 10 of 10 spot checks. Those include all three gapped hands, so
+  this is the solution behind the chart.
+- **Mixing is rare.** At 2 to 20 bb, at most 3 classes mix at any one depth
+  (0.01 < p < 0.99) for the pusher, and at most 2 for the caller.
+- **The b-inary table** is what its source says it is: a 1,326 × 1,326 table of
+  2 × wins + ties.
+  - Conflicting pairs are 0.
+  - Swapping the two hands always gives the complementary score.
+  - It gave the same integer as our own exhaustive enumeration on 8 of 8
+    pairs.
+
+## Our own error, measured
+
+Over all 14,196 distinct cells, our matrix compared with exact equity:
+- the largest absolute error is 0.0046 (T4s vs 33);
+- the mean absolute error is 0.0009;
+- 97.2% of cells fall within 2 of their own SE, and 99.86% within 3.
+
+So the standard errors are honest. At 10 bb the largest error moves one class
+pair's showdown value by about 0.09 bb, and a typical error by about 0.02 bb.
+Gate D's 95% bar should absorb that. A solve on an exact matrix would remove
+the question altogether.
 
 ## Sources
 

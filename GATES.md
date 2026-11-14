@@ -107,6 +107,31 @@ enumeration. Suit-isomorphic combo pairs share one enumeration.
 The card-removal pair counts are exact. They total 1,326 × 1,225 = 1,624,350
 ordered combo pairs. For example, AA vs KK has 36 pairs and AKo vs AA has 36.
 
+**Every cell against exact equity (added 2026-11-14, after the gate).** This
+check uses b-inary/poker-cfr's exact equity table for every combo pair
+(DECISIONS 20; `spikes/2026-11-14-reference-data.py`).
+
+First, the table was checked against our own engine:
+- 8 of 8 combo pairs, AsAh vs KdKc among them, gave the same integer
+  2 × wins + ties as our exhaustive enumeration.
+- Its card-removal pair counts equal ours.
+
+Against the table, over all 14,196 distinct off-diagonal cells:
+
+| Measure | Value | What a well-calibrated SE gives |
+|---|---|---|
+| Within 2 SE | 97.2% | 95.4% |
+| Within 3 SE | 99.86% | 99.73% |
+| Largest \|z\| | 3.83 (T4s vs 33: 0.48313 ± 0.00112, exact 0.48742) | about 3.9 for 14,196 draws |
+| Standard deviation of z | 0.93 | 1 |
+| Largest \|error\| | 0.00463 | — |
+| Mean \|error\| | 0.00086 | — |
+
+The standard errors are honest and slightly conservative. The average signed
+error is -0.0001. Every cell is scored on the same boards, so cell errors are
+correlated, and that average is not an independent test of bias. It is worth
+0.004 bb at 20 bb.
+
 Bugs found by these tests before the gate was declared:
 - **Range parser.** It upper-cased only the first two characters of a token, so
   "A2s-A5s" failed. Fixed.

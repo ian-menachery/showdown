@@ -412,3 +412,59 @@ quantity, so Gate C's calibration test means something.
 
 **Rules out:** Weighted ranges ("AKs:0.5") in v1. They are an amendment if Phase
 4 or the analyzer needs them.
+
+---
+
+### 20. Gate D's reference is HoldemResources' no-ante raw data; third-party files stay out of git (2026-11-14)
+
+**Decided:** Ian picked this on 2026-11-14, from the options in
+`docs/gate-d-reference.md`, which settles SCOPE Open question 4.
+- **The reference.** Gate D compares against HoldemResources.net's heads-up
+  push/fold equilibrium, no ante, in its unsimplified raw form.
+  - `holdemresources_hu_push.csv` and `holdemresources_hu_call.csv` come from
+    `holdemresources_hu_equilibrium.zip`.
+  - Each gives a play probability for all 169 classes at every stack from 1 to
+    200 bb, in steps of 0.05 bb. Probabilities are rounded to 0.01.
+  - Stacks are effective stacks in bb before the blinds are posted, which is our
+    definition.
+  - The public chart on the same page is the fallback, used only if the raw data
+    proves unusable.
+- **Downloads approved.** Ian also approved downloading b-inary/poker-cfr's
+  exact equity table (`heads_up_pre_flop_equity.bin`, BSD-2-Clause, commit
+  a534708). It serves as an exact reference for the 169×169 matrix.
+- **Storage.** Both files live in the gitignored `data/external/` and are pinned
+  by SHA-256:
+
+| File | SHA-256 |
+|---|---|
+| `hrc/holdemresources_hu_equilibrium.zip` | `650da7525b35e12adbc03df26d6690c30b583ff4b7d930156c104012a040ec9d` |
+| `hrc/raw/holdemresources_hu_push.csv` | `ed588eda85842704adeb233e7f2a22331aa6b83543b23fce838788ba55e32cc2` |
+| `hrc/raw/holdemresources_hu_call.csv` | `fa99898839ca9da23bb6193bdfcb873632fecc95b34079b79ff27670426682d3` |
+| `b-inary/heads_up_pre_flop_equity.bin` | `006404b36d257fc9455da0d0f0ab89aef3e80ece56c8f3e770bad926cfe5ec8a` |
+
+**Why:**
+- **Same game.** HoldemResources solves the same game we do: heads-up, no ante,
+  chip EV, stacks measured before the blinds.
+- **The raw data is an equilibrium, not a simplified chart.** So the comparison
+  can be pure strategy against pure strategy, with mixed classes excluded on
+  either side. That is what Gate D's wording describes.
+- **It is the solution behind the chart.** The spike
+  (`spikes/2026-11-14-reference-data.py`) confirmed this: 10 of 10 chart
+  thresholds, including all three gapped hands, agree within 0.05 bb.
+- **Mixing is rare.** At 2 to 20 bb the raw data mixes at most 3 classes per
+  depth.
+- **Why the files stay out of git.** Neither HoldemResources' page nor its
+  Legal page grants a licence to redistribute the data. Keeping both files out
+  of git also keeps Open question 5 (going public) clean.
+
+**Not yet decided:** the depths checked and the exact scoring rule. The note
+proposes them. Ian did not tick that box, so they are fixed in a later DECISIONS
+entry before the push/fold solver first runs.
+
+**Rules out:**
+- Committing either file, or a transcription of the chart.
+- Comparing against *Mathematics of Poker*'s tables.
+- Comparing against Miltersen and Sørensen. They solve a multi-hand tournament,
+  which is a different game.
+- A Gate D test that skips when the reference file is missing. It must fail and
+  say how to fetch the file.
