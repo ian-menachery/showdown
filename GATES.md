@@ -26,10 +26,48 @@ fast suite. Solver: `cfr_plus`, 1,000 iterations, average policy.
 
 Beyond the gate:
 - Our CFR, CFR+ and both simultaneous-update variants reproduce OpenSpiel's
-  average and current policies to 1e-10 at iterations 1, 2, 3, 10 and 60.
+  average and current policies at iterations 1, 2, 3, 10 and 60. When first
+  recorded this was to 1e-10. Since DECISIONS 17 it is exact equality, and the
+  test asserts exact equality.
 - Exploitability matches OpenSpiel to 1e-9 on three seeded random policies.
 - Player 2's unique equilibrium holds within 0.02.
 
 ```
 showdown solve kuhn --iterations 1000
+```
+
+---
+
+## Gate B: Leduc: PASS (2026-11-14)
+
+Evidence: `tests/test_cfr_leduc_oracle.py` (fast suite) and `tests/test_gate_b.py`
+(slow suite, `py gate.py --full`). Solver: `cfr_plus`, 200 iterations, average
+policy.
+
+| Check | Measured | Bar | Result |
+|---|---|---|---|
+| Exploitability vs OpenSpiel, uniform policy | match to 1e-9 (2.3736111111) | ≤ 1e-9 | PASS |
+| Exploitability vs OpenSpiel, seeded random policy | match to 1e-9 | ≤ 1e-9 | PASS |
+| Exploitability vs OpenSpiel, CFR+ iterate (25 iterations) | match to 1e-9 | ≤ 1e-9 | PASS |
+| CFR+ exploitability at iteration 200 | ours 0.0049631295504932865, OpenSpiel 0.0049631295504932865, ratio 1.000 | ≤ 1.10× | PASS |
+| Wall time for 200 iterations | ours 2.38 s, OpenSpiel 27.35 s | no slower | PASS |
+
+Beyond the gate:
+- Our CFR+ is **bit-identical** to OpenSpiel's `CFRPlusSolver`: every average and
+  current policy entry is equal at every one of the 200 iterations
+  (DECISIONS 17).
+- The lockstep walk confirms our Leduc has the same structure as OpenSpiel's at
+  all 9,457 nodes (157 chance, 3,780 decision, 5,520 terminal) and the same 936
+  infosets.
+- After 1,000 iterations (12 s), exploitability is 2.57e-4 and player 1's value
+  is -0.08559.
+- The first gate run failed the extra bit-identity test: 0.0050008 against
+  0.0049631, though both gate bars passed even then. The cause was found and
+  fixed before this result was recorded; see DECISIONS 17.
+- OpenSpiel's time differs between runs: 27 s here, 101 s in the Phase 0 spike.
+  Ours was 10× to 40× faster in every run.
+
+```
+showdown solve leduc --iterations 200
+py gate.py --full
 ```

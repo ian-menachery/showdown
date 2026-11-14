@@ -2,8 +2,9 @@
 
 from showdown.games.base import CHANCE, TERMINAL, Game, State
 from showdown.games.kuhn import KuhnPoker
+from showdown.games.leduc import LeducPoker
 
-GAMES: dict[str, type] = {"kuhn": KuhnPoker}
+GAMES: dict[str, type] = {"kuhn": KuhnPoker, "leduc": LeducPoker}
 
 
 def load_game(name: str) -> Game:

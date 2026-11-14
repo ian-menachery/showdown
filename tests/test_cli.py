@@ -35,3 +35,10 @@ def test_report_points() -> None:
     assert _report_points(1000, None) == [1, 10, 100, 1000]
     assert _report_points(250, None) == [1, 10, 100, 250]
     assert _report_points(25, 10) == [10, 20, 25]
+
+
+def test_solve_leduc_hides_large_policy(capsys) -> None:
+    assert main(["solve", "leduc", "--iterations", "3"]) == 0
+    text = capsys.readouterr().out
+    assert "leduc: 9457 nodes, 936 infosets" in text
+    assert "KsQs:" not in text  # 936 infosets are too many to print by default

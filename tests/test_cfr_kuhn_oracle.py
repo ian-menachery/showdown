@@ -54,7 +54,7 @@ def test_exploitability_matches_openspiel(kuhn, seed) -> None:
     ids=["cfr", "cfr+", "cfr-simultaneous", "cfr+-simultaneous"],
 )
 def test_cfr_trajectory_equals_openspiel(kuhn, alternating, linear, plus) -> None:
-    """Same flags, same update order: same average and current policy every iteration."""
+    """Same flags, same update order: bit-identical policies (DECISIONS 15)."""
     tree, os_game, mapping = kuhn
     ours = CFRSolver(
         tree, alternating_updates=alternating, linear_averaging=linear, regret_matching_plus=plus
@@ -68,6 +68,4 @@ def test_cfr_trajectory_equals_openspiel(kuhn, alternating, linear, plus) -> Non
                 (ours.average_policy(), theirs.average_policy()),
                 (ours.current_policy(), theirs.current_policy()),
             ):
-                other = from_openspiel_policy(tree, other, mapping)
-                for a, b in zip(mine, other, strict=True):
-                    assert a == pytest.approx(b, abs=1e-10)
+                assert mine == from_openspiel_policy(tree, other, mapping)

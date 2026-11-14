@@ -44,6 +44,10 @@ class CFRSolver:
         self._internal = tree.internal_nodes()
         self._reversed_internal = self._internal[::-1]
         self._terminals = [n for n, p in enumerate(tree.player) if p == TERMINAL]
+        self._decisions = {
+            p: [n for n, owner in enumerate(tree.player) if owner == p] for p in (0, 1)
+        }
+        self._all_decisions = [n for n, owner in enumerate(tree.player) if owner in (0, 1)]
 
     def iterate(self, iterations: int = 1) -> None:
         for _ in range(iterations):
@@ -62,7 +66,7 @@ class CFRSolver:
     def average_policy(self) -> Policy:
         average = []
         for sums in self._policy_sum:
-            total = sum(sums)
+            total = _plain_sum(sums)
             if total == 0:
                 average.append([1.0 / len(sums)] * len(sums))
             else:
@@ -76,7 +80,7 @@ class CFRSolver:
                     if r < 0:
                         regrets[k] = 0
         for infoset, regrets in enumerate(self._regret):
-            positive = sum(r for r in regrets if r > 0)
+            positive = _plain_sum(r for r in regrets if r > 0)
             if positive > 0:
                 self._current[infoset] = [max(0.0, r) / positive for r in regrets]
             else:
@@ -117,8 +121,6 @@ class CFRSolver:
         for node in self._terminals:
             value[node] = utility[node]
 
-        weight = self.iteration if self.linear_averaging else None
-        regret_table, sum_table = self._regret, self._policy_sum
         for node in self._reversed_internal:
             kind = player[node]
             if kind == CHANCE:
@@ -127,18 +129,29 @@ class CFRSolver:
                     v += prob * value[child]
                 value[node] = v
                 continue
+            if reach0[node] == 0 and reach1[node] == 0:
+                continue  # value stays 0.0; see module docstring
+            v = 0.0
+            for child, s in zip(children[node], current[infoset[node]], strict=True):
+                v += s * value[child]
+            value[node] = v
+
+        # Updates run in preorder, not in the reverse order values were computed
+        # in. Nodes sharing an infoset are never ancestor and descendant, so
+        # preorder is the order OpenSpiel's recursion reaches them. Summing in
+        # that order keeps the float results identical, not merely close (DECISIONS 15).
+        weight = self.iteration if self.linear_averaging else None
+        regret_table, sum_table = self._regret, self._policy_sum
+        nodes = self._all_decisions if updating is None else self._decisions[updating]
+        for node in nodes:
+            kind = player[node]
             p0, p1 = reach0[node], reach1[node]
             if p0 == 0 and p1 == 0:
-                continue  # value stays 0.0; see module docstring
+                continue
             info = infoset[node]
             sigma = current[info]
             kids = children[node]
-            v = 0.0
-            for child, s in zip(kids, sigma, strict=True):
-                v += s * value[child]
-            value[node] = v
-            if updating is not None and kind != updating:
-                continue
+            v = value[node]
             if kind == 0:
                 own, cf, sign = p0, p1 * reach_c[node], 1.0
             else:
@@ -152,6 +165,21 @@ class CFRSolver:
                     sums[k] += own * s
                 else:
                     sums[k] += weight * own * s
+
+
+def _plain_sum(values) -> float:
+    """Left-to-right float addition.
+
+    Python 3.12's built-in `sum` uses compensated (Neumaier) summation for exact
+    floats, but OpenSpiel's regrets are np.float64, which `sum` adds plainly.
+    With three or more terms the two can differ in the last bit, and CFR+
+    amplifies a 1-ulp difference about 1.24x per iteration (measured on Leduc).
+    Plain addition keeps us bit-identical to OpenSpiel (DECISIONS 15).
+    """
+    total = 0.0
+    for v in values:
+        total += v
+    return total
 
 
 def cfr(tree: Tree) -> CFRSolver:

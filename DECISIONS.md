@@ -318,3 +318,37 @@ run after every change. The slow checks still run before any gate is declared.
 **Rules out:**
 - Declaring a gate PASS from the fast suite when that gate has slow checks.
 - Gate results that live only in a terminal scrollback.
+
+---
+
+### 17. Bit-identical to OpenSpiel: preorder updates and plain summation (2026-11-14)
+
+**Decided:** This makes DECISIONS 15 more precise. "Same update order" is now
+enforced down to float rounding, in two ways:
+
+1. Regret and policy-sum updates run in a separate forward (preorder) loop,
+   after the backward loop has computed values. Nodes in one infoset are then
+   summed in the same order as OpenSpiel's recursion reaches them. They are
+   never ancestor and descendant, so preorder equals recursion order.
+2. Regret matching and the average-policy normalisation add floats left to
+   right (`_plain_sum`), not with the built-in `sum`.
+
+**Why:** The first Gate B run passed both bars but ended at exploitability
+0.0050008, against OpenSpiel's 0.0049631. Investigation found two separate
+1-ulp sources, and CFR+ amplifies a 1-ulp difference about 1.24× per iteration
+(1e-16 at iteration 1, 1e-10 at 62, 0.03 by 200):
+
+- the backward loop summed an infoset's nodes in reverse order, which put 226
+  infosets 1 ulp apart after the first pass;
+- Python 3.12's `sum` uses compensated (Neumaier) summation for exact floats,
+  but OpenSpiel's regrets are `np.float64`, which `sum` adds plainly. Three-term
+  sums such as 0.0667 + 0.0333 + 0.0194 then round differently. That is why Kuhn
+  (2-action infosets) matched and Leduc (3-action infosets) did not.
+
+With both fixed, all 200 iterations are equal entry for entry, and the
+exploitability is the same double.
+
+**Rules out:**
+- Built-in `sum` over floats in the solver's update path.
+- Folding the updates back into the backward loop for speed.
+- Tolerance-based trajectory tests. Equality is the test now.
