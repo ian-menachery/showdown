@@ -12,8 +12,8 @@ A heads-up poker lab in Python:
 
 - **Solver.** CFR and CFR+ are **bit-identical to OpenSpiel's** on Kuhn and
   Leduc: equal policies at every iteration, and the same exploitability double.
-  On Leduc the solver runs about 11× faster than OpenSpiel's Python
-  implementation.
+  On Leduc the solver ran 3.6× to 11.5× faster than OpenSpiel's Python
+  implementation across the recorded runs.
 - **Equity.** The engine agrees with phevaluator on 100,000 random showdowns and
   20 exact enumerations. It ships a 169×169 preflop matrix in which every cell
   has a standard error of at most 0.002.

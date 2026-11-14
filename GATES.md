@@ -64,8 +64,10 @@ Beyond the gate:
 - The first gate run failed the extra bit-identity test: 0.0050008 against
   0.0049631, though both gate bars passed even then. The cause was found and
   fixed before this result was recorded; see DECISIONS 17.
-- OpenSpiel's time differs between runs: 27 s here, 101 s in the Phase 0 spike.
-  Ours was 10× to 40× faster in every run.
+- Wall times move with machine load. OpenSpiel took 27.4 s here, 60.7 s in the
+  Phase 3 full-suite run, and 101 s in the Phase 0 spike. Ours took 2.4 s here
+  and 16.9 s in the Phase 3 run. Ours was faster in every recorded run, by 3.6×
+  to 11.5×.
 
 ```
 showdown solve leduc --iterations 200
