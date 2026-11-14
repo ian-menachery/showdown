@@ -15,11 +15,16 @@ A heads-up poker lab in Python:
   On Leduc the solver ran 3.6× to 11.5× faster than OpenSpiel's Python
   implementation across the recorded runs.
 - **Equity.** The engine agrees with phevaluator on 100,000 random showdowns and
-  20 exact enumerations. It ships a 169×169 preflop matrix in which every cell
-  has a standard error of at most 0.002.
+  20 exact enumerations. It ships two 169×169 preflop matrices:
+  - a **Monte Carlo** one, in which every cell has a standard error of at most
+    0.002 (Gate C);
+  - an **exact** one (DECISIONS 21). It enumerates every board through its
+    134,459 suit-distinct classes. In every cell it matches the independent
+    exact table from b-inary/poker-cfr to the integer.
 
-Next is Phase 4, the push/fold game. It needs Open question 4 (which reference
-chart Gate D compares against) settled first.
+Next is Phase 4, the push/fold game. Gate D's reference is settled: it is
+HoldemResources' no-ante raw data (DECISIONS 20). The depths it checks and its
+scoring rule are fixed in DECISIONS before the solver first runs.
 
 ## Try it
 
@@ -28,7 +33,7 @@ showdown solve kuhn --iterations 1000          # prints the near-Nash strategy
 showdown solve leduc --iterations 1000 --every 250
 showdown equity AsKs QhQd --board Ts9s2dJc     # exact: 13 of 44 rivers win
 showdown equity "TT+,AK" "22-99"                # Monte Carlo, with a standard error
-showdown matrix show AKs QQ                     # from data/preflop_169.npz
+showdown matrix show AKs QQ                     # exact, from data/preflop_169_exact.npz
 ```
 
 ## Start here
@@ -40,8 +45,10 @@ showdown matrix show AKs QQ                     # from data/preflop_169.npz
 3. [`GATES.md`](GATES.md): each gate's measured numbers against its bar.
 4. [`docs/plan-phases-1-3.md`](docs/plan-phases-1-3.md): how phases 1 to 3 were
    designed.
-5. [`spikes/2026-11-14-deps.py`](spikes/2026-11-14-deps.py): the dependency
-   check behind decisions 5, 6 and 10, with its output.
+5. [`docs/gate-d-reference.md`](docs/gate-d-reference.md): which published
+   push/fold solution Gate D checks against, and why.
+6. [`spikes/`](spikes/): the dependency check behind decisions 5, 6 and 10, and
+   the reference-data check behind decision 20, each with its output.
 
 ## Setup (Windows, Python 3.12)
 
@@ -72,7 +79,9 @@ src/showdown/
   engine/     pokerkit adapter                     (Phase 5)
   bot/        policies, local play page and API    (Phase 5, 127.0.0.1 only)
   hh/         hand-history parsing, stats, all-in EV (Phase 6)
-data/preflop_169.npz   the committed matrix (DECISIONS 18)
+data/preflop_169.npz         Monte Carlo matrix, Gate C evidence (DECISIONS 18)
+data/preflop_169_exact.npz   exact matrix, the push/fold payoffs (DECISIONS 21)
+data/external/               third-party reference data, gitignored (DECISIONS 20)
 tests/openspiel_oracle.py   OpenSpiel as a reference, tests only
 ```
 
@@ -87,6 +96,18 @@ tests/openspiel_oracle.py   OpenSpiel as a reference, tests only
 
 No library source is copied into this repo. Everything comes in through pip at
 the versions pinned in `pyproject.toml`.
+
+## Reference data (downloaded, never committed)
+
+Two files are used only as outside answers in tests and spikes. They live in
+the gitignored `data/external/`, pinned by SHA-256 in DECISIONS 20. The fetch
+commands are in [`docs/gate-d-reference.md`](docs/gate-d-reference.md).
+`py gate.py --full` fails without them.
+
+| Source | License | Used for |
+|---|---|---|
+| [HoldemResources.net](https://www.holdemresources.net/hune) heads-up push/fold raw data | none stated | Gate D reference |
+| [b-inary/poker-cfr](https://github.com/b-inary/poker-cfr) exact preflop equity table | BSD-2-Clause | checks every cell of the exact matrix |
 
 ## Not this
 

@@ -468,3 +468,48 @@ entry before the push/fold solver first runs.
   which is a different game.
 - A Gate D test that skips when the reference file is missing. It must fail and
   say how to fetch the file.
+
+---
+
+### 21. Phase 4 solves on an exact 169×169 matrix, built from every board (2026-11-14)
+
+**Decided:** Ian approved this on 2026-11-14. It amends DECISIONS 18.
+- **What it is.** `showdown matrix build --exact` writes
+  `data/preflop_169_exact.npz`, which is committed. It runs the same per-board
+  step as the Monte Carlo build: rank the live combos, compare every pair, then
+  sum into class blocks. But it runs that step on every 5-card board instead of
+  a sample.
+- **One board per class.** It scores one board from each class of boards that
+  are the same up to relabelling suits. There are 134,459 such classes. Each
+  board's integer sums of 2 × wins + ties are weighted by the number of boards
+  its class contains (4, 12 or 24, for 2,598,960 in all).
+- **Timing.** The build took 1,063 s on 16 cores.
+- **What Phase 4 uses.** The push/fold game uses this exact matrix as its
+  payoffs.
+- **The Monte Carlo matrix stays.** `data/preflop_169.npz` is still committed,
+  as Gate C's evidence.
+
+**Why:**
+- **It is exact for the same cost.** Relabelling suits maps every class to
+  itself and keeps every hand's strength. So a board's class sums equal those of
+  every relabelling of it, and 134,459 boards give the exact answer for about
+  what the Monte Carlo build cost (147,200 boards). DECISIONS 18 assumed an
+  exact matrix was out of reach, because it priced brute force at 5 s per combo
+  pair. Enumerating board by board, over one board per suit class, removes that
+  cost.
+- **It removes a source of Gate D disagreement.** Against exact equity, the
+  Monte Carlo matrix's largest cell error is 0.0046 (GATES.md, Gate C), which is
+  about 0.09 bb per class pair at 10 bb. A class near indifference could land on
+  the wrong side of HoldemResources' answer because of matrix noise alone. With
+  exact payoffs, any Gate D disagreement is the solver's or the reference's.
+- **It has an independent check.** Every cell equals the value built from
+  b-inary/poker-cfr's exact combo-pair table, to the integer:
+  `tests/test_matrix_exact_slow.py`, which needs `data/external/`
+  (DECISIONS 20). Two separate programs, enumerating in different orders (combo
+  pair first, against board first), give the same 28,561 integers.
+
+**Rules out:**
+- Using the Monte Carlo matrix as push/fold payoffs.
+- Rebuilding the exact matrix with anything other than integer sums.
+- Loading b-inary's table at runtime. It is a test oracle only, like OpenSpiel
+  and phevaluator (DECISIONS 6).

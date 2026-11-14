@@ -2,9 +2,11 @@
 
 import json
 
+import numpy as np
 import pytest
 
 from showdown.cli import _report_points, main
+from showdown.equity import matrix as M
 
 
 def test_solve_kuhn_prints_table_and_writes_json(tmp_path, capsys) -> None:
@@ -75,3 +77,21 @@ def test_matrix_build_and_show(tmp_path, capsys) -> None:
     assert "wrote" in capsys.readouterr().out
     assert main(["matrix", "show", "AA", "KK", "--file", str(out_file)]) == 0
     assert "AA vs KK: equity" in capsys.readouterr().out
+
+
+def test_matrix_build_exact_and_show(tmp_path, capsys, monkeypatch) -> None:
+    fake = M.PreflopMatrix(
+        equity=np.full((169, 169), 0.5),
+        se=np.zeros((169, 169)),
+        pair_counts=M.exact_pair_counts(),
+        boards=M.ALL_BOARDS,
+        batches=0,
+        seed=0,
+        method="exact",
+    )
+    monkeypatch.setattr(M, "build_exact", lambda workers=None: fake)
+    out_file = tmp_path / "e.npz"
+    assert main(["matrix", "build", "--exact", "--out", str(out_file)]) == 0
+    assert "exact, all 2,598,960 boards" in capsys.readouterr().out
+    assert main(["matrix", "show", "AA", "KK", "--file", str(out_file)]) == 0
+    assert "AA vs KK: equity 0.50000 exact, 36 combo pairs" in capsys.readouterr().out

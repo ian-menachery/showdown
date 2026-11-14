@@ -151,8 +151,10 @@ Over all 14,196 distinct cells, our matrix compared with exact equity:
 
 So the standard errors are honest. At 10 bb the largest error moves one class
 pair's showdown value by about 0.09 bb, and a typical error by about 0.02 bb.
-Gate D's 95% bar should absorb that. A solve on an exact matrix would remove
-the question altogether.
+
+That question is now gone. Ian approved an exact matrix, and Phase 4 solves on
+it (DECISIONS 21). The matrix enumerates every board and equals b-inary's
+table to the integer in every cell.
 
 ## Sources
 

@@ -4,7 +4,7 @@ showdown solve kuhn --algo cfr+ --iterations 1000
 showdown solve leduc --iterations 200 --out data/strategies/leduc.json
 showdown equity AsKs QQ --board Ts9s2d
 showdown equity "TT+,AK" "22-99" --samples 200000
-showdown matrix build
+showdown matrix build --exact
 showdown matrix show AKs QQ
 """
 
@@ -97,6 +97,7 @@ def _solve(args: argparse.Namespace) -> int:
 
 
 DEFAULT_MATRIX = "data/preflop_169.npz"
+DEFAULT_EXACT_MATRIX = "data/preflop_169_exact.npz"
 
 
 def _equity(args: argparse.Namespace) -> int:
@@ -131,6 +132,15 @@ def _equity(args: argparse.Namespace) -> int:
 
 def _matrix_build(args: argparse.Namespace) -> int:
     start = time.perf_counter()
+    if args.exact:
+        out = args.out or DEFAULT_EXACT_MATRIX
+        result = preflop_matrix.build_exact(workers=args.workers)
+        result.save(out)
+        print(
+            f"wrote {out}: exact, all {result.boards:,} boards, {time.perf_counter() - start:.0f} s"
+        )
+        return 0
+    args.out = args.out or DEFAULT_MATRIX
     result = preflop_matrix.build(
         boards_per_batch=args.boards_per_batch,
         batches=args.batches,
@@ -151,7 +161,8 @@ def _matrix_show(args: argparse.Namespace) -> int:
     loaded = preflop_matrix.PreflopMatrix.load(args.file)
     equity, se = loaded.cell(args.row, args.col)
     pairs = int(loaded.pair_counts[class_index(args.row), class_index(args.col)])
-    print(f"{args.row} vs {args.col}: equity {equity:.5f} +/- {se:.5f} (1 SE), {pairs} combo pairs")
+    error = "exact" if loaded.method == "exact" else f"+/- {se:.5f} (1 SE)"
+    print(f"{args.row} vs {args.col}: equity {equity:.5f} {error}, {pairs} combo pairs")
     return 0
 
 
@@ -181,17 +192,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     matrix = commands.add_parser("matrix", help="the 169x169 preflop equity matrix")
     matrix_commands = matrix.add_subparsers(dest="matrix_command", required=True)
-    build = matrix_commands.add_parser("build", help="estimate the matrix (minutes, all cores)")
+    build = matrix_commands.add_parser(
+        "build", help="build the matrix: Monte Carlo, or exact with --exact (minutes, all cores)"
+    )
+    build.add_argument("--exact", action="store_true", help="enumerate every board (DECISIONS 21)")
     build.add_argument("--boards-per-batch", type=int, default=2300)
     build.add_argument("--batches", type=int, default=64)
     build.add_argument("--seed", type=int, default=20261114)
     build.add_argument("--workers", type=int, help="processes (default: all cores)")
-    build.add_argument("--out", default=DEFAULT_MATRIX)
+    build.add_argument("--out", help=f"default {DEFAULT_MATRIX}, or {DEFAULT_EXACT_MATRIX}")
     build.set_defaults(handler=_matrix_build)
     show = matrix_commands.add_parser("show", help="one cell, e.g. AKs QQ")
     show.add_argument("row")
     show.add_argument("col")
-    show.add_argument("--file", default=DEFAULT_MATRIX)
+    show.add_argument("--file", default=DEFAULT_EXACT_MATRIX)
     show.set_defaults(handler=_matrix_show)
     return parser
 

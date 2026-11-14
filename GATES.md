@@ -132,6 +132,24 @@ error is -0.0001. Every cell is scored on the same boards, so cell errors are
 correlated, and that average is not an independent test of bias. It is worth
 0.004 bb at 20 bb.
 
+**The exact matrix (added 2026-11-14, DECISIONS 21).** `data/preflop_169_exact.npz`
+enumerates all 2,598,960 boards. It does so through one board from each of the
+134,459 suit-relabelling classes, weighted by class size. The build took 1,063 s
+on 16 cores.
+
+| Check | Result |
+|---|---|
+| Every cell vs b-inary's exact table (`tests/test_matrix_exact_slow.py`) | 28,561 of 28,561 equal, to the integer |
+| Live-pair counts vs exact card-removal counts × C(48,5), checked inside the build | all equal |
+| AA vs KK, AKs vs QQ, T9s vs AKo vs exact class-vs-class enumeration | 0.819461, 0.460485, 0.405237, all within 5e-6 |
+| Monte Carlo matrix vs exact (`tests/test_matrix_exact.py`) | largest \|z\| 3.83; 97.2% within 2 SE |
+| One board's block sums vs brute force, 3 class pairs | equal |
+| Block sums unchanged when the board's suits are relabelled | equal |
+
+```
+showdown matrix build --exact   # about 18 minutes on 16 cores; reproduces the committed file
+```
+
 Bugs found by these tests before the gate was declared:
 - **Range parser.** It upper-cased only the first two characters of a token, so
   "A2s-A5s" failed. Fixed.
