@@ -1,2 +1,3 @@
 # core.autocrlf is true on the dev machine; pin LF in the working tree too.
 * text=auto eol=lf
+*.npz binary

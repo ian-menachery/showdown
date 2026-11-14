@@ -352,3 +352,63 @@ exploitability is the same double.
 - Built-in `sum` over floats in the solver's update path.
 - Folding the updates back into the backward loop for speed.
 - Tolerance-based trajectory tests. Equality is the test now.
+
+---
+
+### 18. The 169×169 matrix is board-major Monte Carlo, committed as a data file (2026-11-14)
+
+**Decided:** `showdown matrix build` samples random 5-card boards. On each board
+it ranks every live combo once with eval7, compares all non-conflicting combo
+pairs in numpy, and sums the results into class blocks. The run uses 64 batches,
+each seeded with `SeedSequence(seed, spawn_key=(batch,))`, spread across worker
+processes. The standard error comes from batch means. The result goes to
+`data/preflop_169.npz`, which is committed:
+
+- 147,200 boards (64 batches of 2,300);
+- seed 20261114;
+- the equity matrix, the SE matrix, and the exact card-removal pair counts.
+
+**Why:**
+- **Exact is not affordable.** An exact matrix needs 812,175 combo pairs at
+  about 2 s each, which is days. A vectorised exact method would need our own
+  lookup-table evaluator, which DECISIONS 3 rules out.
+- **One board scores many pairs.** Board-major sampling scores about 580,000
+  combo pairs per board for 1,081 evaluator calls. With 16 cores, a full build
+  takes minutes.
+- **The estimate is unbiased.** A uniform board that avoids a pair's cards is
+  uniform over that pair's remaining 48 cards, and every pair is equally likely
+  to be live. So the summed ratio estimates the equal-weight class average.
+- **The data file is committed.** Phase 4 depends on it, and rebuilding is
+  slow. It is reproducible from the seed by `showdown matrix build`.
+
+**A gate bullet that is weaker than it looks:** under this method,
+M[i,j] + M[j,i] = 1 holds exactly by construction. Every comparison scores both
+orders at once. So Gate C's symmetry bullet can only catch aggregation bugs
+such as a transposed class index. The independent check is in the slow suite:
+three cells (AA vs KK, AKs vs QQ, T9s vs AKo) must sit within 3 SE of exact
+class-vs-class enumeration. That enumeration shares work across suit-isomorphic
+combo pairs, so AA vs KK takes 3 enumerations rather than 36.
+
+**Rules out:**
+- Rebuilding the matrix silently with a different seed or board count. A new
+  matrix is a new commit, with its numbers in GATES.md.
+- Any cell with SE above 0.002 (Gate C).
+- Using eval7's equity helpers for any part of this (DECISIONS 5).
+
+---
+
+### 19. Range equity gives equal weight to every non-conflicting combo pair (2026-11-14)
+
+**Decided:** Range-vs-range equity, exact and Monte Carlo alike, averages
+per-pair equity over every (hero combo, villain combo) pair that shares no card
+with the other or with the board. Ranges carry no weights in v1. In Monte Carlo,
+each sample draws a pair uniformly and then a runout. Exact enumeration averages
+each pair's exact equity. The push/fold game weights class pairs by the exact
+pair counts stored with the matrix.
+
+**Why:** It is the standard definition, and it is what pokerkit's sampling
+implies for single combos. It also makes exact and Monte Carlo estimate the same
+quantity, so Gate C's calibration test means something.
+
+**Rules out:** Weighted ranges ("AKs:0.5") in v1. They are an amendment if Phase
+4 or the analyzer needs them.

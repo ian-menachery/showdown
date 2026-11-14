@@ -66,7 +66,7 @@ OpenSpiel (DECISIONS 6).
 in `GATES.md`, with the commit, the date, the numbers and the command that
 reproduces them.
 
-## The 169×169 matrix (DECISIONS 17)
+## The 169×169 matrix (DECISIONS 18)
 
 Brute force per combo pair takes about 5 s each, over 812,175 pairs, which is
 far too slow. Instead, for each random 5-card board:
