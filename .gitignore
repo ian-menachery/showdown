@@ -1,0 +1,18 @@
+# Load-bearing: gate.py's clean-tree check fails on any untracked file, and
+# pytest --cov creates several.
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.ruff_cache/
+.venv/
+venv/
+
+# Real hand histories are personal data and are never committed.
+/data/hh/*
+!/data/hh/.gitkeep
