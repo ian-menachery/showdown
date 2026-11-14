@@ -197,3 +197,55 @@ FAIL here does not end the project: these gates test correctness, not a thesis.
 
 **Rules out:** Loosening a tolerance to get a gate green, and starting phase N+1
 while gate N fails.
+
+---
+
+### 12. Play happens in a browser page served on localhost (2026-11-14)
+
+**Decided:** `showdown play` starts a local server bound to `127.0.0.1` and opens
+a page with both games: the push/fold trainer and Leduc against the CFR bot. The
+game logic stays in Python (pokerkit and our solver). The page is only a view
+over a small HTTP API, and Gate E drives that API directly. The web framework is
+chosen in Phase 5 and recorded as its own entry. The lightest option that works
+is the default.
+
+**Why:** Ian chose a browser page over the terminal (SCOPE A2). Keeping the
+logic in Python means the bot the page shows is the same code the gates test.
+
+**Rules out:**
+- Binding to `0.0.0.0` and any hosted or public deployment.
+- Porting game logic or strategies to JavaScript.
+- Accounts, persistence beyond a session, multiplayer.
+
+---
+
+### 13. ClubWPT Gold: own exports only, offline only, never while the client is open (2026-11-14)
+
+**Decided:** ClubWPT Gold hands enter the analyzer in one of two ways only:
+- a file that the ClubWPT Gold client itself lets Ian download; or
+- Ian transcribing chosen hands by hand into PHH.
+
+A parser for an exported format is a scope amendment, written against one real
+sample file. Until Ian has a sample, there is no ClubWPT code. The README tells
+the user not to run showdown (equity, charts, trainer or analyzer) while a
+ClubWPT Gold client is open.
+
+**Why:** ClubWPT Gold's prohibited-tools page
+(support.clubwptgold.com, "Prohibited Tools", read 2026-11-14) bans three
+relevant things:
+- "equity calculators, range simulators, or analytical software while the game
+  client is open";
+- reference material, including "charts or plots, range matrices";
+- "Tools designed to scrape hand history data".
+
+The page says nothing about offline review of your own hands after a session,
+and it documents no export format. A PokerTracker forum post says the site does
+not save local hand histories. Only ClubWPT support can say whether post-session
+analysis is allowed (SCOPE, Open question 6).
+
+**Rules out:**
+- Scraping, screen capture, OCR or memory reading of the ClubWPT client.
+- Pulling hand data from the site through anything except its own download.
+- Any feature meant to be used during a ClubWPT session.
+
+This tightens DECISIONS 9; it does not replace it.

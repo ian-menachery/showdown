@@ -6,7 +6,8 @@ Amendments log at the bottom, never by a silent edit.
 **Repo:** `ian-menachery/showdown` (private)
 **Package:** `showdown`
 **Started:** 2026-11-14
-**Time box:** OPEN, see Open questions.
+**Time box:** about 40 hours as a soft target, with no hard stop (A1). The
+gates still apply.
 
 **One line:** A heads-up poker lab in Python. It has a CFR solver checked
 against known answers, an equity engine, a push/fold bot you can play against,
@@ -61,14 +62,18 @@ copying source files into this repo (DECISIONS 3).
   seeded Monte Carlo with a stated standard error, and the 169×169 preflop
   matrix cached as a data file.
 - Push/fold solutions at 1 to 20 bb, printed as 13×13 charts.
-- Terminal play:
+- Browser play on a local page that `showdown play` serves on localhost only
+  (A2):
   - a push/fold trainer against the solved bot, in either seat, showing bb lost
     on each decision;
   - Leduc against the CFR bot.
-- Hand-history analyzer. It parses PokerStars-format text (through pokerkit) and
-  PHH files. It reports VPIP, PFR, 3-bet, WTSD, W$SD and bb/100, plus all-in
+- Hand-history analyzer. It parses PHH files and PokerStars-format text (through
+  pokerkit). It reports VPIP, PFR, 3-bet, WTSD, W$SD and bb/100, plus all-in
   EV-adjusted bb/100. It grades heads-up hands at 20 bb effective or less
   against push/fold Nash.
+  - The primary dataset is the public phh-dataset (A3).
+  - ClubWPT Gold hands are supported only through a file the site itself lets
+    you download, or by hand transcription into PHH (A3, DECISIONS 13).
 - One CLI, `showdown`, with subcommands `solve`, `equity`, `play` and `analyze`.
 
 ## Explicitly out of scope
@@ -85,7 +90,10 @@ This list is load-bearing. Anything on it is a scope amendment, not a good idea.
 - Neural networks, Deep CFR, reinforcement learning.
 - Writing our own hand evaluator or NLHE rules engine.
 - Site formats that pokerkit does not parse, GGPoker included.
-- A browser UI in v1 (Open question 3).
+- Serving the play page anywhere except localhost, and any public deployment
+  (A2).
+- Scraping, screen-reading or OCR of any poker client, ClubWPT Gold included
+  (A3).
 - Performance rewrites (Cython, Numba, Rust) unless a gate fails on runtime.
   Even then, a DECISIONS entry comes first.
 - Database, accounts, hosting.
@@ -96,10 +104,10 @@ This list is load-bearing. Anything on it is a scope amendment, not a good idea.
    passes, pytest passes with coverage of at least 80% on `showdown`, the tree is
    clean, and HEAD is pushed.
 2. Gates A to F below all PASS.
-3. `showdown play pushfold` and `showdown play leduc` each run a full session in
-   a fresh terminal.
-4. `showdown analyze <file>` prints the stats table for a real hand-history file
-   (Open question 2 decides which file).
+3. `showdown play` opens a local page. A full push/fold trainer session and a
+   full Leduc session can each be played there in the browser (A2).
+4. `showdown analyze <file>` prints the stats table for the phh-dataset Pluribus
+   hands (A3).
 5. The README states what is borrowed and under which license, what is built,
    every gate result, and the known limits.
 
@@ -160,15 +168,16 @@ takes a dated amendment, and "it failed" is never a valid reason.
   machine, the realised SB result lands within 3 SE of the game value the solver
   reports. This proves that the bot, the engine adapter and the payoff model
   agree.
-- A scripted human seat completes 20 hands of each game through the CLI.
+- A scripted human seat completes 20 hands of each game through the play page's
+  HTTP API (A2).
 
 **Gate F: analyzer (Phase 6)**
 - A hand-built fixture of at least 30 hands has every stat counted by hand, and
   every computed stat matches exactly.
 - All-in EV adjustment on the fixture's all-in hands matches hand-computed values
   to 1e-6 bb.
-- On the full real dataset (Open question 2), at least 99% of hands parse.
-  Failures are counted and printed, never dropped silently.
+- On the phh-dataset Pluribus hands, at least 99% parse (A3). Failures are
+  counted and printed, never dropped silently.
 
 ---
 
@@ -181,7 +190,7 @@ takes a dated amendment, and "it failed" is never a valid reason.
 | 2 | Leduc, OpenSpiel oracle adapter | Gate B |
 | 3 | Equity engine, 169×169 matrix | Gate C |
 | 4 | Push/fold game and charts | Gate D |
-| 5 | pokerkit adapter, bot, terminal play | Gate E |
+| 5 | pokerkit adapter, bot, local browser play | Gate E |
 | 6 | Hand-history analyzer | Gate F |
 | 7 | README truth pass, decide whether to go public | Done 1 to 5 |
 
@@ -204,23 +213,25 @@ The spike script and its output are in `spikes/2026-11-14-deps.py`.
 - **pokerkit's own evaluator is slow**, about 1.3 ms per equity sample. It is
   used only as an oracle in tests.
 
-## Open questions, for Ian to settle before Phase 1
+## Open questions
 
-1. **Time box.** Hours, and a calendar limit.
-2. **Hand histories.** Use your own (from which site?), or the public MIT
-   [phh-dataset](https://github.com/uoftcprg/phh-dataset), which includes the
-   10,000-hand Pluribus set and HandHQ online hands? pokerkit parses PokerStars,
-   Full Tilt, iPoker, Ongame, PartyPoker and Absolute. It does not parse
-   GGPoker.
-3. **Bot surface.** Terminal only for v1, as currently planned, or a browser
-   page?
-4. **Push/fold reference chart** for Gate D: which published source?
+Questions 1 to 3 were settled on 2026-11-14 (amendments A1 to A3).
+
+4. **Push/fold reference chart** for Gate D: which published source? Settle
+   before Phase 4.
 5. **Going public.** Make the repo public at the end, and under which license?
+   Settle at Phase 7.
+6. **ClubWPT Gold.** Does the client let you download your own hand histories,
+   and in what format? Is post-session analysis of them allowed? Their
+   prohibited-tools page does not address it. Only support can answer the
+   second question. Settle before any ClubWPT parser work.
 
 ---
 
 ## Amendments log
 
-| Date | Change | Reason |
-|---|---|---|
-| | | |
+| # | Date | Change | Reason |
+|---|---|---|---|
+| A1 | 2026-11-14 | Time box set to about 40 hours as a soft target, with no hard stop. | Ian ticked both "~40 hours" and "No time box". Read as a budget to plan against, not a stop. |
+| A2 | 2026-11-14 | Bot surface is a local browser page instead of the terminal. Done 3 and Gate E reworded to match. The browser-UI line moves from out of scope to in scope, limited to localhost. | Ian chose a browser page. The web framework gets its own DECISIONS entry in Phase 5. |
+| A3 | 2026-11-14 | Analyzer data is the phh-dataset (Pluribus hands for Done 4 and Gate F), plus ClubWPT Gold under DECISIONS 13. Scraping, screen-reading and OCR of any client are out of scope. | Ian plays on ClubWPT Gold. pokerkit has no parser for it, no export format is documented, and the site bans tools that "scrape hand history data". |

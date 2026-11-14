@@ -4,7 +4,7 @@ A heads-up poker lab in Python:
 
 - a CFR solver, proven on Kuhn and Leduc against known answers;
 - an equity engine;
-- a push/fold bot you can play against in the terminal;
+- a push/fold bot you can play against in a local browser page;
 - a hand-history analyzer that grades real hands against the solved strategy.
 
 **Status: Phase 0, plan only.** There is no solver code yet. The package is a
@@ -39,7 +39,7 @@ src/showdown/
   cfr/        CFR, CFR+, best response, exploitability
   equity/     combos and ranges, exact enumeration, Monte Carlo, 169x169 matrix
   engine/     pokerkit adapter
-  bot/        policies and terminal play
+  bot/        policies, and the local play page and its API (127.0.0.1 only)
   hh/         hand-history parsing, stats, all-in EV
   cli.py      showdown solve | equity | play | analyze
 ```
@@ -60,3 +60,9 @@ the versions pinned in `pyproject.toml`.
 
 Nothing here touches live play: no HUD, no overlay, no table reading, and no
 connection to any poker site (DECISIONS 9).
+
+**Do not run showdown while a ClubWPT Gold client is open.** That includes the
+equity tool, the charts, the trainer and the analyzer. ClubWPT Gold's
+prohibited-tools page bans equity and range tools "while the game client is
+open", and it also bans strategy charts and range matrices. Study after the
+session is over (DECISIONS 13).
