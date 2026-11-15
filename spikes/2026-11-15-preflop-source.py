@@ -354,6 +354,26 @@ def mixed_share(run: Run, hist: str) -> float:
     return float(w @ (pure_action(run.strategy[hist][1]) < 0) / w.sum())
 
 
+OFF_PATH = 0.001
+"""A node is off the equilibrium path when the opponent's actions leading there are this rare."""
+MAIN_NODES = ("", "r", "rr")
+
+
+def opponent_reach(run: Run, hist: str) -> float:
+    """Probability that the opponent of the player acting at `hist` takes the actions leading there.
+
+    Each factor is the opponent's share at an earlier node (card removal ignored).
+    """
+    p = 1.0
+    for k in range(1 - len(hist) % 2, len(hist), 2):
+        p *= range_shares(run, hist[:k])[ACTION_NAMES[CODE.index(hist[k])]]
+    return p
+
+
+def off_path(run: Run, hist: str) -> bool:
+    return opponent_reach(run, hist) < OFF_PATH
+
+
 # --- reporting ----------------------------------------------------------------------------
 
 
@@ -394,6 +414,84 @@ def to_json(run: Run) -> dict:
             for hist, (actions, table) in run.strategy.items()
         },
     }
+
+
+def from_json(d: dict) -> Run:
+    """Inverse of `to_json`."""
+    strategy = {}
+    for hist, by_action in d["strategy"].items():
+        actions = tuple(ACTION_NAMES.index(a) for a in by_action)
+        table = np.array([[by_action[a][name] for a in by_action] for name in CLASS_NAMES])
+        strategy[hist] = (actions, table)
+    return Run(
+        label=d["label"],
+        stack=float(d["stack"]),
+        r_oop=float(d["r_oop"]),
+        raises=bool(d["raises"]),
+        iterations=int(d["iterations"]),
+        nodes=int(d["nodes"]),
+        infosets=int(d["infosets"]),
+        compile_s=float(d["compile_s"]),
+        solve_s=float(d["solve_s"]),
+        curve=[(int(i), float(e)) for i, e in d["curve"]],
+        value_sb=float(d["value_sb"]),
+        strategy=strategy,
+    )
+
+
+def _shares_cell(run: Run, hist: str) -> str:
+    cell = " / ".join(f"{100 * v:.0f}" for v in range_shares(run, hist).values()) + "%"
+    return cell + ("*" if off_path(run, hist) else "")
+
+
+def _tv_cell(ref: Run, run: Run, hist: str) -> str:
+    star = "*" if off_path(ref, hist) or off_path(run, hist) else ""
+    return f"{tv_distance(ref, run, hist):.3f}{star}"
+
+
+def print_r_comparison(full: dict[tuple[float, float], Run], reference: float) -> None:
+    """Every R_oop at each stack against the `reference` R_oop (DECISIONS 33's sweep)."""
+    print(f"\n## How the strategy moves with R, against R_oop {reference:g}")
+    print("Shares are of the hands reaching each node. * marks an off-path node: the")
+    print(f"opponent's actions leading there are taken less than {OFF_PATH:.1%} of the time,")
+    print("so its strategy is barely trained. TV is the mean total-variation distance from")
+    print(f"the R_oop {reference:g} strategy, weighted by that strategy's reach (0 = same, 1 = disjoint).")
+    print()
+    print("| Stack | R_oop | Exploitability | SB value | SB first in f/r/j | BB vs raise f/c/3b/j "
+          "| SB vs 3-bet f/c/j | TV: first in / vs raise / vs 3-bet |")
+    print("|---|---|---|---|---|---|---|---|")
+    stacks = sorted({s for s, _ in full})
+    refs: dict[float, Run | None] = {}
+    for stack in stacks:
+        rs = sorted((r for s, r in full if s == stack), reverse=True)
+        ref = next((full[(stack, r)] for r in rs if np.isclose(r, reference)), None)
+        refs[stack] = ref
+        for r in rs:
+            run = full[(stack, r)]
+            if ref is None:
+                tv = "no reference run"
+            elif run is ref:
+                tv = "reference"
+            else:
+                tv = " / ".join(_tv_cell(ref, run, h) for h in MAIN_NODES)
+            print(f"| {stack:g} | {r:g} | {run.exploitability:.1e} | {run.value_sb:+.3f} "
+                  f"| {_shares_cell(run, '')} | {_shares_cell(run, 'r')} "
+                  f"| {_shares_cell(run, 'rr')} | {tv} |")
+    for stack in stacks:
+        ref = refs[stack]
+        if ref is None:
+            continue
+        for r in sorted((r for s, r in full if s == stack), reverse=True):
+            run = full[(stack, r)]
+            if run is ref:
+                continue
+            print(f"\n{stack:g} bb, R_oop {r:g} against {reference:g}. TV by node: "
+                  + ", ".join(f"{NODE_LABELS[h]} {_tv_cell(ref, run, h)}" for h in ref.strategy))
+            for h in ("", "r"):
+                flips = switches(ref, run, h)
+                if flips:
+                    print(f"  {NODE_LABELS[h]}, pure flips (R_oop {reference:g} -> {r:g}), "
+                          f"{len(flips)}: {', '.join(flips)}")
 
 
 def continuity(matrix: PreflopMatrix) -> Run:

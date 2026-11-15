@@ -407,3 +407,39 @@ TexasSolver v0.2.0 runs as a separate program with 16 threads.
 ```
 .venv\Scripts\python -I spikes\2026-11-15-texassolver-speed.py
 ```
+
+---
+
+## Gate G: the V1 advisor: PASS (2026-11-15)
+
+Evidence: `tests/test_gate_g.py` (fast suite). The fixture is
+`tests/fixtures/live/spots.toml`. The rules and bars were pre-registered in
+DECISIONS 32 before any advisor code existed.
+
+| Check | Measured | Bar | Result |
+|---|---|---|---|
+| Fixture spots get the expected suggestion | 43 of 43: 10 river and turn, 21 preflop, 2 with no suggestion, 10 flop | ≥ 40 spots | PASS |
+| Preflop at 20 bb or less equals the push/fold solution's pure actions | 21 of 21 | all | PASS |
+| River and turn equity equal the hand-counted outs | 10 of 10, exactly (e.g. 3/15, 7/44, 8/22) | exact | PASS |
+| Flop Monte Carlo against exact enumeration | 10 of 10 within 3 SE, each spot far enough from its threshold that the action is stable | within 3 SE | PASS |
+| 95th-percentile time per suggestion, separate process without coverage, idle laptop on AC | 65–70 ms over three runs (max 80 ms) | ≤ 300 ms | PASS |
+| Every suggestion is logged | 43 of 43 lines in the JSONL log | all | PASS |
+
+How it got here:
+- **One fixture spot was replaced before the gate was recorded.** 96o at 5 bb
+  is a hand the solution mixes (18% jam), so it has no pure answer. It became
+  96o at 4 bb, where the solution is pure.
+- **Latency was not measured validly until an idle run** (DECISIONS 32). An
+  earlier in-suite measurement read 937 ms. Reproduced, that came from
+  coverage tracing plus other heavy work on the laptop:
+  - first, a parallel S3 CFR solve at 93% CPU;
+  - then, another project's session.
+  
+  Under that load, even CPU time per suggestion rose to 344 ms. Those runs
+  don't count, and the bar never moved. The idle runs on 2026-11-15 measured
+  65 to 70 ms.
+
+```
+showdown advise --hero AhKh --seat sb --stack 50 --board Qh7h2c3s --pot 20 --to-call 10 --villain QsQd
+.venv\Scripts\python -m pytest tests/test_gate_g.py -s
+```

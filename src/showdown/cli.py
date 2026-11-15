@@ -10,6 +10,7 @@ showdown pushfold build
 showdown pushfold chart 10
 showdown play
 showdown analyze data/external/phh/repo/data/pluribus
+showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5
 """
 
 from __future__ import annotations
@@ -302,6 +303,42 @@ def _analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def _advise(args: argparse.Namespace) -> int:
+    from showdown.live.advisor import Advisor
+    from showdown.live.spot import Spot, SpotError
+
+    try:
+        spot = Spot.parse(
+            args.hero,
+            args.board or "",
+            seat=args.seat,
+            effective_bb=args.stack,
+            pot_bb=args.pot,
+            to_call_bb=args.to_call,
+            pot_type=args.pot_type,
+            preflop=args.facing,
+            villain_range=args.villain,
+            mode=args.mode,
+        )
+    except (SpotError, ValueError) as error:
+        raise SystemExit(f"bad spot: {error}") from None
+    advisor = Advisor.load(log_path=None if args.no_log else args.log)
+    s = advisor.suggest(spot)
+    print(
+        f"{s.street}: {(s.action or 'no action hint').upper()}"
+        + (f" {s.size_bb:g} bb" if s.size_bb else "")
+    )
+    if s.evs:
+        print("  EV (bb): " + ", ".join(f"{k} {v:+.3f}" for k, v in s.evs.items()))
+    if s.equity is not None:
+        se = f" +/- {s.se:.3f}" if s.se else ""
+        print(f"  equity {s.equity:.1%}{se} vs {s.villain_range}")
+    if s.threshold is not None:
+        print(f"  threshold {s.threshold:.1%}")
+    print(f"  {s.source}; {s.elapsed_ms:.0f} ms")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="showdown", description="Heads-up poker lab.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -375,6 +412,28 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_cmd.add_argument("--show-failures", type=int, default=20)
     analyze_cmd.add_argument("--pushfold", default=pushfold.DEFAULT_SOLUTION)
     analyze_cmd.set_defaults(handler=_analyze)
+
+    advise = commands.add_parser(
+        "advise", help="one live suggestion: push/fold preflop, equity helper postflop"
+    )
+    advise.add_argument("--hero", required=True, help="your two cards, e.g. AsKd")
+    advise.add_argument("--seat", choices=["sb", "bb"], required=True)
+    advise.add_argument("--stack", type=float, required=True, help="effective stack in bb")
+    advise.add_argument("--board", help="e.g. Ts9s2d")
+    advise.add_argument("--pot", type=float, default=1.5, help="pot in bb, incl. a bet faced")
+    advise.add_argument("--to-call", type=float, default=0.0, help="bb to call; 0 = can check")
+    advise.add_argument("--pot-type", choices=["srp", "3bp"], default="srp")
+    advise.add_argument(
+        "--facing",
+        choices=["sb_first", "bb_vs_jam", "other"],
+        default="sb_first",
+        help="preflop decision",
+    )
+    advise.add_argument("--villain", help="custom villain range, e.g. 'TT+,AQs+'")
+    advise.add_argument("--mode", choices=["hint", "equity"], default="hint")
+    advise.add_argument("--log", default="data/live/advice.jsonl")
+    advise.add_argument("--no-log", action="store_true")
+    advise.set_defaults(handler=_advise)
     return parser
 
 

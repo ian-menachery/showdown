@@ -1,0 +1,256 @@
+# Gate G fixture (DECISIONS 32): 43 spots for the V1 advisor.
+#
+# River and turn spots: the equity is counted by hand, with the count beside
+# the spot, and the action follows from DECISIONS 32's rules:
+# - facing a bet: call if equity >= to_call / (pot + to_call) + 0.05;
+# - free to bet: bet at 60% equity or more (75% of the pot on the river,
+#   66% on the turn), else check;
+# - "equity" mode: no action.
+# Preflop spots: the expected action is the push/fold solution's pure action,
+# checked against data/pushfold.json in the test. Flop spots: the Monte Carlo
+# equity must land within 3 SE of exact enumeration, and the action must
+# match exact equity.
+
+[[river]]
+id = "r1_top_pair_vs_sets_and_two_pair"
+# Villain QQ: 3 combos (Qd on board) beat us with a set. AK: 3 aces x 2 kings
+# = 6 combos tie (both play K-K-A-Q-7). KQ: 2 kings x 3 queens = 6 combos beat
+# us with two pair. 15 combos, so equity = 3 / 15. The threshold is
+# 5 / 15 + 0.05 = 0.3833, so fold.
+hero = "AsKs"
+board = "KhQd7c2s3h"
+seat = "bb"
+pot = 10.0
+to_call = 5.0
+villain = "QQ,AK,KQ"
+equity = 0.2
+action = "fold"
+
+[[river]]
+id = "r2_value_bet_vs_jj"
+# All 6 JJ combos lose to our kings: equity 1. Free to bet: bet 75% of 10.
+hero = "AsKs"
+board = "KhQd7c2s3h"
+seat = "bb"
+pot = 10.0
+to_call = 0.0
+villain = "JJ"
+equity = 1.0
+action = "bet"
+size = 7.5
+
+[[river]]
+id = "r3_board_broadway_chop"
+# Broadway on the board, and 22 cannot beat it: all 6 combos chop, equity 0.5.
+# The threshold is 10 / 30 + 0.05 = 0.3833, so call.
+hero = "4c5d"
+board = "AhKhQdJcTs"
+seat = "sb"
+pot = 20.0
+to_call = 10.0
+villain = "22"
+equity = 0.5
+action = "call"
+
+[[river]]
+id = "r4_equity_mode"
+# As r2, in equity mode: no action hint.
+hero = "AsKs"
+board = "KhQd7c2s3h"
+seat = "bb"
+pot = 10.0
+to_call = 0.0
+villain = "JJ"
+mode = "equity"
+equity = 1.0
+
+[[river]]
+id = "r5_kings_with_queen_kicker"
+# Board Kd 9s 5h 2c 2d (no flush or straight possible).
+# - AK: 4 aces x 2 kings (Ks, Kh) = 8 combos win with an ace kicker.
+# - KJ: 2 x 4 = 8 combos lose to our queen kicker.
+# - 99: 3 combos make nines full.
+# - 55: 3 combos make fives full.
+# 22 combos, we win 8: equity 8/22 = 0.3636. The threshold is 4/16 + 0.05 =
+# 0.30, so call.
+hero = "KcQc"
+board = "Kd9s5h2c2d"
+seat = "bb"
+pot = 12.0
+to_call = 4.0
+villain = "AK,KJ,99,55"
+equity = 0.36363636363636365
+action = "call"
+
+[[turn]]
+id = "t1_nut_flush_draw_vs_set"
+# 44 rivers. 9 hearts remain, but 2h and 3h pair the board and give QQQ a
+# full house. So 7 rivers win and none tie: 7/44. Against a threshold of
+# 10/30 + 0.05, fold.
+hero = "AhKh"
+board = "Qh7h2c3s"
+seat = "sb"
+pot = 20.0
+to_call = 10.0
+villain = "QsQd"
+equity = 0.1590909090909091
+action = "fold"
+
+[[turn]]
+id = "t2_open_ender_vs_aces"
+# Four 5s and four 10s make our straight: 8 of 44 rivers, for each of the
+# 6 AA combos. Only 3 spades can come, so no flush. Free to bet, 8/44 < 0.6:
+# check.
+hero = "9s8s"
+board = "7s6d2cKh"
+seat = "bb"
+pot = 6.0
+to_call = 0.0
+villain = "AA"
+equity = 0.18181818181818182
+action = "check"
+
+[[turn]]
+id = "t3_set_vs_ak"
+# AhKh cannot catch up with one card: a pair is not enough, and there are
+# only 4 hearts with the Qh. Equity 1. The threshold is 5/20 + 0.05, so call.
+hero = "QcQd"
+board = "Qh8s3d2c"
+seat = "sb"
+pot = 15.0
+to_call = 5.0
+villain = "AhKh"
+equity = 1.0
+action = "call"
+
+[[turn]]
+id = "t4_same_hand_chop"
+# AcKd against AsKc on Ah Td 7s 2c: no flush or straight can come, so every
+# river chops. Equity 0.5. The threshold is 10/40 + 0.05 = 0.30, so call.
+hero = "AcKd"
+board = "AhTd7s2c"
+seat = "bb"
+pot = 30.0
+to_call = 10.0
+villain = "AsKc"
+equity = 0.5
+action = "call"
+
+[[turn]]
+id = "t5_nut_flush_draw_bet_check"
+# As t1, but free to bet: 7/44 < 0.6, so check.
+hero = "AhKh"
+board = "Qh7h2c3s"
+seat = "sb"
+pot = 20.0
+to_call = 0.0
+villain = "QsQd"
+equity = 0.1590909090909091
+action = "check"
+
+# Preflop: [hand, seat, effective bb, decision]. The expected action is the
+# push/fold solution's pure action at depth_for(bb), checked in the test.
+[preflop]
+spots = [
+  ["AhAd", "sb", 20, "sb_first"],
+  ["7c2d", "sb", 10, "sb_first"],
+  ["Th5c", "sb", 10, "sb_first"],
+  ["As5d", "sb", 15, "sb_first"],
+  ["3c2d", "sb", 1, "sb_first"],
+  ["2c2d", "sb", 20, "sb_first"],
+  ["Qd9c", "sb", 8, "sb_first"],
+  ["Jc4c", "sb", 10, "sb_first"],
+  ["9h6c", "sb", 4, "sb_first"],  # 5 bb mixes (18% jam), so it has no pure answer
+  ["KsTd", "sb", 20, "sb_first"],
+  ["5s4s", "sb", 12, "sb_first"],
+  ["8d3h", "sb", 3, "sb_first"],
+  ["9s9c", "bb", 10, "bb_vs_jam"],
+  ["KcJh", "bb", 15, "bb_vs_jam"],
+  ["7c2d", "bb", 2, "bb_vs_jam"],
+  ["8c3d", "bb", 10, "bb_vs_jam"],
+  ["Ah2c", "bb", 14, "bb_vs_jam"],
+  ["QsTs", "bb", 16, "bb_vs_jam"],
+  ["6h5h", "bb", 4, "bb_vs_jam"],
+  ["KhKd", "bb", 20, "bb_vs_jam"],
+  ["Jd3c", "bb", 6, "bb_vs_jam"],
+]
+# These get no suggestion: deeper than 20 bb, or not a push/fold decision.
+none = [
+  ["AsKd", "sb", 40, "sb_first"],
+  ["AsKd", "bb", 10, "other"],
+]
+
+# Flop: Monte Carlo within 3 SE of exact. Spots sit far from their thresholds.
+[[flop]]
+hero = "AsKd"
+board = "Ts9s2d"
+seat = "sb"
+pot = 5.0
+to_call = 0.0
+
+[[flop]]
+hero = "AhAd"
+board = "Kc7d2s"
+seat = "bb"
+pot = 5.0
+to_call = 0.0
+
+[[flop]]
+hero = "7c2d"
+board = "AsKh9c"
+seat = "bb"
+pot = 5.0
+to_call = 3.0
+
+[[flop]]
+hero = "QhJh"
+board = "Th9h2c"
+seat = "sb"
+pot = 18.0
+to_call = 6.0
+pot_type = "3bp"
+
+[[flop]]
+hero = "8s8d"
+board = "8c5h2d"
+seat = "sb"
+pot = 10.0
+to_call = 3.0
+
+[[flop]]
+hero = "KcQs"
+board = "Jd8h3c"
+seat = "bb"
+pot = 10.0
+to_call = 8.0
+villain = "JJ+,AJ,KJ"
+
+[[flop]]
+hero = "6d5d"
+board = "Ac Kd 2s"
+seat = "bb"
+pot = 5.0
+to_call = 4.0
+
+[[flop]]
+hero = "AcQc"
+board = "Qd7s3h"
+seat = "sb"
+pot = 5.0
+to_call = 0.0
+
+[[flop]]
+hero = "TsTd"
+board = "Ah6c4d"
+seat = "bb"
+pot = 36.0
+to_call = 0.0
+pot_type = "3bp"
+
+[[flop]]
+hero = "4h3h"
+board = "Jc9d7s"
+seat = "sb"
+pot = 10.0
+to_call = 6.0
+mode = "equity"

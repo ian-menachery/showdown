@@ -25,6 +25,7 @@ a bar set before the code existed (SCOPE, DECISIONS 11).
 | D: push/fold | HoldemResources' published heads-up equilibrium | exploitability ≤ 3.6e-6 bb at all 20 depths; 100% agreement in all 40 pre-registered comparisons |
 | E: bot and engine | pokerkit's NLHE state machine | 20,000 bot-vs-bot hands land at z = +0.19 against the solver's value; 20 scripted hands of each game over HTTP |
 | F: analyzer | a hand-counted fixture; the phh-dataset | 945 of 945 stat values exact; 17 all-in EVs within 1e-6 bb; 10,000 of 10,000 Pluribus hands parse |
+| G: live advisor V1 | hand-counted equities; the push/fold solution | 43 of 43 spots; river and turn equity exact; flop within 3 SE; 95th-percentile 65–70 ms (bar 300 ms) |
 
 Beyond the gates:
 - The exact matrix equals an independent exact table (b-inary/poker-cfr) to
@@ -43,6 +44,7 @@ showdown matrix show AKs QQ                     # exact, from data/preflop_169_e
 showdown pushfold chart 10                      # SB jam and BB call charts at 10 bb
 showdown play                                   # trainer and Leduc in your browser, 127.0.0.1 only
 showdown analyze path/to/hands                  # PHH files, or PokerStars .txt exports
+showdown advise --hero AsKd --seat sb --stack 10   # live advisor V1: push/fold preflop, equity helper postflop
 ```
 
 `showdown analyze` prints, per player:
