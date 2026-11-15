@@ -1445,3 +1445,186 @@ this against board enumeration.
 - A margin on the call rule.
 - Partial-class ranges preflop.
 - Moving any bar after results are seen, except by a dated amendment.
+
+---
+
+### 37. Push/fold exploit charts (2026-11-15)
+
+**Decided:** Ian chose this on 2026-11-15, after the exploit-potential
+measurement. It is a second, manual slice of Phase 12 under SCOPE A8: Ian
+gives a read, and showdown gives the best response, what it gains, and what
+it risks.
+
+**The command.**
+```
+showdown pushfold exploit <stack> --villain-calls N   # you are the SB; the BB calls the top N%
+showdown pushfold exploit <stack> --villain-jams N    # you are the BB; the SB jams the top N%
+```
+- **The stack** uses push/fold's nearest solved depth (DECISIONS 27), from 1
+  to 20 bb.
+- **The read** is the top N% by equity against a random hand, in whole
+  classes (`top_range`), the same ordering as `--villain-top`
+  (DECISIONS 36). Phase 12's other ordering, "Nash's own calling order", is
+  left for the opponent model.
+- **The best response** is pure, class by class: jam (or call) when that
+  action's EV against the read is strictly above folding's. It uses
+  `sb_action_values` and `bb_action_values`.
+
+**What it prints,** in bb per hand in the hero's seat:
+- the game value (Nash against Nash);
+- Nash's EV against the read, and the best response's EV against the read,
+  each also shown as an edge over the game value;
+- the gain, best response minus Nash. It is also given as bb/100 over a
+  heads-up session, which is the gain × 50, because the hero holds that seat
+  in half the hands;
+- **the risk:** the best response's EV against a Nash opponent, minus the game
+  value. It is never positive, and shows what the exploit costs if the read is
+  wrong;
+- the best-response chart, as `pushfold chart` draws it: 100 or ".".
+
+**Bars,** all in the fast suite:
+1. **Independent EVs.** The command's best-response and Nash EVs equal the
+   compiled push/fold tree's own computation, to 1e-9: `cfr.best_response`
+   for the best response, and `cfr.policy_value` for Nash against the read.
+   This is checked at 5 and 15 bb, for both seats, at two reads each.
+2. **The measured numbers.** At 10 bb, against a BB who calls the top 15%,
+   the best response is +0.427 and Nash +0.133 over the game value, to
+   1e-3. Against an SB who jams any hand at 20 bb (`--villain-jams 100`), the
+   gain is +0.747 bb/hand.
+3. **The risk** is at most 1e-5, the solution's exploitability, at every
+   depth from 1 to 20 bb, for both seats, with reads of 15%, 50% and 100%.
+4. **The chart** is the per-class argmax of the two action values.
+
+**Rules out:**
+- Presenting a best response as safe. The risk line is always printed.
+- Moving a bar after results are seen.
+
+---
+
+### 38. Spike S4: b-inary's postflop-solver as the postflop engine, and Gate S4 pre-registered (2026-11-15)
+
+**Decided:** Ian chose this spike on 2026-11-15, after the open-source survey,
+and approved the downloads:
+- `rustup-init.exe` (x86_64-pc-windows-gnu, 14,862,151 bytes, SHA-256
+  `f6289656ce42e1099f3cbc6f10ef6321dfde54773faf599dd36fd3b1f07d9103`, which
+  matches static.rust-lang.org's published checksum);
+- stable Rust 1.100.0, minimal profile (149,991,448 bytes compressed),
+  installed with `--no-modify-path`;
+- b-inary/postflop-solver at commit `9d1509fe5077d019825f833eed04b16d342dfda1`
+  (2023-10-01, AGPL-3.0-or-later);
+- its crates from crates.io.
+
+**Why.** S2 failed: TexasSolver took 50 to 76 s on 3-bet-pot flops, and never
+converged on single-raised pots within 120 s. The survey found postflop-solver
+to be the fastest open engine. It uses discounted CFR, combines isomorphic
+runouts, and has node locking (`lock_current_strategy`). Its author reports
+it faster than PioSOLVER. Development stopped in October 2023.
+
+**The separate-process boundary** (DECISIONS 29) stays.
+- The spike writes a small Rust bridge, our own code, into
+  `data/external/postflop-solver/bridge/` (gitignored). The bridge depends on
+  the pinned solver.
+- The bridge reads one spot as JSON and writes one result as JSON. Python calls
+  it with `subprocess`.
+- The compiled binary links AGPL code. It is never committed, linked into
+  showdown, or distributed.
+
+**The grid, the same as S2's** (DECISIONS 30). S2's code is reused.
+- The same 5 spots (SRP25, SRP50, SRP100, 3BP50, 3BP100), with the same pots
+  and stacks, in half-big-blind chips.
+- The same 20 flops, run in the same flop-by-flop order.
+- S2's ranges, the top N% by equity against a random hand. The last class
+  carries its fractional weight, which postflop-solver's `AA:0.5` syntax
+  takes as is.
+
+**The tree, T1, as postflop-solver expresses it:**
+
+| Street | Bets | Raises |
+|---|---|---|
+| flop | "33%, a" | "60%, a" |
+| turn | "66%, a" | "60%, a" |
+| river | "75%, a" | "60%, a" |
+
+- Donk bets: none on the turn (an empty list), and "75%" on the river.
+- The all-in thresholds (`add_allin_threshold` 1.5, `force_allin_threshold`
+  0.15, `merging_threshold` 0.1) are the library's defaults. TexasSolver's
+  0.67 all-in threshold has no exact equivalent, so the two trees can differ
+  slightly near all-in. The spike prints each tree's node count.
+
+**Settings.**
+- Threads: rayon's default, all 16 logical cores.
+- The target is 2% of the starting pot, measured as `compute_exploitability`
+  (the mean of the two players' best-response gains, in chips; NashConv/2,
+  the same convention as DECISIONS 7), at most 300 iterations.
+- 32-bit storage. Any spot whose uncompressed tree needs more than 10 GB of
+  this laptop's 15.7 GB uses the solver's 16-bit compression, and the spike
+  says so.
+- Each solve has a 120 s timeout. The time counts from process start to
+  result, so it includes building the tree and allocating memory.
+
+**Gate S4,** with S2's bars:
+- the median wall time per solve is at most 10 s;
+- the 95th percentile is at most 20 s;
+- every solve ends with exploitability at most 2% of the pot.
+
+S2's stop-early rule applies: a run stops only once its FAIL is certain.
+
+**Reported, not gated:**
+- **The model ranges.** A second pass replaces the top-% ranges with the
+  preflop model's ranges (DECISIONS 35) on the first 5 flops.
+- **Node locking.** On SRP50 and the first flop, the BB (out of position)
+  is locked to never fold to the SB's 33% flop bet. The spike compares the
+  SB's flop betting frequency, overall and with its weakest third of hands,
+  with and without the lock.
+- Memory per spot, and iterations to target.
+
+**What follows from the result.**
+- **If S4 passes,** D2 (postflop solving in scope) goes to Ian, with a SCOPE
+  amendment. It would unlock option 1 (DECISIONS 31) and Phase 12's postflop
+  exploits.
+- **If it fails,** it is recorded as such, and the equity helper stays.
+
+**Rules out:**
+- Changing the tree, ranges, threads or bars after the first solve.
+- Building any other solver without asking.
+
+---
+
+### 39. The PHH dataset and a human-leak measurement (2026-11-15)
+
+**Decided:** Ian approved the download on 2026-11-15:
+- **The file:** `poker-hand-histories.zip`, 20,289,230,983 bytes, the only
+  file in Zenodo record 17136841.
+- **The record:** "A Dataset of Poker Hand Histories", Juho Kim, published
+  2025-09-16, DOI 10.5281/zenodo.17136841, CC BY 4.0.
+- **Checks:** it must match Zenodo's md5 `5a49377ab4ea30db3aa887c8e0ce580f`.
+  Its SHA-256 is then pinned in `tests/external_data.py`.
+- **Where it lives:** `data/external/phh-zenodo/` (gitignored). Its members
+  are listed and checked for absolute or `..` paths before anything is
+  extracted, and only the online no-limit hands are extracted.
+- **Nothing from it is committed.**
+- **Timing:** the download started before this entry was committed. Nothing
+  was opened or measured before it.
+
+**What is measured** (spike `spikes/2026-11-15-phh-leaks.py`, note
+`docs/human-leaks.md`):
+- **Which hands:** every online no-limit hold'em hand that `hh/parse.py`
+  replays to its recorded finishing stacks (DECISIONS 25's rule).
+- **Grouping:** by table size (heads-up, 3 to 6 players, more) and by stake.
+- **Per player:**
+  - VPIP, PFR and 3-bet;
+  - fold to a flop continuation bet, and flop continuation-bet frequency;
+  - for spots at 20 bb effective or less: how often players jam first in,
+    and how often they call a jam.
+
+  The sample size goes with every figure.
+- **Purpose.** These are candidate starting points for Phase 12's opponent
+  model: the prior a read shrinks toward. They are not exploit
+  recommendations.
+- **Caveat.** These hands are 2009 real-money online play, mostly 6-max, so
+  heads-up play-money friends will differ. The note says so on its first
+  line.
+
+**Rules out:**
+- Committing third-party data.
+- Treating these rates as facts about Ian's friends.
