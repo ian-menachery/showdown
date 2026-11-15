@@ -524,3 +524,40 @@ showdown advise --hero Kh9h --seat bb --stack 100 --facing bb_vs_raise --pot 4 -
 showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5 --ranges fixed
 .venv\Scripts\python -m pytest tests/test_gate_g.py tests/test_gate_g_model.py -s
 ```
+
+## Gate J: the jam-vs-range helper: PASS (2026-11-15)
+
+Evidence: `tests/test_gate_j.py` (fast suite), `tests/test_gate_j_slow.py`
+(`py gate.py --full`), and the latency test in `tests/test_gate_g.py`. The
+fixture is `tests/fixtures/live/jam_spots.toml`. The rules and bars were
+pre-registered in DECISIONS 36 (commit d0547e8) before any helper code.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Best response to the solution's own jam range reproduces its pure calls and folds | push/fold 1–20 bb: 3,363 pure classes agree, 1 indifferent. The model: `j` at 25 and 30 bb (161, 153), `rj` at all nine depths (127 to 167 each), `rrj` at 70–100 bb (25, 28, 30, 41). No class disagrees | every pure class, except within 0.001 bb | PASS |
+| 2. Matrix equity vs exact board enumeration | 6 spots, including a hero that blocks both villain classes (AKo vs AA,AKs) | to 1e-9 | PASS |
+| 3. Hand-worked spots | 10 fully hand-worked (2 close calls, 1 close fold, the exploit view beside Nash and the model, `--villain-top`), 3 default-range spots, 1 no-suggestion spot, 5 errors | ≥ 10 | PASS |
+| 4. 95th-percentile time over every Gate G and Gate J spot, separate process, no coverage, idle laptop | 67 ms over 102 suggestions (max 75 ms) | ≤ 300 ms | PASS |
+
+How it got here:
+- **The test's own non-vacuity floor was wrong, and was not a bar.** Bar 1's
+  model test first asserted more than 100 pure classes per case. At `rrj` the
+  model mixes most classes, so only 25 to 41 are pure, though none disagree.
+  The floor became 20.
+- **One edit to my latency script did not apply** the first time, so the
+  first run lacked Gate J's spots. It was fixed and rerun.
+- **No pre-registered bar or expected answer was changed.**
+- **The core `answer()` accepts a to-call of 0.** That case is the 1 bb
+  push/fold jam, which bar 1 covers. The advisor still rejects a live jam spot
+  with no to-call.
+
+Changes to Gate G's fixture, by design (DECISIONS 36): KhKd facing a first-in
+jam at 50 bb, and AhAd facing a 4-bet jam at 60 bb, moved from "no
+suggestion" to Gate J's default spots.
+
+```
+showdown advise --hero Kc8d --seat bb --stack 10 --facing bb_vs_jam --pot 11 --to-call 9 --villain TT
+showdown advise --hero KhKd --seat bb --stack 50 --facing bb_vs_jam --pot 51 --to-call 49 --villain-top 20
+.venv\Scripts\python -m pytest tests/test_gate_j.py -s
+.venv\Scripts\python -m pytest tests/test_gate_j_slow.py -m slow
+```

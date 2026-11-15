@@ -321,6 +321,7 @@ def _advise(args: argparse.Namespace) -> int:
             pot_type=args.pot_type,
             preflop=args.facing,
             villain_range=args.villain,
+            villain_top=args.villain_top,
             mode=args.mode,
         )
     except (SpotError, ValueError) as error:
@@ -491,6 +492,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="default postflop villain range: the preflop model's, or fixed top-%%",
     )
     advise.add_argument("--villain", help="custom villain range, e.g. 'TT+,AQs+'")
+    advise.add_argument(
+        "--villain-top", type=float, help="custom villain range: the top N%% of hands"
+    )
     advise.add_argument("--mode", choices=["hint", "equity"], default="hint")
     advise.add_argument("--log", default="data/live/advice.jsonl")
     advise.add_argument("--no-log", action="store_true")

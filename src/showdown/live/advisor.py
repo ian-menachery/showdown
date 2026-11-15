@@ -26,6 +26,7 @@ from showdown.equity.montecarlo import monte_carlo
 from showdown.equity.ranges import parse_range
 from showdown.games.preflop import OPEN_TO, THREEBET_TO
 from showdown.hh.grade import depth_for
+from showdown.live import jam
 from showdown.live.spot import DECISIONS, Spot, SpotError
 
 CALL_MARGIN = 0.05
@@ -160,11 +161,23 @@ class Advisor:
             self._model_ranges[key] = result
         return self._model_ranges[key]
 
-    def villain(self, spot: Spot) -> VillainRange:
+    def given_range(self, spot: Spot) -> VillainRange | None:
+        """Ian's range for the villain: `--villain` or `--villain-top`, or None."""
         if spot.villain_range:
             return VillainRange(
                 parse_range(spot.villain_range), None, f"custom: {spot.villain_range}"
             )
+        if spot.villain_top is not None:
+            combos = top_range(spot.villain_top, self.strategy.matrix)
+            share = len(combos) / len(ALL_COMBOS)
+            label = f"top {spot.villain_top:g}% (--villain-top), {share:.1%} of combos"
+            return VillainRange(combos, None, label)
+        return None
+
+    def villain(self, spot: Spot) -> VillainRange:
+        given = self.given_range(spot)
+        if given is not None:
+            return given
         top = DEFAULT_TOP[(spot.pot_type, spot.villain_seat)]
         fixed = f"default (assumed): top {top}% for the {spot.villain_seat.upper()}"
         if self.ranges == "fixed":
@@ -191,18 +204,74 @@ class Advisor:
     # --- preflop -------------------------------------------------------------------
 
     def _preflop(self, spot: Spot) -> Suggestion:
+        if spot.has_villain_range and spot.preflop not in jam.JAM_DECISIONS:
+            raise SpotError(
+                "a preflop villain range is used only against a jam: "
+                + ", ".join(jam.JAM_DECISIONS)
+            )
         if spot.preflop == "other":
             return _none("not one of the model's decisions")
         seat, node = DECISIONS[spot.preflop]
         if seat != spot.seat:
             raise SpotError(f"{spot.preflop} is a decision for the {seat.upper()}")
+        reference = self._reference(spot, node)
+        given = self.given_range(spot)
+        if given is not None:  # Ian's read: the exploit view (DECISIONS 36)
+            return self._jam(spot, given, reference)
+        if reference.action is None and spot.preflop in jam.DEFAULT_TOP:
+            top = jam.DEFAULT_TOP[spot.preflop]
+            combos = top_range(top, self.strategy.matrix)
+            label = (
+                f"default (assumed): top {top:g}% for a {jam.JAM_KIND[spot.preflop]}, "
+                f"{len(combos) / len(ALL_COMBOS):.1%} of combos"
+            )
+            return self._jam(spot, VillainRange(combos, None, label), None)
+        return reference
+
+    def _reference(self, spot: Spot, node: str) -> Suggestion:
+        """Push/fold Nash or the model chart, or "no suggestion" (DECISIONS 32, 35)."""
         if spot.effective_bb <= PUSHFOLD_MAX_BB:
             if spot.preflop in ("sb_first", "bb_vs_jam"):
                 return self._pushfold(spot)
+            if spot.preflop == "sb_vs_jam":
+                return _none(
+                    "at 20 bb or less push/fold has no jam over a raise; "
+                    "give --villain or --villain-top"
+                )
             return _none("at 20 bb or less only push/fold answers, for sb_first and bb_vs_jam")
         if self.model is None:
             return _none("no preflop model loaded above 20 bb")
         return self._model_chart(spot, node)
+
+    def _jam(self, spot: Spot, villain: VillainRange, reference: Suggestion | None) -> Suggestion:
+        """Call or fold against an all-in, as the best response to `villain` (DECISIONS 36)."""
+        if spot.to_call_bb <= 0:
+            raise SpotError(f"{spot.preflop} needs the amount to call for the jam helper")
+        try:
+            weights = jam.class_weights(villain.combos)
+            equity = jam.jam_equity(spot.hero, weights, self.strategy.matrix)
+        except jam.RangeError as error:
+            raise SpotError(str(error)) from None
+        result = jam.answer(equity, spot.pot_bb, spot.to_call_bb)
+        notes = ["close"] if result.close else []
+        if reference is not None and reference.action is not None:
+            said = f"{_reference_label(reference)} says {reference.action}"
+            if reference.action == result.action:
+                notes.append(f"{said}; it agrees")
+            else:
+                gain = result.ev_call if result.action == "call" else -result.ev_call
+                verb = "calling" if result.action == "call" else "folding"
+                notes.append(f"{said}; against this range {verb} gains {gain:+.2f} bb")
+        return Suggestion(
+            street="preflop",
+            action=result.action,
+            equity=result.equity,
+            threshold=result.price,
+            evs={"call": result.ev_call, "fold": 0.0},
+            notes=tuple(notes),
+            source="jam vs range: exact equity; EV relative to folding",
+            villain_range=villain.label,
+        )
 
     def _pushfold(self, spot: Spot) -> Suggestion:
         depth = depth_for(spot.effective_bb)
@@ -303,6 +372,11 @@ class Advisor:
         }
         with self.log_path.open("a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(line) + "\n")
+
+
+def _reference_label(reference: Suggestion) -> str:
+    """The source without its class: "push/fold Nash at 10 bb", "model chart, R 0.90, 100 bb"."""
+    return reference.source.rsplit(" (", 1)[0]
 
 
 def _none(why: str) -> Suggestion:

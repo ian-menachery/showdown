@@ -142,6 +142,7 @@ from showdown.live.advisor import Advisor
 from showdown.live.spot import Spot
 fixture = tomllib.loads(open(sys.argv[1], encoding="utf-8").read())
 model_fixture = tomllib.loads(open(sys.argv[2], encoding="utf-8").read())
+jam_fixture = tomllib.loads(open(sys.argv[3], encoding="utf-8").read())
 fixed, model = Advisor.load(ranges="fixed"), Advisor.load()
 spots = []
 for row in fixture["river"] + fixture["turn"] + fixture["flop"]:
@@ -157,6 +158,10 @@ for row in rows:
     jobs.append((model, Spot.parse(row["hero"], row.get("board", ""), seat=row["seat"],
         effective_bb=row["bb"], pot_bb=row.get("pot", 1.5), to_call_bb=row.get("to_call", 0.0),
         pot_type=row.get("pot_type", "srp"), preflop=row.get("decision", "sb_first"))))
+for row in jam_fixture["worked"] + jam_fixture["default"] + jam_fixture["none"]:
+    jobs.append((model, Spot.parse(row["hero"], seat=row["seat"], effective_bb=row["bb"],
+        pot_bb=row["pot"], to_call_bb=row["to_call"], preflop=row["decision"],
+        villain_range=row.get("villain"), villain_top=row.get("villain_top"))))
 times = []
 for advisor, spot in jobs:
     start = time.perf_counter()
@@ -167,8 +172,8 @@ print(json.dumps(times))
 
 
 def test_latency_without_coverage_tracing() -> None:
-    """The 300 ms bar over old and new spots, timed in a separate process without pytest-cov's
-    tracer (DECISIONS 32, 35).
+    """The 300 ms bar over Gate G's and Gate J's spots, timed in a separate process without
+    pytest-cov's tracer (DECISIONS 32, 35, 36).
 
     In-suite timings are inflated by coverage tracing. Other heavy work running on the
     machine inflates them too, so a gate run needs an otherwise idle machine.
@@ -182,6 +187,7 @@ def test_latency_without_coverage_tracing() -> None:
             _LATENCY_SCRIPT,
             str(live / "spots.toml"),
             str(live / "model_spots.toml"),
+            str(live / "jam_spots.toml"),
         ],
         capture_output=True,
         text=True,
@@ -191,7 +197,7 @@ def test_latency_without_coverage_tracing() -> None:
     times = json.loads(out)
     p95 = float(np.percentile(times, 95))
     print(f"\n{len(times)} suggestions, 95th percentile {p95:.0f} ms, max {max(times):.0f} ms")
-    assert len(times) >= 80
+    assert len(times) >= 100
     assert p95 <= LATENCY_P95_MS
 
 

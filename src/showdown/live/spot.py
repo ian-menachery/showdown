@@ -45,6 +45,8 @@ class Spot:
     """Preflop only: one of `DECISIONS`, or "other"."""
     villain_range: str | None = None
     """A custom range in showdown's syntax; overrides the default (DECISIONS 32)."""
+    villain_top: float | None = None
+    """A custom range as the top N% by equity against a random hand (DECISIONS 36)."""
     mode: str = "hint"
 
     def __post_init__(self) -> None:
@@ -61,6 +63,10 @@ class Spot:
             raise SpotError("preflop spot must be one of " + ", ".join(PREFLOP_SPOTS))
         if self.mode not in MODES:
             raise SpotError("mode must be hint or equity")
+        if self.villain_range and self.villain_top is not None:
+            raise SpotError("give a villain range or a villain top %, not both")
+        if self.villain_top is not None and not 0 < self.villain_top <= 100:
+            raise SpotError("villain top % must be above 0 and at most 100")
         if self.effective_bb < 1 or self.pot_bb <= 0 or self.to_call_bb < 0:
             raise SpotError("need a stack of at least 1 bb, a positive pot and to-call >= 0")
 
@@ -79,6 +85,10 @@ class Spot:
         return (self.pot_bb + self.to_call_bb) / 2
 
     @property
+    def has_villain_range(self) -> bool:
+        return bool(self.villain_range) or self.villain_top is not None
+
+    @property
     def villain_seat(self) -> str:
         return "bb" if self.seat == "sb" else "sb"
 
@@ -93,5 +103,6 @@ class Spot:
             "pot_type": self.pot_type,
             "preflop": self.preflop,
             "villain_range": self.villain_range,
+            "villain_top": self.villain_top,
             "mode": self.mode,
         }

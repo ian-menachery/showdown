@@ -1,0 +1,289 @@
+# Gate J fixture (DECISIONS 36): the jam-vs-range helper.
+#
+# Equities come from `showdown matrix show` (5 decimals), weighted by hand by
+# the villain combos the hero's cards leave. None of these hands block the
+# villain's classes, so each class counts its full combos. price = to_call /
+# (pot + to_call). The call is made if equity >= price. EV is relative to
+# folding: equity * (pot + to_call) - to_call. "close" means
+# |equity - price| < 0.02.
+
+# Fully hand-worked: equity, price, action, EV and notes.
+[[worked]]
+id = "h1_AKo_vs_QQ_50bb_fold"
+# AKo vs QQ 0.43242. Price 49 / 100 = 0.49, so fold. EV = 43.242 - 49 = -5.758.
+# The model never reaches a first-in jam at 50 bb, so there is no reference note.
+hero = "AhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain = "QQ"
+equity = 0.43242
+price = 0.49
+action = "fold"
+ev = -5.758
+notes = []
+
+[[worked]]
+id = "h2_AKo_vs_QQ_JJ_50bb_fold"
+# 6 + 6 combos at equal weight: (0.43242 + 0.43149) / 2 = 0.431955.
+# EV = 43.1955 - 49 = -5.8045.
+hero = "AhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain = "QQ,JJ"
+equity = 0.431955
+price = 0.49
+action = "fold"
+ev = -5.8045
+notes = []
+
+[[worked]]
+id = "h3_22_vs_AKo_50bb_call"
+# 22 vs AKo 0.52649 >= 0.49, so call. EV = 52.649 - 49 = 3.649. The gap is
+# 0.0365, so not close.
+hero = "2c2d"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain = "AKo"
+equity = 0.52649
+price = 0.49
+action = "call"
+ev = 3.649
+notes = []
+
+[[worked]]
+id = "h4_22_vs_AKs_50bb_close_call"
+# 22 vs AKs 0.50107 >= 0.49, so call. The gap is 0.01107 < 0.02, so close.
+# EV = 50.107 - 49 = 1.107.
+hero = "2c2d"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain = "AKs"
+equity = 0.50107
+price = 0.49
+action = "call"
+ev = 1.107
+notes = ["close"]
+
+[[worked]]
+id = "h5_QJs_vs_88_50bb_closest_call"
+# QJs vs 88 0.49053 >= 0.49 by 0.00053: a close call. EV = 49.053 - 49 = 0.053.
+hero = "QhJh"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain = "88"
+equity = 0.49053
+price = 0.49
+action = "call"
+ev = 0.053
+notes = ["close"]
+
+[[worked]]
+id = "h6_KQs_vs_AJo_25bb_close_fold_vs_model"
+# The SB opened and faces the BB's jam at 25 bb: pot 25 + 2.5 = 27.5, to call
+# 22.5, price 22.5 / 50 = 0.45. KQs vs AJo 0.43677 < 0.45, so fold. The gap is
+# 0.01323, so close. EV = 0.43677 * 50 - 22.5 = -0.6615. The model chart at
+# 25 bb, node rj, has KQs = C (call), so folding gains 0.66 bb against this range.
+hero = "KhQh"
+seat = "sb"
+bb = 25
+decision = "sb_vs_jam"
+pot = 27.5
+to_call = 22.5
+villain = "AJo"
+equity = 0.43677
+price = 0.45
+action = "fold"
+ev = -0.6615
+notes = ["close", "model chart, R 0.90, 25 bb says call; against this range folding gains +0.66 bb"]
+
+[[worked]]
+id = "h7_K8o_vs_TT_10bb_exploit_beats_nash"
+# Push/fold at 10 bb: pot 11, to call 9, price 9 / 20 = 0.45. K8o vs TT
+# 0.27503, so fold. EV = 0.27503 * 20 - 9 = -3.4994. Nash calls K8o at 10 bb.
+hero = "Kc8d"
+seat = "bb"
+bb = 10
+decision = "bb_vs_jam"
+pot = 11.0
+to_call = 9.0
+villain = "TT"
+equity = 0.27503
+price = 0.45
+action = "fold"
+ev = -3.4994
+notes = ["push/fold Nash at 10 bb says call; against this range folding gains +3.50 bb"]
+
+[[worked]]
+id = "h8_AA_vs_KK_10bb_agrees_with_nash"
+# AA vs KK 0.81946 >= 0.45, so call. EV = 0.81946 * 20 - 9 = 7.3892. Nash agrees.
+hero = "AhAd"
+seat = "bb"
+bb = 10
+decision = "bb_vs_jam"
+pot = 11.0
+to_call = 9.0
+villain = "KK"
+equity = 0.81946
+price = 0.45
+action = "call"
+ev = 7.3892
+notes = ["push/fold Nash at 10 bb says call; it agrees"]
+
+[[worked]]
+id = "h9_66_vs_AKo_4bet_jam_70bb_agrees_with_model"
+# The BB 3-bet to 7.5 and faces the SB's jam at 70 bb: pot 77.5, to call 62.5,
+# price 62.5 / 140 = 0.446428... 66 vs AKo 0.54989, so call.
+# EV = 0.54989 * 140 - 62.5 = 14.4846. The model chart at 70 bb, node rrj, has
+# 66 = C* (call), so it agrees.
+hero = "6h6d"
+seat = "bb"
+bb = 70
+decision = "bb_vs_4bet_jam"
+pot = 77.5
+to_call = 62.5
+villain = "AKo"
+equity = 0.54989
+price = 0.44642857142857145
+action = "call"
+ev = 14.4846
+notes = ["model chart, R 0.90, 70 bb says call; it agrees"]
+
+[[worked]]
+id = "h10_villain_top_half_percent_is_AA"
+# --villain-top 0.5 is AA alone (6 of 1326 combos, 0.5%). KK vs AA 0.18054
+# < 0.49, so fold. EV = 18.054 - 49 = -30.946.
+hero = "KhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain_top = 0.5
+equity = 0.18054
+price = 0.49
+action = "fold"
+ev = -30.946
+notes = []
+label = "top 0.5% (--villain-top), 0.5% of combos"
+
+# Default ranges: price, action and label worked by hand. EV is checked against
+# the formula with the reported equity. The first two rows were "no suggestion"
+# spots in model_spots.toml, and moved here by design (DECISIONS 36).
+[[default]]
+id = "d1_KK_first_in_jam_50bb"
+hero = "KhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+price = 0.49
+action = "call"
+label = "default (assumed): top 20% for a first-in jam"
+
+[[default]]
+id = "d2_AA_4bet_jam_60bb"
+# Pot 60 + 7.5, to call 60 - 7.5. Price 52.5 / 120 = 0.4375.
+hero = "AhAd"
+seat = "bb"
+bb = 60
+decision = "bb_vs_4bet_jam"
+pot = 67.5
+to_call = 52.5
+price = 0.4375
+action = "call"
+label = "default (assumed): top 8% for a 4-bet jam"
+
+[[default]]
+id = "d3_AKo_4bet_jam_15bb"
+# Push/fold has no 3-bet at 15 bb, so the default answers.
+# Pot 15 + 7.5, to call 7.5. Price 0.25.
+hero = "AhKd"
+seat = "bb"
+bb = 15
+decision = "bb_vs_4bet_jam"
+pot = 22.5
+to_call = 7.5
+price = 0.25
+action = "call"
+label = "default (assumed): top 8% for a 4-bet jam"
+
+# No suggestion: the SB faces a jam over its raise at 20 bb or less, with no range.
+[[none]]
+id = "n1_sb_vs_jam_12bb_no_range"
+hero = "AhKd"
+seat = "sb"
+bb = 12
+decision = "sb_vs_jam"
+pot = 14.5
+to_call = 9.5
+why = "give --villain or --villain-top"
+
+# Errors.
+[[error]]
+id = "e1_partial_class"
+hero = "AhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain = "AhAd,KK"
+match = "whole hand classes"
+
+[[error]]
+id = "e2_no_to_call"
+hero = "KhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+match = "needs the amount to call"
+
+[[error]]
+id = "e3_range_on_a_raise"
+hero = "AhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_raise"
+pot = 3.5
+to_call = 1.5
+villain = "QQ"
+match = "used only against a jam"
+
+[[error]]
+id = "e4_both_range_flags"
+hero = "AhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain = "QQ"
+villain_top = 10
+match = "not both"
+
+[[error]]
+id = "e5_top_out_of_range"
+hero = "AhKd"
+seat = "bb"
+bb = 50
+decision = "bb_vs_jam"
+pot = 51.0
+to_call = 49.0
+villain_top = 150
+match = "at most 100"

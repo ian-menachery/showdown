@@ -68,8 +68,9 @@ spots = [
 none = [
   { hero = "7c2d", seat = "sb", bb = 50, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, why = "almost never reaches" },  # rr at 50 bb: 0.004%
   { hero = "KhKd", seat = "sb", bb = 40, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, why = "almost never reaches" },  # rr at 40 bb: 0.001%
-  { hero = "AhAd", seat = "bb", bb = 60, decision = "bb_vs_4bet_jam", why = "almost never reaches" },  # rrj at 60 bb: 0.049%
-  { hero = "KhKd", seat = "bb", bb = 50, decision = "bb_vs_jam", why = "almost never reaches" },  # j at 50 bb: 0.001%
+  # Two more rows, KhKd facing a first-in jam at 50 bb and AhAd facing a 4-bet
+  # jam at 60 bb, moved to jam_spots.toml: the jam-vs-range helper's defaults
+  # answer them now (DECISIONS 36).
   { hero = "AhKd", seat = "bb", bb = 15, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, why = "20 bb or less" },
   { hero = "AhKd", seat = "sb", bb = 10, decision = "sb_vs_jam", why = "20 bb or less" },
   { hero = "AhKd", seat = "sb", bb = 60, decision = "other", why = "not one of the model's decisions" },

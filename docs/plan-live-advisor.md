@@ -254,8 +254,10 @@ logged hands, shrinking toward Nash, and the simulation gate.
   mix, the R flag and a raise-size note. The model is never used where it reaches
   a decision in less than 0.1% of deals. The postflop helper defaults to the
   model's weighted ranges, and `--ranges fixed` restores the fixed ranges.
-- **Phase 12, slice 1 is planned** (DECISIONS 36; SCOPE A8): the
-  jam-vs-range helper and Gate J. It is waiting for Ian's go-ahead to build.
+- **Phase 12, slice 1 is built** (DECISIONS 36; SCOPE A8; Gate J PASS): the
+  jam-vs-range helper. `--villain` or `--villain-top N` gives the best
+  response to Ian's read against any jam, beside the Nash or model answer.
+  Labelled defaults fill the jams the model skips.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D2, which waits until option 1 starts;
