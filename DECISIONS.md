@@ -1100,3 +1100,49 @@ recorded).**
   coverage tracing stripped (`test_latency_without_coverage_tracing`), on an
   otherwise idle machine. **The 300 ms bar does not change.** A gate run with
   other heavy work on the machine does not count; it is repeated.
+
+---
+
+### 33. D3: the preflop source above 20 bb is our own model at R_oop = 0.9, after an R sweep (2026-11-15)
+
+**Decided:** Ian chose this on 2026-11-15, from spike S3 (`docs/preflop-source.md`).
+SCOPE amendment A7 brings the model into scope.
+- **The model.** S3's heads-up preflop game:
+  - SB: fold, raise to 2.5, or jam;
+  - BB facing the raise: fold, call, 3-bet 3×, or jam;
+  - SB facing the 3-bet: fold, call, or jam;
+  - calls or folds against every jam.
+  
+  It is solved by our CFR+. A pot that reaches the flop is valued as
+  c(2·share − 1), with share = 1 − R_oop·(1 − E); the flop is not played.
+- **R_oop = 0.9 is the default.** R_oop is the share of its equity the
+  out-of-position player realizes after the flop.
+- **The sweep comes first.** R_oop runs over 0.80, 0.85, 0.90, 0.95 and 1.00
+  at 25, 50 and 100 bb, to show how much the advice depends on R before it is
+  fixed. The sweep is a measurement. It runs only after Gate G's latency
+  check, so that check gets an idle machine.
+- **Labelling.** The charts appear as "model chart" on screen and in the hand
+  log, next to push/fold's "Nash" label.
+- **Below 20 bb nothing changes.** Push/fold still answers at 20 bb or less
+  (Gate D). The overlay names which source answered, because the advice
+  changes at 20 bb (S3 measured the jump).
+
+**Still to be fixed before the product solve:** Gate P, pre-registered after
+the sweep. It covers:
+- the stack grid and the rule for stacks in between;
+- the iteration count and an exploitability bar;
+- continuity (the jam-only 20 bb game reproduces `data/pushfold.json`, which
+  S3 has already shown);
+- the sanity bound at 20 bb;
+- an independent payoff check.
+
+S3 suggested all of these; Ian sets the numbers.
+
+**Why:** No licensed heads-up chart exists for 25 to 100 bb (S3's survey). V1's
+equity helper, and the flop library after it, need preflop ranges above 20
+bb. R = 1 plays unlike heads-up poker: the BB never folds to a raise.
+
+**Rules out:**
+- Presenting model charts as Nash, or as checked against an outside answer.
+- Limps, min-raises and other sizes in v1 (SCOPE).
+- Fixing R before the sweep.
