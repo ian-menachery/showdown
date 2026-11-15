@@ -216,15 +216,17 @@ The spike script and its output are in `spikes/2026-11-14-deps.py`.
 ## Open questions
 
 Questions 1 to 3 were settled on 2026-11-14 (amendments A1 to A3). Question 4
-was settled on 2026-11-14 by DECISIONS 20.
+was settled on 2026-11-14 by DECISIONS 20 and 22. Question 5 was answered on
+2026-11-14 for now. Question 6 is still open.
 
 4. **Push/fold reference chart** for Gate D: which published source? *Settled:*
    HoldemResources.net's no-ante heads-up raw data (DECISIONS 20; research in
-   `docs/gate-d-reference.md`). Still open: the depths checked and the scoring
-   rule. They are proposed in that note and are fixed in DECISIONS before the
-   solver first runs.
+   `docs/gate-d-reference.md`). The depths and the scoring rule were fixed in
+   DECISIONS 22 before the solver ran; Gate D passed.
 5. **Going public.** Make the repo public at the end, and under which license?
-   Settle at Phase 7.
+   *Answered 2026-11-14:* stay private for now. Ian decides the visibility and
+   adds a license himself. The README is written as if public, and no
+   third-party data is committed (DECISIONS 20, 25).
 6. **ClubWPT Gold.** Does the client let you download your own hand histories,
    and in what format? Is post-session analysis of them allowed? Their
    prohibited-tools page does not address it. Only support can answer the

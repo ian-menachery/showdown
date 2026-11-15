@@ -351,3 +351,15 @@ showdown analyze tests/fixtures/hh
 showdown analyze data/external/phh/repo/data/pluribus     # about 100 s
 py gate.py --full
 ```
+
+---
+
+## Done 1 to 5 (SCOPE), checked 2026-11-14
+
+| # | Definition | Evidence | Result |
+|---|---|---|---|
+| 1 | `py gate.py` exits zero: ruff, format, pytest with ≥ 80% coverage, a clean tree, HEAD pushed | It passes at every phase commit; coverage is 97%. `py gate.py --full` also passes; see the run recorded below | PASS |
+| 2 | Gates A to F all PASS | the sections above | PASS |
+| 3 | `showdown play` opens a local page, and a full push/fold trainer session and a full Leduc session can each be played in the browser | Played by hand in the browser pane: fixed and random depth, both seats, graded decisions, the board and result after a call, the summary, and Leduc in both seats (Gate E) | PASS |
+| 4 | `showdown analyze <file>` prints the stats table for the phh-dataset Pluribus hands | 10,000 hands parsed; a table of 14 players with all-in EV and grading summaries; about 100 s (Gate F) | PASS |
+| 5 | The README states what is borrowed and under which license, what is built, every gate result and the known limits | the README after the Phase 7 truth pass | PASS |
