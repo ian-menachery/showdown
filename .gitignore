@@ -23,3 +23,6 @@ venv/
 
 # Local Claude Code launch config for the play-page preview; machine-specific.
 /.claude/
+
+# The live advisor's hand log is personal play data and is never committed (DECISIONS 32).
+/data/live/

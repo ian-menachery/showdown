@@ -1025,3 +1025,61 @@ laptop.
 - Shrinking S2's tree or loosening its bar after the fact (DECISIONS 30).
 - Calling the helper's hints "GTO". They are labelled as equity heuristics on
   screen and in the log.
+
+---
+
+### 32. V1 helper rules and Gate G, pre-registered before any helper code (2026-11-15)
+
+**Decided:** Ian approved these on 2026-11-15, and they implement DECISIONS 31.
+
+**Preflop: push/fold Nash at 20 bb effective or less.**
+- It covers two decisions: the SB's first decision, and the BB facing an SB
+  jam.
+- The hand is graded at `depth_for(effective)`, the nearest solved depth
+  (DECISIONS 27), with `PushFoldStrategy.grade`. The suggestion is the
+  higher-EV action, shown with both EVs.
+- Every other preflop decision gets "no suggestion" until Ian decides D3.
+
+**Postflop: an equity helper, labelled "heuristic, not GTO".**
+- **Equity** is the hero's against the villain's range, with combos that share
+  a card with the hero or the board removed:
+  - river and turn: exact (`exact.range_vs_range`);
+  - flop: seeded Monte Carlo (`montecarlo.monte_carlo`), 20,000 samples, with
+    its standard error. A pre-check measured 148 ms, while exact took 370 ms.
+- **Facing a bet:** call if equity ≥ to call / (pot + to call) + 0.05,
+  otherwise fold. Here "pot" includes the villain's bet. V1 never suggests a
+  raise.
+- **Free to check or bet,** in one of two modes. Ian ticked both, so it is a
+  switch:
+  - **hint**, the default: bet if equity ≥ 0.60, otherwise check. The bet size
+    is 33% of the pot on the flop, 66% on the turn and 75% on the river, the
+    same as S2's tree.
+  - **equity:** no hint, just the numbers.
+
+**The villain's range.**
+- A **custom range for each decision**, in showdown's range syntax
+  (`ranges.parse_range`), takes priority. Ian asked for custom ranges.
+- Otherwise the **default**, shown on screen as an assumption, comes from the
+  pot type and the villain's seat. These are the spike ranges from DECISIONS
+  30:
+  - single-raised pot: an SB villain holds the top 75%, a BB villain the top
+    55%;
+  - 3-bet pot: a BB villain (the 3-bettor) holds the top 15%, an SB villain
+    (the caller) the top 30%.
+- Node locking, meaning fixing the villain's strategy at a decision, needs a
+  solver. It moves to option 1, and TexasSolver's support for it is checked
+  then.
+
+**The hand log** is one JSON line per suggestion in the gitignored
+`data/live/advice.jsonl`: the spot, the suggestion, the numbers and the time
+taken. The reader adds the action Ian actually took in Phase 10.
+
+**Gate G**, with bars as Ian approved them:
+- At least 40 fixture spots (`tests/fixtures/live/spots.toml`) get the
+  expected suggestion.
+- Preflop suggestions at 20 bb or less equal the push/fold solution's pure
+  actions.
+- River and turn equity equal the hand-counted outs exactly.
+- Flop Monte Carlo lands within 3 SE of exact enumeration on 10 spots.
+- The 95th-percentile time per suggestion over the fixture is at most 300 ms.
+- Every suggestion appears in the log.
