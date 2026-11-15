@@ -204,8 +204,11 @@ Decisions for Ian when this phase starts:
 - **Ian's fallback** (DECISIONS 31): V1 is preflop suggestions plus a
   postflop equity and pot-odds helper. A precomputed flop library, with live
   turn and river solves behind a new gate S2b, comes next.
+- **Gate G passed** (GATES.md): the V1 advisor, `showdown advise`.
+- **D3 is decided** (DECISIONS 33, 34; SCOPE A7): our own preflop model above
+  20 bb, solved at R_oop 0.90, with a "depends on R" flag from R 0.85 and 0.95.
+  **Gate P passed** (GATES.md). The model is not yet wired into the advisor.
 - **Still open:**
-  - D3, the preflop source above 20 bb, which waits for spike S3;
   - S1, which waits for Ian's screenshots;
   - D2, which waits until option 1 starts;
   - D5, the self-hosted table.
@@ -216,7 +219,7 @@ Decisions for Ian when this phase starts:
 |---|---|---|
 | D1 | Read locally, or send screenshots to a cloud AI (Open Cluely) | Local: fast, free, and friends' names stay on this machine |
 | D2 | Bring postflop solving into scope through TexasSolver | Decide after S2's numbers |
-| D3 | Preflop source above 20 bb | Decide after S3 |
+| D3 | Preflop source above 20 bb | Decided: our own model at R 0.90 (DECISIONS 33, 34); Gate P PASS |
 | D4 | Approve downloading the TexasSolver release (AGPL-3.0, from GitHub; the file and size will be stated before download) | Needed for S2 |
 | D5 | A self-hosted table, and its amendment to DECISIONS 12 | Later. Screen reading comes first, as Ian chose |
 

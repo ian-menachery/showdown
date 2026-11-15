@@ -443,3 +443,49 @@ How it got here:
 showdown advise --hero AhKh --seat sb --stack 50 --board Qh7h2c3s --pot 20 --to-call 10 --villain QsQd
 .venv\Scripts\python -m pytest tests/test_gate_g.py -s
 ```
+
+## Gate P: the preflop model above 20 bb: PASS (2026-11-15)
+
+Evidence: `tests/test_gate_p.py` (fast suite, on the committed
+`data/preflop_model.json`) and `tests/test_gate_p_slow.py` (`py gate.py
+--full`). The solve, grid, lookup rule and bars were pre-registered in
+DECISIONS 34 before the product solve ran.
+
+The solve: `showdown preflop build --workers 12`, our CFR+ at 1,000
+iterations on the exact matrix. It covers 9 depths (25, 30, 40, 50, 60, 70, 80,
+90, 100 bb) at R_oop 0.85, 0.90 and 0.95, plus the two 20 bb check solves: 29
+solves in 4,557 s.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Exploitability at every depth, every R | worst 1.62e-4 bb/hand (80 bb, R 0.95); worst at the product R 0.90 is 1.05e-4 (100 bb) | ≤ 1e-3 | PASS |
+| 2. The jam-only 20 bb game equals `data/pushfold.json` at 20 bb | 169 of 169 jam and call frequencies bit-identical; exploitability identical (2.82e-6) | exact | PASS |
+| 3. The full game at 20 bb, R 0.90, is worth at least push/fold to the SB | −0.0781 bb/hand against a bound of −0.1832 | ≥ push/fold value − both exploitabilities | PASS |
+| 4. Every terminal equals a closed form written from DECISIONS 34 alone | 314,171 terminals (169 × 169 × 11) at each of 25 and 100 bb × 3 values of R | to 1e-12 | PASS |
+| Stored exploitability equals a fresh best response on the stored strategy | 25 and 100 bb at R 0.90 | to 1e-12 | PASS |
+
+SB value at R 0.90 rises from −0.059 bb/hand at 25 bb to +0.123 at 100 bb.
+Across R it moves far more than solver error: at 100 bb it is +0.229 at R
+0.85 and +0.002 at R 0.95.
+
+The "depends on R" flag (DECISIONS 34) marks a (class, node) pair when its most
+likely action differs between the R 0.85 and 0.95 solves:
+- 102 to 139 of 1,014 pairs per depth;
+- 11 to 31 of the 169 SB first-in classes, rising with depth.
+
+What the gate does not show:
+- Gate P shows the model is solved correctly. It does not show the model is
+  realistic. Its postflop line is an assumption (R), so its charts are labelled
+  "model chart" (DECISIONS 33).
+- S3's limits still hold (`docs/preflop-source.md`):
+  - with one 3-bet size, the BB never 3-bets to 7.5 at 25 and 50 bb at R 0.90;
+    it calls or jams instead. At 50 bb it jams over the open with 31% of
+    classes;
+  - money behind never goes in after a called raise or 3-bet.
+
+```
+showdown preflop build --workers 12
+showdown preflop chart 50
+.venv\Scripts\python -m pytest tests/test_gate_p.py
+.venv\Scripts\python -m pytest tests/test_gate_p_slow.py -m slow
+```

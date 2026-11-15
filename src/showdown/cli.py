@@ -339,6 +339,51 @@ def _advise(args: argparse.Namespace) -> int:
     return 0
 
 
+def _preflop_build(args: argparse.Namespace) -> int:
+    from showdown import preflop_model
+
+    start = time.perf_counter()
+    model = preflop_model.build(iterations=args.iterations, workers=args.workers)
+    model.save(args.out)
+    print(f"cfr+, {args.iterations} iterations; grid {list(preflop_model.GRID)}")
+    print(f"{'stack':>6} {'R':>5} {'exploitability':>15} {'SB value':>9}")
+    for s in model.checks + model.solutions:
+        kind = "" if s.raises else "  (jam-only)"
+        print(f"{s.stack:>6g} {s.r_oop:>5.2f} {s.exploitability:>15.2e} {s.value_sb:>+9.4f}{kind}")
+    print(f"wrote {args.out} in {time.perf_counter() - start:.0f} s")
+    return 0
+
+
+def _preflop_chart(args: argparse.Namespace) -> int:
+    from showdown import preflop_model
+    from showdown.equity.cards import RANKS
+
+    model = preflop_model.PreflopModel.load(args.file)
+    depth = model.depth_for(args.stack)
+    if depth is None:
+        raise SystemExit("20 bb or less uses push/fold: showdown pushfold chart")
+    s = model.at(depth, args.r)
+    if args.node not in s.actions:
+        raise SystemExit(f"node must be one of {sorted(s.actions)}")
+    letters = {"fold": "F", "call": "C", "raise": "R", "all-in": "J"}
+    print(f"model chart, R {args.r:.2f}, {depth:g} bb, node {args.node!r}: most likely action")
+    print("(lower case = mixed below 90%; * = depends on R)")
+    labels = RANKS[::-1]
+    print("     " + "".join(f"{r:>4}" for r in labels))
+    for row in range(13):
+        cells = []
+        for col in range(13):
+            cls = 13 * row + col
+            probs = s.probs(args.node, cls)
+            best = max(probs, key=probs.get)
+            mark = letters[best] if probs[best] >= 0.9 else letters[best].lower()
+            if model.depends_on_r(depth, args.node, cls):
+                mark += "*"
+            cells.append(f"{mark:>4}")
+        print(f"  {labels[row]}  " + "".join(cells))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="showdown", description="Heads-up poker lab.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -434,6 +479,20 @@ def build_parser() -> argparse.ArgumentParser:
     advise.add_argument("--log", default="data/live/advice.jsonl")
     advise.add_argument("--no-log", action="store_true")
     advise.set_defaults(handler=_advise)
+
+    pre = commands.add_parser("preflop", help="the preflop model above 20 bb (DECISIONS 33, 34)")
+    pre_commands = pre.add_subparsers(dest="preflop_command", required=True)
+    pre_build = pre_commands.add_parser("build", help="solve the grid at R 0.85/0.90/0.95 (hours)")
+    pre_build.add_argument("--iterations", type=int, default=1000)
+    pre_build.add_argument("--workers", type=int, help="processes (about 200 MB each)")
+    pre_build.add_argument("--out", default="data/preflop_model.json")
+    pre_build.set_defaults(handler=_preflop_build)
+    pre_chart = pre_commands.add_parser("chart", help="13x13 most-likely-action chart")
+    pre_chart.add_argument("stack", type=float, help="effective stack in bb")
+    pre_chart.add_argument("--node", default="", help="'' first in, r, rr, rrj, rj, j")
+    pre_chart.add_argument("--r", type=float, default=0.9)
+    pre_chart.add_argument("--file", default="data/preflop_model.json")
+    pre_chart.set_defaults(handler=_preflop_chart)
     return parser
 
 
