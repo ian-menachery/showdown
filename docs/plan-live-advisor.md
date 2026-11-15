@@ -137,6 +137,55 @@ to F (DECISIONS 11).
 - **Gate I:** at least 99% of a real session's hands parse and reconcile with
   the log's own stack counts.
 
+### Phase 12 (proposed 2026-11-15): exploit opponents' deviations
+
+Ian made this a headline feature on 2026-11-15: "exploit opponents' deviating
+play by playing exploitative myself, and this should help me figure out how".
+It promotes two items his scope had parked: player-type identification, and
+an exploitative action shown beside the GTO one.
+
+What already exists to build on:
+- **Exact best response.** `pushfold.sb_action_values` and
+  `bb_action_values` give the EV of every hand against any opponent strategy.
+  `cfr.best_response` does the same on any game tree.
+- **Per-player stats from hand logs.** VPIP, PFR, 3-bet, WTSD and W$SD
+  (DECISIONS 25). The V1 hand log, and Poker Now's own game logs (Phase 11),
+  supply the hands.
+- **Custom villain ranges for each decision.** V1 already has them
+  (DECISIONS 32), as the manual lever.
+
+The design, for Ian's review:
+1. **An opponent model.** For each opponent, estimate their tendencies from
+   logged hands:
+   - in push/fold spots: how often they jam, and how often they call a jam, by
+     stack depth;
+   - postflop: how often they fold to a bet, and how often they bet when
+     checked to.
+   Each estimate is **shrunk toward Nash**: a beta prior worth k
+   pseudo-hands, so a handful of hands can't swing it. The stats carry their
+   sample size.
+2. **The deviation as a range.** An opponent who calls jams at f%, against
+   Nash's g%, is modelled as calling the top f% in Nash's own calling order.
+   Hand strength stays ordered; only the cutoff moves.
+3. **The exploit suggestion.** Compute the best response to that modelled
+   range. Show it beside the Nash action, with the EV gained, and with the
+   risk if the read is wrong: the EV lost against a Nash opponent.
+4. **Postflop.** Narrow the villain's range by their tendencies; for example,
+   a player who rarely folds to bets gets a wider range when calling. Show the
+   bluff and value thresholds that follow from their fold rate. Locking their
+   tendencies into a solver ("node locking") arrives with option 1.
+5. **A validation gate (to pre-register).** In pokerkit simulations against
+   bots with known deviations (calling too wide, jamming too tight), the
+   exploit strategy must:
+   - win at least its predicted EV gain, within 3 SE;
+   - stay within a pre-set loss bound against a Nash bot.
+
+Decisions for Ian when this phase starts:
+- its priority against S1 and the reader;
+- the shrinkage strength k;
+- which postflop tendencies to track first;
+- how the overlay shows two actions.
+
 ### Later, each needing its own amendment first
 - **A self-hosted table for friends (Ian ticked this).** It means serving
   beyond 127.0.0.1, which DECISIONS 12 forbids. It would replace screen

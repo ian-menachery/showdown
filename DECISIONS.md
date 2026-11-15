@@ -1083,3 +1083,20 @@ taken. The reader adds the action Ian actually took in Phase 10.
 - Flop Monte Carlo lands within 3 SE of exact enumeration on 10 spots.
 - The 95th-percentile time per suggestion over the fixture is at most 300 ms.
 - Every suggestion appears in the log.
+
+**How Gate G's latency is measured (added 2026-11-15, before the gate was
+recorded).**
+- **What happened.** Inside the full pytest run, the latency test measured a
+  95th percentile of 937 ms, against 128 ms when the module ran on its own.
+- **Reproduced.** The same code measured:
+  - 879 ms with coverage tracing on;
+  - 519 ms without it, while a parallel session's CFR spike held the CPU at
+    93%;
+  - 1,264 ms in a clean subprocess under that same load.
+
+  Two artifacts, then: pytest-cov's tracer, and other heavy work on the
+  machine. Neither is the advisor's speed in use.
+- **Decided.** The latency is timed in a separate Python process with
+  coverage tracing stripped (`test_latency_without_coverage_tracing`), on an
+  otherwise idle machine. **The 300 ms bar does not change.** A gate run with
+  other heavy work on the machine does not count; it is repeated.

@@ -26,3 +26,6 @@ venv/
 
 # The live advisor's hand log is personal play data and is never committed (DECISIONS 32).
 /data/live/
+
+# TexasSolver writes its iteration log to its working directory (spike S2).
+/tmp_log.txt
