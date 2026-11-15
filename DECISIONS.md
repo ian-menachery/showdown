@@ -888,3 +888,77 @@ protection everywhere else.
 **Not decided here:** whether captured screens may go to a cloud AI (Open
 Cluely's design). The plan recommends against it, for speed and for friends'
 privacy, and leaves the choice to Ian.
+
+---
+
+### 30. Phase 8 decisions, and Gate S2 pre-registered (2026-11-15)
+
+**Decided:** Ian decided these on 2026-11-15.
+- **D1: a local reader.** The live reader captures the Poker Now window and
+  reads it on this machine. It does not send screenshots to Open Cluely's
+  cloud AI. Friends' names never leave the laptop.
+- **D4: TexasSolver download approved.** The file is
+  `TexasSolver-v0.2.0-Windows.zip` from
+  github.com/bupticybee/TexasSolver/releases: 41,415,352 bytes, AGPL-3.0,
+  published 2021-11-04. It goes in the gitignored
+  `data/external/texassolver/`, is pinned by SHA-256 (recorded below once
+  downloaded), and runs only as a separate program. It is never linked or
+  committed.
+- **Capture and OCR packages approved.** `mss`, `Pillow` and Windows' OCR
+  bindings go in an optional `live` extra in `pyproject.toml`. They are
+  pinned, but installed only when spike S1 starts, and their exact versions
+  are recorded then.
+- **D6: where practice hands come from.**
+  - Poker Now self-play: both seats, in two browser windows.
+  - The public phh-dataset: HandHQ hands, and the heads-up bot-competition
+    hands on Zenodo. Each download's size is stated before fetching.
+  - PokerStars play-money hand-history files, for review after a session
+    only. The advisor never runs on PokerStars, whose terms ban assistance
+    (DECISIONS 29).
+- **Phase 8 order.** S2 (TexasSolver speed) and S3 (preflop source above
+  20 bb) run first. S1 (screen reading) waits for at least 50 of Ian's
+  screenshots.
+
+**Gate S2: fixed before the first solve.**
+
+- **The grid:** 5 spots on 20 flops, 100 solves. Chips are in half big
+  blinds; effective stacks count from before the blinds.
+
+  | Spot | Preflop | Pot | Effective stack | Ranges (IP = SB, OOP = BB) |
+  |---|---|---|---|---|
+  | SRP25 | SB opens 2 bb, BB calls | 8 | 46 | IP: top 75% of combos; OOP: top 55% |
+  | SRP50 | SB opens 2.5 bb, BB calls | 10 | 95 | the same |
+  | SRP100 | SB opens 2.5 bb, BB calls | 10 | 195 | the same |
+  | 3BP50 | BB 3-bets to 7 bb, SB calls | 28 | 86 | OOP: top 15%; IP: top 30% |
+  | 3BP100 | BB 3-bets to 9 bb, SB calls | 36 | 182 | the same |
+
+- **The ranges are for timing only, not a strategy.** "Top X%" ranks the 169
+  classes by equity against a random hand. That equity comes from
+  `data/preflop_169_exact.npz`, weighted by `pair_counts`. Whole classes are
+  taken in that order until X% of 1,326 combos is reached, and the last class
+  is partly weighted.
+- **The 20 flops,** drawn with `random.Random(20261115)` from the 1,755
+  suit-distinct flops (sorted descending):
+  Kc7d6c, AcKd4h, JdJc6h, 9c6d3d, 8c4d4c, 9c4d3h, Tc2h2d, 6c4c2d, Tc8d7d,
+  Ac6d2h, QcJhJd, Ac4d2h, 9c7c2c, 9c6d4c, 7d7c3h, 7c5c2c, Qc6c2c, Tc7c5d,
+  KdKc6c, 8c7d2d.
+- **Tree T1,** one size per street, for both players:
+  - flop bet 33% of the pot, turn 66%, river 75%;
+  - raises 60%, plus all-in on every street;
+  - donk bets only on the river, at 75%;
+  - `set_allin_threshold 0.67`.
+- **Settings:** `set_thread_num 16`, `set_accuracy 2` (percent of the pot),
+  `set_max_iteration 300`, `set_use_isomorphism 1`.
+- **Pass needs all three:**
+  - median wall time per solve at most 10 s, including the tree build;
+  - 95th percentile at most 20 s;
+  - every solve ends with TexasSolver's reported exploitability at most 2% of
+    the pot.
+- **If it fails:** the result is recorded as it is. The tree, the ranges and
+  the bar are never retuned afterwards. Ian chooses between a precomputed flop
+  library and a preflop-only V1.
+
+**Why:** These spots cover the stacks Ian's friendly games will see. One size
+per street is the "speed beats precision" tree from his scope. Fixing the
+flops and ranges in advance means the gate measures the solver, not choices
+made after seeing results.
