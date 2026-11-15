@@ -1146,3 +1146,60 @@ bb. R = 1 plays unlike heads-up poker: the BB never folds to a raise.
 - Presenting model charts as Nash, or as checked against an outside answer.
 - Limps, min-raises and other sizes in v1 (SCOPE).
 - Fixing R before the sweep.
+
+---
+
+### 34. The preflop model: R = 0.90 with an R-sensitivity flag, and Gate P pre-registered (2026-11-15)
+
+**Decided:** Ian set these on 2026-11-15, after the R sweep (`docs/preflop-source.md`,
+"The R sweep").
+
+**The game, unchanged from spike S3.**
+- SB first in: fold, raise to 2.5, or jam.
+- BB facing the raise: fold, call, 3-bet to 7.5, or jam.
+- SB facing the 3-bet: fold, call, or jam.
+- Calls or folds against every jam.
+- A called raise or 3-bet is valued at c(2·share − 1) for the SB, with
+  share = 1 − R_oop·(1 − E). A called all-in nets S(2E − 1).
+- E comes from the exact matrix.
+
+**R.**
+- **The product solution uses R_oop = 0.90.**
+- The same grid is also solved at R_oop = 0.85 and 0.95. A suggestion is
+  flagged **"depends on R"** when the class's most likely action at that node
+  differs between the 0.85 and 0.95 solutions.
+
+**The grid and lookup.**
+- The grid is 25, 30, 40, 50, 60, 70, 80, 90 and 100 bb. Ian approved
+  25/30/40/50/60/80/100; 70 and 90 are added so that "nearest" never jumps
+  20 bb.
+- **Lookup rule:** an effective stack of 20 bb or less uses push/fold
+  (DECISIONS 32). Above 20 bb, it uses the nearest grid depth, with ties going
+  to the smaller stack; above 100 bb, it uses 100 bb. The depth used is printed
+  with every suggestion.
+
+**The solve.** `cfr_plus`, exactly 1,000 iterations, average policy, payoffs
+from `data/preflop_169_exact.npz`. No early stopping and no re-running until
+the answer matches. 27 solves in all (9 depths × 3 R values), stored in the
+committed `data/preflop_model.json`.
+
+**Gate P: all four bars must pass.**
+1. **Exploitability:** at most 0.001 bb/hand at every depth, for all three R
+   values, measured by `showdown.cfr.exploitability` on the compiled tree.
+2. **Continuity:** the jam-only game at 20 bb (no raise) reproduces
+   `data/pushfold.json` exactly, every probability equal, after 1,000
+   iterations.
+3. **Sanity:** at 20 bb with R 0.90, the full game's SB value is at least
+   push/fold's 20 bb value, minus both games' exploitabilities.
+4. **Payoffs:** a separate closed-form function, written from the rules above
+   and not from the game's code, gives every terminal payoff for every class
+   pair. It must match every terminal utility in the compiled tree to 1e-12,
+   at 25 and 100 bb, for all three R values.
+
+**Fixed now:** the 9 × 3 grid, 1,000 iterations, and the four bars.
+**Rules out:** changing any of them after results are seen, except by a dated
+amendment.
+
+Wiring the model into the advisor (preflop suggestions above 20 bb, and the
+helper's villain ranges) is a separate step. It needs its own entry and an
+extension of Gate G, after Ian's OK.
