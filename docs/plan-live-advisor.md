@@ -207,7 +207,12 @@ Decisions for Ian when this phase starts:
 - **Gate G passed** (GATES.md): the V1 advisor, `showdown advise`.
 - **D3 is decided** (DECISIONS 33, 34; SCOPE A7): our own preflop model above
   20 bb, solved at R_oop 0.90, with a "depends on R" flag from R 0.85 and 0.95.
-  **Gate P passed** (GATES.md). The model is not yet wired into the advisor.
+  **Gate P passed** (GATES.md).
+- **The model is in the advisor** (DECISIONS 35; Gate G extended, PASS). Above
+  20 bb, `showdown advise` answers the model's six preflop decisions with the
+  mix, the R flag and a raise-size note. The model is never used where it reaches
+  a decision in less than 0.1% of deals. The postflop helper defaults to the
+  model's weighted ranges, and `--ranges fixed` restores the fixed ranges.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D2, which waits until option 1 starts;

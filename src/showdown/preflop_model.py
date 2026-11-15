@@ -30,6 +30,7 @@ ITERATIONS = 1000
 PUSHFOLD_MAX_BB = 20
 DEFAULT_MATRIX = "data/preflop_169_exact.npz"
 DEFAULT_MODEL = "data/preflop_model.json"
+LINE_ACTIONS = {"f": "fold", "c": "call", "r": "raise", "j": "all-in"}
 
 
 @dataclass
@@ -46,6 +47,26 @@ class DepthSolution:
     def probs(self, node: str, cls: int) -> dict[str, float]:
         row = self.strategy[node][CLASS_NAMES[cls]]
         return dict(zip(self.actions[node], row, strict=True))
+
+    def line_factors(self, line: str) -> tuple[np.ndarray, np.ndarray]:
+        """(SB, BB): per class, the product of that player's own action frequencies along `line`.
+
+        `line` is a history code such as "rc" (an open, called). The BB's factor
+        for "rc" is its range in a single-raised pot (DECISIONS 35).
+        """
+        factors = [np.ones(len(CLASS_NAMES)), np.ones(len(CLASS_NAMES))]
+        for k, code in enumerate(line):
+            node = line[:k]
+            index = self.actions[node].index(LINE_ACTIONS[code])
+            column = np.array([self.strategy[node][name][index] for name in CLASS_NAMES])
+            factors[k % 2] = factors[k % 2] * column
+        return factors[0], factors[1]
+
+    def reach(self, line: str, pair_counts: np.ndarray) -> float:
+        """The share of deals, weighted by class-pair combo counts, that follow `line`."""
+        sb, bb = self.line_factors(line)
+        w = pair_counts.astype(float)
+        return float(sb @ w @ bb / w.sum())
 
 
 def read_strategy(tree: Tree, policy) -> tuple[dict, dict]:

@@ -1,4 +1,4 @@
-"""One heads-up decision as the advisor sees it (DECISIONS 32).
+"""One heads-up decision as the advisor sees it (DECISIONS 32, 35).
 
 Amounts are in big blinds. `pot_bb` is everything already in the middle,
 including any bet the hero is facing. `to_call_bb` is 0 when the hero may check.
@@ -12,7 +12,16 @@ from showdown.equity.cards import Combo, cards_str, make_combo, parse_cards
 
 SEATS = ("sb", "bb")
 POT_TYPES = ("srp", "3bp")
-PREFLOP_SPOTS = ("sb_first", "bb_vs_jam", "other")
+DECISIONS: dict[str, tuple[str, str]] = {
+    "sb_first": ("sb", ""),
+    "bb_vs_raise": ("bb", "r"),
+    "sb_vs_3bet": ("sb", "rr"),
+    "bb_vs_4bet_jam": ("bb", "rrj"),
+    "sb_vs_jam": ("sb", "rj"),
+    "bb_vs_jam": ("bb", "j"),
+}
+"""Preflop decision -> (the seat that makes it, its node in the preflop model)."""
+PREFLOP_SPOTS = (*DECISIONS, "other")
 MODES = ("hint", "equity")
 
 
@@ -33,7 +42,7 @@ class Spot:
     pot_type: str = "srp"
     """Postflop default ranges: "srp" (single-raised) or "3bp" (3-bet pot)."""
     preflop: str = "sb_first"
-    """Preflop only: "sb_first", "bb_vs_jam" or "other"."""
+    """Preflop only: one of `DECISIONS`, or "other"."""
     villain_range: str | None = None
     """A custom range in showdown's syntax; overrides the default (DECISIONS 32)."""
     mode: str = "hint"
@@ -49,7 +58,7 @@ class Spot:
         if self.pot_type not in POT_TYPES:
             raise SpotError("pot type must be srp or 3bp")
         if self.preflop not in PREFLOP_SPOTS:
-            raise SpotError("preflop spot must be sb_first, bb_vs_jam or other")
+            raise SpotError("preflop spot must be one of " + ", ".join(PREFLOP_SPOTS))
         if self.mode not in MODES:
             raise SpotError("mode must be hint or equity")
         if self.effective_bb < 1 or self.pot_bb <= 0 or self.to_call_bb < 0:
@@ -63,6 +72,11 @@ class Spot:
     @property
     def street(self) -> str:
         return {0: "preflop", 3: "flop", 4: "turn", 5: "river"}[len(self.board)]
+
+    @property
+    def raise_to_bb(self) -> float:
+        """The villain's total bet: (pot + to call) / 2, since the pot holds both bets."""
+        return (self.pot_bb + self.to_call_bb) / 2
 
     @property
     def villain_seat(self) -> str:

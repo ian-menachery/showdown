@@ -1,4 +1,8 @@
-"""Gate G: the V1 advisor (DECISIONS 32), on a fixture of 43 spots.
+"""Gate G: the V1 advisor (DECISIONS 32), on a fixture of 42 spots.
+
+DECISIONS 35 runs these spots with the fixed top-% ranges, so their answers
+cannot move. A 43rd spot, AsKd first in at 40 bb, moved to model_spots.toml
+(test_gate_g_model.py), where the preflop model now answers it.
 
 River and turn equities are counted by hand in tests/fixtures/live/spots.toml.
 Preflop actions must equal the push/fold solution's pure actions. Flop Monte
@@ -35,7 +39,7 @@ TIMES: list[float] = []
 @pytest.fixture(scope="module")
 def advisor(tmp_path_factory):
     log = tmp_path_factory.mktemp("live") / "advice.jsonl"
-    return Advisor.load(log_path=log)
+    return Advisor.load(ranges="fixed", log_path=log)
 
 
 def _spot(row: dict) -> Spot:
@@ -137,7 +141,8 @@ import json, sys, time, tomllib
 from showdown.live.advisor import Advisor
 from showdown.live.spot import Spot
 fixture = tomllib.loads(open(sys.argv[1], encoding="utf-8").read())
-advisor = Advisor.load()
+model_fixture = tomllib.loads(open(sys.argv[2], encoding="utf-8").read())
+fixed, model = Advisor.load(ranges="fixed"), Advisor.load()
 spots = []
 for row in fixture["river"] + fixture["turn"] + fixture["flop"]:
     spots.append(Spot.parse(row["hero"], row["board"], seat=row["seat"], effective_bb=50,
@@ -145,8 +150,15 @@ for row in fixture["river"] + fixture["turn"] + fixture["flop"]:
         villain_range=row.get("villain"), mode=row.get("mode", "hint")))
 for hero, seat, bb, decision in fixture["preflop"]["spots"] + fixture["preflop"]["none"]:
     spots.append(Spot.parse(hero, seat=seat, effective_bb=bb, preflop=decision))
+jobs = [(fixed, spot) for spot in spots]
+rows = model_fixture["spots"] + model_fixture["none"]
+rows += model_fixture["range"] + model_fixture["range_flop"]
+for row in rows:
+    jobs.append((model, Spot.parse(row["hero"], row.get("board", ""), seat=row["seat"],
+        effective_bb=row["bb"], pot_bb=row.get("pot", 1.5), to_call_bb=row.get("to_call", 0.0),
+        pot_type=row.get("pot_type", "srp"), preflop=row.get("decision", "sb_first"))))
 times = []
-for spot in spots:
+for advisor, spot in jobs:
     start = time.perf_counter()
     advisor.suggest(spot)
     times.append((time.perf_counter() - start) * 1000)
@@ -155,15 +167,22 @@ print(json.dumps(times))
 
 
 def test_latency_without_coverage_tracing() -> None:
-    """The 300 ms bar, timed in a separate process without pytest-cov's tracer (DECISIONS 32).
+    """The 300 ms bar over old and new spots, timed in a separate process without pytest-cov's
+    tracer (DECISIONS 32, 35).
 
     In-suite timings are inflated by coverage tracing. Other heavy work running on the
     machine inflates them too, so a gate run needs an otherwise idle machine.
     """
-    path = Path(__file__).parent / "fixtures" / "live" / "spots.toml"
+    live = Path(__file__).parent / "fixtures" / "live"
     env = {k: v for k, v in os.environ.items() if not k.startswith("COV_CORE")}
     out = subprocess.run(
-        [sys.executable, "-c", _LATENCY_SCRIPT, str(path)],
+        [
+            sys.executable,
+            "-c",
+            _LATENCY_SCRIPT,
+            str(live / "spots.toml"),
+            str(live / "model_spots.toml"),
+        ],
         capture_output=True,
         text=True,
         check=True,
@@ -172,7 +191,7 @@ def test_latency_without_coverage_tracing() -> None:
     times = json.loads(out)
     p95 = float(np.percentile(times, 95))
     print(f"\n{len(times)} suggestions, 95th percentile {p95:.0f} ms, max {max(times):.0f} ms")
-    assert len(times) >= 40
+    assert len(times) >= 80
     assert p95 <= LATENCY_P95_MS
 
 

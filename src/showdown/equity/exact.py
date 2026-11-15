@@ -2,7 +2,8 @@
 
 Equity = P(win) + P(tie) / 2. For ranges, every combo pair that does not share
 a card (with each other or the board) counts equally, and each pair's equity is
-taken over all of its own runouts.
+taken over all of its own runouts. With villain weights (DECISIONS 35), a pair
+counts with its villain combo's weight instead.
 
 Speed: about 5 s for one preflop hand-vs-hand (1,712,304 boards). For class vs
 class, combo pairs that are identical up to a relabelling of suits share one
@@ -79,14 +80,28 @@ def _hand_vs_hand(hero: Combo, villain: Combo, board: tuple[int, ...]) -> Equity
 
 
 def range_vs_range(
-    hero: Sequence[Combo], villain: Sequence[Combo], board: Sequence[int] = ()
+    hero: Sequence[Combo],
+    villain: Sequence[Combo],
+    board: Sequence[int] = (),
+    villain_weights: Sequence[float] | None = None,
 ) -> Equity:
-    """Exact equity of `hero` against `villain`, equal weight per valid combo pair."""
+    """Exact equity of `hero` against `villain`.
+
+    Every valid combo pair counts equally, or, given `villain_weights` (one per
+    villain combo, at least 0), with its villain combo's weight. Combos of
+    weight 0 are dropped. Without weights the code is unchanged (DECISIONS 35).
+    """
     board = tuple(board)
     _check_disjoint(board)
     on_board = set(board)
     hero = [h for h in hero if not on_board.intersection(h)]
-    villain = [v for v in villain if not on_board.intersection(v)]
+    weights = None
+    if villain_weights is None:
+        villain = [v for v in villain if not on_board.intersection(v)]
+    else:
+        kept = _weighted(villain, villain_weights, on_board)
+        villain = [v for v, _ in kept]
+        weights = np.array([w for _, w in kept])
     pairs_valid = np.array([[not set(h) & set(v) for v in villain] for h in hero], dtype=bool)
     if not hero or not villain or not pairs_valid.any():
         raise ValueError("no combo pair is possible on this board")
@@ -130,9 +145,29 @@ def range_vs_range(
         ties += (hr[:, None] == vr[None, :]) & live
         counts += live
     per_pair = counts[pairs_valid]
-    win = float(np.mean(wins[pairs_valid] / per_pair))
-    tie = float(np.mean(ties[pairs_valid] / per_pair))
+    if weights is None:
+        win = float(np.mean(wins[pairs_valid] / per_pair))
+        tie = float(np.mean(ties[pairs_valid] / per_pair))
+    else:
+        w = np.broadcast_to(weights[None, :], pairs_valid.shape)[pairs_valid]
+        win = float(np.sum(w * wins[pairs_valid] / per_pair) / w.sum())
+        tie = float(np.sum(w * ties[pairs_valid] / per_pair) / w.sum())
     return Equity(win, tie, int(per_pair.sum()))
+
+
+def _weighted(
+    villain: Sequence[Combo], weights: Sequence[float], on_board: set[int]
+) -> list[tuple[Combo, float]]:
+    """(combo, weight) for villain combos of positive weight that miss the board."""
+    if len(weights) != len(villain):
+        raise ValueError("need one weight per villain combo")
+    if any(w < 0 for w in weights):
+        raise ValueError("weights must be at least 0")
+    return [
+        (v, float(w))
+        for v, w in zip(villain, weights, strict=True)
+        if w > 0 and not on_board.intersection(v)
+    ]
 
 
 def canonical_pair(hero: Combo, villain: Combo) -> tuple[tuple[int, ...], tuple[int, ...]]:

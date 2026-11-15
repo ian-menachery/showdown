@@ -1,4 +1,6 @@
-# Gate G fixture (DECISIONS 32): 43 spots for the V1 advisor.
+# Gate G fixture (DECISIONS 32): 42 spots for the V1 advisor, run with the fixed
+# top-% ranges (DECISIONS 35). The 43rd, AsKd first in at 40 bb, moved to
+# model_spots.toml when the preflop model began answering it.
 #
 # River and turn spots: the equity is counted by hand, with the count beside
 # the spot, and the action follows from DECISIONS 32's rules:
@@ -174,9 +176,8 @@ spots = [
   ["KhKd", "bb", 20, "bb_vs_jam"],
   ["Jd3c", "bb", 6, "bb_vs_jam"],
 ]
-# These get no suggestion: deeper than 20 bb, or not a push/fold decision.
+# This gets no suggestion: not a push/fold decision.
 none = [
-  ["AsKd", "sb", 40, "sb_first"],
   ["AsKd", "bb", 10, "other"],
 ]
 

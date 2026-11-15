@@ -11,6 +11,8 @@ showdown pushfold chart 10
 showdown play
 showdown analyze data/external/phh/repo/data/pluribus
 showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5
+showdown advise --hero AhJs --seat bb --stack 60 --facing bb_vs_raise --pot 3.5 --to-call 1.5
+showdown preflop chart 50
 """
 
 from __future__ import annotations
@@ -41,6 +43,7 @@ from showdown.equity.exact import range_vs_range
 from showdown.equity.montecarlo import monte_carlo
 from showdown.equity.ranges import parse_range
 from showdown.games import GAMES, load_game
+from showdown.live.spot import PREFLOP_SPOTS
 
 _ALGORITHMS = {"cfr": cfr, "cfr+": cfr_plus}
 _MAX_PRINTED_INFOSETS = 60
@@ -322,14 +325,21 @@ def _advise(args: argparse.Namespace) -> int:
         )
     except (SpotError, ValueError) as error:
         raise SystemExit(f"bad spot: {error}") from None
-    advisor = Advisor.load(log_path=None if args.no_log else args.log)
-    s = advisor.suggest(spot)
+    advisor = Advisor.load(ranges=args.ranges, log_path=None if args.no_log else args.log)
+    try:
+        s = advisor.suggest(spot)
+    except SpotError as error:
+        raise SystemExit(f"bad spot: {error}") from None
     print(
         f"{s.street}: {(s.action or 'no action hint').upper()}"
         + (f" {s.size_bb:g} bb" if s.size_bb else "")
     )
     if s.evs:
         print("  EV (bb): " + ", ".join(f"{k} {v:+.3f}" for k, v in s.evs.items()))
+    if s.mix:
+        print("  mix: " + ", ".join(f"{k} {v:.0%}" for k, v in s.mix.items()))
+    for note in s.notes:
+        print(f"  ! {note}")
     if s.equity is not None:
         se = f" +/- {s.se:.3f}" if s.se else ""
         print(f"  equity {s.equity:.1%}{se} vs {s.villain_range}")
@@ -367,7 +377,7 @@ def _preflop_chart(args: argparse.Namespace) -> int:
         raise SystemExit(f"node must be one of {sorted(s.actions)}")
     letters = {"fold": "F", "call": "C", "raise": "R", "all-in": "J"}
     print(f"model chart, R {args.r:.2f}, {depth:g} bb, node {args.node!r}: most likely action")
-    print("(lower case = mixed below 90%; * = depends on R)")
+    print("(suited above the diagonal; lower case = mixed below 90%; * = depends on R)")
     labels = RANKS[::-1]
     print("     " + "".join(f"{r:>4}" for r in labels))
     for row in range(13):
@@ -459,7 +469,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_cmd.set_defaults(handler=_analyze)
 
     advise = commands.add_parser(
-        "advise", help="one live suggestion: push/fold preflop, equity helper postflop"
+        "advise", help="one live suggestion: push/fold or model chart preflop, equity postflop"
     )
     advise.add_argument("--hero", required=True, help="your two cards, e.g. AsKd")
     advise.add_argument("--seat", choices=["sb", "bb"], required=True)
@@ -470,9 +480,15 @@ def build_parser() -> argparse.ArgumentParser:
     advise.add_argument("--pot-type", choices=["srp", "3bp"], default="srp")
     advise.add_argument(
         "--facing",
-        choices=["sb_first", "bb_vs_jam", "other"],
+        choices=PREFLOP_SPOTS,
         default="sb_first",
-        help="preflop decision",
+        help="preflop decision; a raise faced is read from --pot and --to-call",
+    )
+    advise.add_argument(
+        "--ranges",
+        choices=["model", "fixed"],
+        default="model",
+        help="default postflop villain range: the preflop model's, or fixed top-%%",
     )
     advise.add_argument("--villain", help="custom villain range, e.g. 'TT+,AQs+'")
     advise.add_argument("--mode", choices=["hint", "equity"], default="hint")

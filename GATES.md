@@ -489,3 +489,38 @@ showdown preflop chart 50
 .venv\Scripts\python -m pytest tests/test_gate_p.py
 .venv\Scripts\python -m pytest tests/test_gate_p_slow.py -m slow
 ```
+
+## Gate G, extended: the preflop model in the advisor: PASS (2026-11-15)
+
+Evidence:
+- `tests/test_gate_g_model.py`, on the fixture `tests/fixtures/live/model_spots.toml`;
+- `tests/test_gate_g.py`, for the old spots and the latency.
+
+The rules and bars were pre-registered in DECISIONS 35 (commit 3142fc9) before
+any wiring code.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. New preflop spots above 20 bb | 34 answered spots (4 to 7 for each of the six decisions) plus 7 no-suggestion spots. Every action, depth and R flag matches the hand-written chart reading. Every mix equals the stored JSON to 1e-12 | ≥ 30 spots, ≥ 4 per decision, ≥ 4 no-suggestion | PASS |
+| 2. Raise sizes the model doesn't use | 3 spots: a 3 bb open (3-bet suggested to 9 bb), a 4 bb open, and a 3-bet to 10 bb, each with its note | ≥ 2 | PASS |
+| 3a. Model range weights | 3 classes × 4 ranges at 100 bb equal the stored frequencies multiplied by hand | to 1e-12 | PASS |
+| 3b. Turn and river equity vs a model range | 4 spots equal a weighted phevaluator brute force, including 15 bb using the 25 bb model | to 1e-12 | PASS |
+| 3c. Flop Monte Carlo vs exact weighted enumeration | 2 spots | within 3 SE | PASS |
+| 3d. 3-bet pot at 50 bb | uses the fixed top-15% default, labelled | — | PASS |
+| 4. Old fixture | 42 of 43 old spots unchanged with `--ranges fixed`. AsKd first in at 40 bb moved to the new fixture by design and gets the model's raise | 42 unchanged | PASS |
+| 5. 95th-percentile time, old and new spots, separate process, no coverage, idle laptop | 68 ms over 90 suggestions (max 70 ms) | ≤ 300 ms | PASS |
+| 6. Log | every suggestion logged; all 34 chart suggestions carry their mix and notes | all | PASS |
+
+How it got here:
+- One fixture typo was fixed before the gate counted: a turn spot's hero,
+  AcTc, shared the Tc with its board. It became AdTd.
+- No bar or expected answer was changed.
+
+What the gate does not show: as with Gate P, that the model's answers are
+good poker. They come from a model chart, R 0.90, with S3's limits.
+
+```
+showdown advise --hero Kh9h --seat bb --stack 100 --facing bb_vs_raise --pot 4 --to-call 2
+showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5 --ranges fixed
+.venv\Scripts\python -m pytest tests/test_gate_g.py tests/test_gate_g_model.py -s
+```

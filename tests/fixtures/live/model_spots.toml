@@ -1,0 +1,140 @@
+# Gate G, extended (DECISIONS 35): the preflop model in the advisor.
+#
+# Preflop spots above 20 bb. Each expected depth, action and R flag was written
+# by hand from `showdown preflop chart <depth> --node <node>` (R 0.90). In the
+# chart, suited hands sit above the diagonal. A letter is the most likely
+# action: R raise, J jam (all-in), C call, F fold. Lower case means mixed below
+# 90%, and * means "depends on R". The test checks the mix against the stored
+# model separately.
+#
+# bb_vs_raise and sb_vs_3bet spots give pot and to_call. The villain's raise-to
+# is (pot + to_call) / 2: 3.5 and 1.5 is the model's 2.5 bb open, and 10 and 5
+# is its 7.5 bb 3-bet. A size other than that gets a note.
+
+spots = [
+  # SB first in, node ''.
+  # The first row was "no suggestion until D3" in Gate G's first fixture.
+  { hero = "AsKd", seat = "sb", bb = 40, decision = "sb_first", depth = 40, action = "raise", r = false, size = 2.5 },  # 40 '': row K, col A = R
+  { hero = "Ah3h", seat = "sb", bb = 25, decision = "sb_first", depth = 25, action = "jam", r = true },  # 25 '': A3s = J*
+  { hero = "7c2d", seat = "sb", bb = 26, decision = "sb_first", depth = 25, action = "fold", r = false },  # 25 '': 72o = F
+  { hero = "4h4d", seat = "sb", bb = 27.5, decision = "sb_first", depth = 25, action = "jam", r = true },  # 25 '': 44 = j* (27.5 ties to 25)
+  { hero = "7c2d", seat = "sb", bb = 140, decision = "sb_first", depth = 100, action = "fold", r = false },  # 100 '': 72o = F
+  { hero = "9c5d", seat = "sb", bb = 100, decision = "sb_first", depth = 100, action = "raise", r = true, size = 2.5 },  # 100 '': 95o = R*
+  { hero = "3h2h", seat = "sb", bb = 96, decision = "sb_first", depth = 100, action = "fold", r = true },  # 100 '': 32s = F*
+
+  # BB facing the open, node 'r'.
+  { hero = "KcJd", seat = "bb", bb = 30, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 30, action = "jam", r = true },  # 30 r: KJo = j*
+  { hero = "Kh9h", seat = "bb", bb = 32, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 30, action = "call", r = false },  # 30 r: K9s = C
+  { hero = "7c2d", seat = "bb", bb = 30, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 30, action = "fold", r = false },  # 30 r: 72o = F
+  { hero = "AhAd", seat = "bb", bb = 100, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 100, action = "raise", r = true, size = 7.5 },  # 100 r: AA = R*
+  { hero = "7c2d", seat = "bb", bb = 100, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 100, action = "fold", r = false },  # 100 r: 72o = F
+  # Sizes the model doesn't use: a 3 bb open (pot 4, to call 2), and a 4 bb open.
+  { hero = "Kh9h", seat = "bb", bb = 100, decision = "bb_vs_raise", pot = 4.0, to_call = 2.0, depth = 100, action = "raise", r = true, size = 9.0, note = "model assumes a 2.5 bb open; you face 3 bb" },  # 100 r: K9s = R*
+  { hero = "AhAd", seat = "bb", bb = 30, decision = "bb_vs_raise", pot = 5.0, to_call = 3.0, depth = 30, action = "jam", r = false, note = "model assumes a 2.5 bb open; you face 4 bb" },  # 30 r: AA = J
+
+  # SB facing the 3-bet, node 'rr'. The model reaches it only at 60 bb and deeper.
+  { hero = "AhKh", seat = "sb", bb = 60, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, depth = 60, action = "jam", r = false },  # 60 rr: AKs = J
+  { hero = "7c2d", seat = "sb", bb = 60, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, depth = 60, action = "call", r = true },  # 60 rr: 72o = c*
+  { hero = "Tc2d", seat = "sb", bb = 60, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, depth = 60, action = "fold", r = true },  # 60 rr: T2o = f*
+  { hero = "AhQh", seat = "sb", bb = 100, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, depth = 100, action = "call", r = true },  # 100 rr: AQs = c*
+  { hero = "KhKd", seat = "sb", bb = 100, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, depth = 100, action = "jam", r = false },  # 100 rr: KK = J
+  # A 3-bet to 10 after a 2.5 open: pot 12.5, to call 7.5.
+  { hero = "KhKd", seat = "sb", bb = 100, decision = "sb_vs_3bet", pot = 12.5, to_call = 7.5, depth = 100, action = "jam", r = false, note = "model assumes a 7.5 bb 3-bet; you face 10 bb" },
+
+  # BB facing the SB's jam over the 3-bet, node 'rrj'. Reached at 70 bb and deeper.
+  { hero = "AhAd", seat = "bb", bb = 70, decision = "bb_vs_4bet_jam", depth = 70, action = "call", r = false },  # 70 rrj: AA = C
+  { hero = "AhTh", seat = "bb", bb = 70, decision = "bb_vs_4bet_jam", depth = 70, action = "call", r = true },  # 70 rrj: ATs = c*
+  { hero = "AhJh", seat = "bb", bb = 100, decision = "bb_vs_4bet_jam", depth = 100, action = "fold", r = true },  # 100 rrj: AJs = f*
+  { hero = "AcQd", seat = "bb", bb = 100, decision = "bb_vs_4bet_jam", depth = 100, action = "fold", r = true },  # 100 rrj: AQo = F*
+  { hero = "QhQd", seat = "bb", bb = 100, decision = "bb_vs_4bet_jam", depth = 100, action = "call", r = false },  # 100 rrj: QQ = C
+
+  # SB facing the BB's jam over the open, node 'rj'.
+  { hero = "Ah3h", seat = "sb", bb = 25, decision = "sb_vs_jam", depth = 25, action = "call", r = true },  # 25 rj: A3s = c*
+  { hero = "Kc9d", seat = "sb", bb = 25, decision = "sb_vs_jam", depth = 25, action = "fold", r = false },  # 25 rj: K9o = F
+  { hero = "AhJh", seat = "sb", bb = 100, decision = "sb_vs_jam", depth = 100, action = "fold", r = true },  # 100 rj: AJs = F*
+  { hero = "7h7d", seat = "sb", bb = 100, decision = "sb_vs_jam", depth = 100, action = "call", r = true },  # 100 rj: 77 = c*
+  { hero = "KhKd", seat = "sb", bb = 100, decision = "sb_vs_jam", depth = 100, action = "call", r = false },  # 100 rj: KK = C
+
+  # BB facing the SB's first-in jam, node 'j'. Reached only at 25 and 30 bb.
+  { hero = "Ah4h", seat = "bb", bb = 25, decision = "bb_vs_jam", depth = 25, action = "call", r = false },  # 25 j: A4s = C
+  { hero = "Ah3h", seat = "bb", bb = 25, decision = "bb_vs_jam", depth = 25, action = "fold", r = true },  # 25 j: A3s = F*
+  { hero = "Th8h", seat = "bb", bb = 25, decision = "bb_vs_jam", depth = 25, action = "fold", r = true },  # 25 j: T8s = f*
+  { hero = "KcJd", seat = "bb", bb = 30, decision = "bb_vs_jam", depth = 30, action = "call", r = true },  # 30 j: KJo = c*
+  { hero = "6h6d", seat = "bb", bb = 30, decision = "bb_vs_jam", depth = 30, action = "call", r = false },  # 30 j: 66 = C
+]
+
+# No suggestion: below the 0.1% reach bar (DECISIONS 35's table), a decision
+# push/fold doesn't cover at 20 bb or less, or `other`.
+none = [
+  { hero = "7c2d", seat = "sb", bb = 50, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, why = "almost never reaches" },  # rr at 50 bb: 0.004%
+  { hero = "KhKd", seat = "sb", bb = 40, decision = "sb_vs_3bet", pot = 10.0, to_call = 5.0, why = "almost never reaches" },  # rr at 40 bb: 0.001%
+  { hero = "AhAd", seat = "bb", bb = 60, decision = "bb_vs_4bet_jam", why = "almost never reaches" },  # rrj at 60 bb: 0.049%
+  { hero = "KhKd", seat = "bb", bb = 50, decision = "bb_vs_jam", why = "almost never reaches" },  # j at 50 bb: 0.001%
+  { hero = "AhKd", seat = "bb", bb = 15, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, why = "20 bb or less" },
+  { hero = "AhKd", seat = "sb", bb = 10, decision = "sb_vs_jam", why = "20 bb or less" },
+  { hero = "AhKd", seat = "sb", bb = 60, decision = "other", why = "not one of the model's decisions" },
+]
+
+# Postflop against the model's weighted range. Turn and river equity must equal
+# a separate weighted brute-force count with phevaluator. Flop Monte Carlo must
+# land within 3 SE of exact weighted enumeration.
+[[range]]
+id = "river_sb_vs_bb_srp_call_range"
+hero = "AhKd"
+board = "Kc7s2d9h4c"
+seat = "sb"
+bb = 50
+pot = 10.0
+to_call = 5.0
+pot_type = "srp"
+
+[[range]]
+id = "river_bb_straight_vs_sb_open_range"
+hero = "QhJh"
+board = "Th9h2c3d8s"
+seat = "bb"
+bb = 100
+pot = 12.0
+to_call = 0.0
+pot_type = "srp"
+
+[[range]]
+id = "turn_sb_vs_bb_3bet_range"
+hero = "8s8d"
+board = "Ac7d2s5h"
+seat = "sb"
+bb = 100
+pot = 20.0
+to_call = 10.0
+pot_type = "3bp"
+
+[[range]]
+id = "turn_bb_at_15bb_uses_the_25bb_model"
+hero = "AdTd"
+board = "Tc6h3s2d"
+seat = "bb"
+bb = 15
+pot = 5.0
+to_call = 2.0
+pot_type = "srp"
+depth = 25
+
+[[range_flop]]
+id = "flop_sb_overpair_srp_60bb"
+hero = "JsJd"
+board = "9c6d2h"
+seat = "sb"
+bb = 60
+pot = 5.0
+to_call = 0.0
+pot_type = "srp"
+
+[[range_flop]]
+id = "flop_bb_flush_draw_vs_sb_3bet_caller_100bb"
+hero = "Ah5h"
+board = "Kh8h3c"
+seat = "bb"
+bb = 100
+pot = 15.0
+to_call = 5.0
+pot_type = "3bp"
