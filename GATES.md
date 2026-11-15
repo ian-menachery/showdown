@@ -168,3 +168,72 @@ showdown matrix build          # about 20 minutes on 16 cores; reproduces the co
 showdown matrix show AKs QQ
 py gate.py --full
 ```
+
+---
+
+## Gate D: push/fold: PASS (2026-11-14)
+
+Evidence: `tests/test_gate_d.py` (fast suite) and `tests/test_gate_d_slow.py`
+(slow suite, which needs `data/external/`). The rule was pre-registered in
+DECISIONS 22 before the solve. The solution is `data/pushfold.json`:
+- `cfr_plus`, 1,000 iterations at each of 1 to 20 bb, average policy;
+- payoffs from the exact matrix (DECISIONS 21);
+- 1,242 s on 16 cores.
+
+The reference is HoldemResources' no-ante raw data (DECISIONS 20).
+
+| Check | Measured | Bar | Result |
+|---|---|---|---|
+| Exploitability at every depth, by our best response on the compiled tree | max 3.6e-6 bb (17 bb); min 7.5e-7 (1 bb) | ≤ 0.001 bb at all 20 depths | PASS |
+| SB jams all 169 classes at 1 bb | 169 of 169 at p ≥ 0.99 | all 169 | PASS |
+| Pusher vs HoldemResources, 20 depths | 100% of compared classes agree at every depth; 0 to 3 classes excluded as mixed | ≥ 95% at every depth | PASS |
+| Caller vs HoldemResources, 20 depths | 100% of compared classes agree at every depth; 0 to 2 classes excluded as mixed | ≥ 95% at every depth | PASS |
+| 10 bb re-solved from scratch | identical push and call vectors and exploitability | identical | PASS |
+
+No depth excluded more than 3 classes. The 10% finding threshold is 17.
+
+| Stack (bb) | Exploitability | SB value (bb) | SB jams | BB calls | Push: agree/compared (excluded) | Call: agree/compared (excluded) |
+|---|---|---|---|---|---|---|
+| 1 | 7.5e-7 | +0.00000 | 100.0% | 100.0% | 169/169 (0) | 169/169 (0) |
+| 2 | 2.2e-6 | +0.00955 | 89.8% | 100.0% | 168/168 (1) | 169/169 (0) |
+| 3 | 1.6e-6 | +0.05159 | 77.8% | 92.3% | 167/167 (2) | 168/168 (1) |
+| 4 | 1.0e-6 | +0.06603 | 73.8% | 74.1% | 169/169 (0) | 169/169 (0) |
+| 5 | 2.0e-6 | +0.05620 | 71.5% | 62.1% | 168/168 (1) | 167/167 (2) |
+| 6 | 2.2e-6 | +0.03816 | 68.5% | 54.4% | 166/166 (3) | 169/169 (0) |
+| 7 | 1.8e-6 | +0.01686 | 66.3% | 48.6% | 168/168 (1) | 168/168 (1) |
+| 8 | 2.5e-6 | -0.00414 | 61.9% | 45.0% | 166/166 (3) | 168/168 (1) |
+| 9 | 2.7e-6 | -0.02523 | 60.0% | 40.6% | 167/167 (2) | 168/168 (1) |
+| 10 | 1.8e-6 | -0.04537 | 58.3% | 37.4% | 168/168 (1) | 168/168 (1) |
+| 11 | 1.6e-6 | -0.06466 | 54.5% | 35.0% | 168/168 (1) | 168/168 (1) |
+| 12 | 1.7e-6 | -0.08253 | 53.3% | 33.0% | 168/168 (1) | 169/169 (0) |
+| 13 | 2.3e-6 | -0.09902 | 51.6% | 30.9% | 167/167 (2) | 167/167 (2) |
+| 14 | 2.0e-6 | -0.11382 | 48.4% | 29.3% | 167/167 (2) | 168/168 (1) |
+| 15 | 2.1e-6 | -0.12723 | 45.7% | 28.5% | 167/167 (2) | 168/168 (1) |
+| 16 | 2.5e-6 | -0.13932 | 44.8% | 26.5% | 166/166 (3) | 167/167 (2) |
+| 17 | 3.6e-6 | -0.15081 | 42.9% | 24.8% | 168/168 (1) | 168/168 (1) |
+| 18 | 2.9e-6 | -0.16216 | 42.3% | 23.8% | 167/167 (2) | 168/168 (1) |
+| 19 | 2.5e-6 | -0.17291 | 40.9% | 22.6% | 169/169 (0) | 169/169 (0) |
+| 20 | 2.8e-6 | -0.18319 | 40.1% | 21.7% | 168/168 (1) | 169/169 (0) |
+
+"SB jams" and "BB calls" are shares of the 1,326 starting hands. There were no
+disagreements at any depth.
+
+Beyond the gate (`spikes/2026-11-14-gate-d-report.py`), HoldemResources' own
+strategies were scored on our exact game:
+- Their SB value matches ours to 5 decimals at all 20 depths.
+- Their exploitability on our game is at most 1.0e-6 bb (13 bb). So their
+  equilibrium is an equilibrium of our game too.
+- The largest per-class probability gap is 0.52, at 6 bb. It is in classes that
+  one side mixes. Those are the excluded classes, and the strategies are
+  equally good there.
+
+Other checks, in the fast suite:
+- The tree's value and exploitability equal closed-form sums to 1e-12 on random
+  and pure strategies.
+- At 1 bb, "jam and call everything" has exploitability 0.
+
+```
+showdown pushfold build          # about 20 minutes on 16 cores; reproduces data/pushfold.json
+showdown pushfold chart 10
+py gate.py --full
+```

@@ -6,6 +6,8 @@ showdown equity AsKs QQ --board Ts9s2d
 showdown equity "TT+,AK" "22-99" --samples 200000
 showdown matrix build --exact
 showdown matrix show AKs QQ
+showdown pushfold build
+showdown pushfold chart 10
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
+from showdown import pushfold
 from showdown.cfr import (
     CFRSolver,
     cfr,
@@ -166,6 +169,40 @@ def _matrix_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def _pushfold_build(args: argparse.Namespace) -> int:
+    if args.iterations < 1:
+        raise SystemExit("--iterations must be at least 1")
+    start = time.perf_counter()
+    solution = pushfold.solve_all(
+        pushfold.DEPTHS, args.iterations, args.matrix, workers=args.workers
+    )
+    solution.save(args.out)
+    print(f"cfr+, {args.iterations} iterations per depth, payoffs {args.matrix}")
+    print(f"{'stack':>6}  {'exploitability':>14}  {'SB value':>9}  {'SB jams':>8}  {'BB calls':>8}")
+    for d in solution.depths:
+        print(
+            f"{d.stack:>6g}  {d.exploitability:>14.2e}  {d.value_sb:>+9.5f}  "
+            f"{d.push_share():>8.1%}  {d.call_share():>8.1%}"
+        )
+    print(f"wrote {args.out} in {time.perf_counter() - start:.0f} s")
+    return 0
+
+
+def _pushfold_chart(args: argparse.Namespace) -> int:
+    result = pushfold.PushFoldSolution.load(args.file).at(args.stack)
+    print(
+        f"{result.stack:g} bb effective: SB value {result.value_sb:+.5f} bb, "
+        f"exploitability {result.exploitability:.2e} bb"
+    )
+    print()
+    print(f"SB jams {result.push_share():.1%} of hands; cells are % of the time, suited above")
+    print(pushfold.chart(result.push))
+    print()
+    print(f"BB calls a jam with {result.call_share():.1%} of hands")
+    print(pushfold.chart(result.call))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="showdown", description="Heads-up poker lab.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -207,6 +244,19 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument("col")
     show.add_argument("--file", default=DEFAULT_EXACT_MATRIX)
     show.set_defaults(handler=_matrix_show)
+
+    pf = commands.add_parser("pushfold", help="heads-up push/fold solutions at 1 to 20 bb")
+    pf_commands = pf.add_subparsers(dest="pushfold_command", required=True)
+    pf_build = pf_commands.add_parser("build", help="solve 1 to 20 bb with CFR+ (DECISIONS 22)")
+    pf_build.add_argument("--iterations", type=int, default=pushfold.ITERATIONS)
+    pf_build.add_argument("--workers", type=int, help="processes (default: one per depth)")
+    pf_build.add_argument("--matrix", default=pushfold.DEFAULT_MATRIX)
+    pf_build.add_argument("--out", default=pushfold.DEFAULT_SOLUTION)
+    pf_build.set_defaults(handler=_pushfold_build)
+    pf_chart = pf_commands.add_parser("chart", help="13x13 SB and BB charts at one depth")
+    pf_chart.add_argument("stack", type=float, help="effective stack in bb, before blinds")
+    pf_chart.add_argument("--file", default=pushfold.DEFAULT_SOLUTION)
+    pf_chart.set_defaults(handler=_pushfold_chart)
     return parser
 
 

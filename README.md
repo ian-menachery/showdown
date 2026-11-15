@@ -7,7 +7,7 @@ A heads-up poker lab in Python:
 - a push/fold bot you can play against in a local browser page;
 - a hand-history analyzer that grades real hands against the solved strategy.
 
-**Status: Phases 1 to 3 done (2026-11-14). Gates A, B and C PASS.** See
+**Status: Phases 1 to 4 done (2026-11-14). Gates A, B, C and D PASS.** See
 [`GATES.md`](GATES.md) for every number.
 
 - **Solver.** CFR and CFR+ are **bit-identical to OpenSpiel's** on Kuhn and
@@ -22,9 +22,15 @@ A heads-up poker lab in Python:
     134,459 suit-distinct classes. In every cell it matches the independent
     exact table from b-inary/poker-cfr to the integer.
 
-Next is Phase 4, the push/fold game. Gate D's reference is settled: it is
-HoldemResources' no-ante raw data (DECISIONS 20). The depths it checks and its
-scoring rule are fixed in DECISIONS before the solver first runs.
+- **Push/fold.** Our CFR+ solves heads-up push/fold at every depth from 1 to
+  20 bb.
+  - Exploitability is at most 3.6e-6 bb.
+  - In all 40 pre-registered comparisons (DECISIONS 22), the solution agrees
+    with HoldemResources' published equilibrium on 100% of the classes that
+    both sides play purely.
+
+Next is Phase 5: the bot and local browser play. Phases 4 to 7 run as one
+autonomous stretch (SCOPE A5, `docs/plan-phases-4-7.md`).
 
 ## Try it
 
@@ -34,6 +40,7 @@ showdown solve leduc --iterations 1000 --every 250
 showdown equity AsKs QhQd --board Ts9s2dJc     # exact: 13 of 44 rivers win
 showdown equity "TT+,AK" "22-99"                # Monte Carlo, with a standard error
 showdown matrix show AKs QQ                     # exact, from data/preflop_169_exact.npz
+showdown pushfold chart 10                      # SB jam and BB call charts at 10 bb
 ```
 
 ## Start here
@@ -72,15 +79,17 @@ the slow gate-evidence tests (about 4 minutes), including OpenSpiel's
 
 ```
 src/showdown/
-  games/      game interface; kuhn, leduc          (pushfold: Phase 4)
+  games/      game interface; kuhn, leduc, pushfold
+  pushfold.py push/fold solve, charts, Gate D comparison
   cfr/        compiled tree, CFR and CFR+, best response, exploitability
   equity/     cards and classes, ranges, exact, Monte Carlo, 169x169 matrix
-  cli.py      showdown solve | equity | matrix     (play, analyze: Phases 5, 6)
+  cli.py      showdown solve | equity | matrix | pushfold   (play, analyze: Phases 5, 6)
   engine/     pokerkit adapter                     (Phase 5)
   bot/        policies, local play page and API    (Phase 5, 127.0.0.1 only)
   hh/         hand-history parsing, stats, all-in EV (Phase 6)
 data/preflop_169.npz         Monte Carlo matrix, Gate C evidence (DECISIONS 18)
 data/preflop_169_exact.npz   exact matrix, the push/fold payoffs (DECISIONS 21)
+data/pushfold.json           push/fold solutions at 1 to 20 bb (DECISIONS 22)
 data/external/               third-party reference data, gitignored (DECISIONS 20)
 tests/openspiel_oracle.py   OpenSpiel as a reference, tests only
 ```
