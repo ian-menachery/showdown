@@ -1,0 +1,10 @@
+# Pot 6 preflop; Bob's flop bet of 4 is uncalled: Bob +4.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100]
+actions = ['d dh p1 4c5d', 'd dh p2 KdKs', 'd dh p3 7h2s', 'p3 cc', 'p1 cc', 'p2 cc', 'd db 2c7d9h', 'p1 cc', 'p2 cbr 4', 'p3 f', 'p1 f']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [98, 104, 98]

@@ -1,0 +1,10 @@
+# 25 bb: outside the game.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [50, 50]
+actions = ['d dh p1 Ks2h', 'd dh p2 AdQd', 'p2 cbr 50', 'p1 f']
+players = ['Vil', 'Hero']
+finishing_stacks = [48, 52]

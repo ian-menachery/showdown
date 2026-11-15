@@ -1,0 +1,10 @@
+# Pot 41; Bob's flop bet uncalled: Bob +21.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100, 100, 100, 100]
+actions = ['d dh p1 7h2s', 'd dh p2 AhKd', 'd dh p3 QcQd', 'd dh p4 9s8s', 'd dh p5 4h4d', 'd dh p6 Jd3c', 'p3 cbr 6', 'p4 f', 'p5 f', 'p6 f', 'p1 f', 'p2 cbr 20', 'p3 cc', 'd db 2c7d9h', 'p2 cbr 20', 'p3 f']
+players = ['Ann', 'Bob', 'Cat', 'Dan', 'Eve', 'Fay']
+finishing_stacks = [99, 121, 80, 100, 100, 100]

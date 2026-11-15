@@ -285,3 +285,69 @@ chip-unit error; see risk 1 in the design review.
 showdown play                 # opens http://127.0.0.1:<port>/
 py gate.py --full
 ```
+
+---
+
+## Gate F: analyzer: PASS (2026-11-14)
+
+Evidence: `tests/test_gate_f.py` (fast suite) and `tests/test_gate_f_slow.py`
+(slow suite, which needs `data/external/phh`). The design is in DECISIONS 25 to
+27, and the pokerkit facts behind it are in `docs/design-review-phases-5-6.md`.
+
+| Check | Measured | Bar | Result |
+|---|---|---|---|
+| Hand-built fixture (`tests/fixtures/hh/`) | 34 hands: 31 PHH (3-handed, 6-max and heads-up) and 3 PokerStars text. 105 player rows; all 945 hand-counted values (8 flags and the net result per player per hand) match exactly | ≥ 30 hands, every stat exact | PASS |
+| All-in EV adjustment against hand-computed values | 17 values in 8 hands, all within 1e-6 bb (see below) | 1e-6 bb | PASS |
+| Pluribus hands (phh-dataset, commit e47fbd5) | 10,000 of 10,000 parse and reconcile with the recorded finishing stacks; 8 of them are odd-chip chops (DECISIONS 25) | ≥ 99%, failures printed | PASS |
+
+The 8 all-in hands and how their EVs were computed by hand:
+- **4 preflop heads-up all-ins.** These use the exact integers 2 × wins + ties
+  from b-inary's independent table, which DECISIONS 21 verified against our
+  own enumeration.
+- **AA vs 22 on a flop.** 22 wins 83 of 990 runouts: 87 runouts contain a
+  deuce, less 4 where AA makes a higher set.
+- **Two turn all-ins, AA vs KK.** AA wins 42 of 44 rivers.
+- **A 3-way turn all-in with a side pot.** The main pot splits 38:2:2 and the
+  side pot 40:2, over 42 rivers.
+
+Each hand's counting is written beside its expected values in
+`tests/fixtures/hh/expected.toml`.
+
+How the fixture was made:
+- The expected values were written before the analyzer ran on these hands.
+- A re-check, before any run, corrected one flag (a non-showdown in h06) and
+  three EV decimals that had been slips of hand arithmetic.
+- Each fixture hand's finishing stacks were counted by hand and checked
+  against pokerkit's replay.
+- That check caught a bug in the scratch helper that writes the fixture's show
+  actions. pokerkit's history iterator "repairs" a hand that has no show
+  actions by showing nothing and splitting the pot, so the helper never saw a
+  show was needed. This is the silent split that the parse rule exists to
+  catch.
+
+Push/fold grading on the fixture:
+- 11 decisions are graded across 7 heads-up hands, at the depths counted by
+  hand: 1, 8 (7.5 bb, rounded up), 10 and 15 (uneven stacks).
+- 27 hands are correctly not gradable: not heads-up, deeper than 20 bb, or a
+  min-raise.
+- The grader found a real mistake that the hand count did not mark: folding
+  K2o in the BB at 8 bb loses 0.017 bb. HoldemResources' caller chart calls K2o
+  up to 8.1 bb.
+
+Beyond the gate:
+- **Pluribus's result** from our replay is −7.09 bb/100 raw. Taken straight
+  from the files' own stacks it is −7.0864 bb/100; the two agree to the 8 odd
+  chips. The EV-adjusted figure is −1.72 bb/100. Pluribus's published win rate
+  is variance-reduced (AIVAT), not raw.
+- **Pluribus stats:** VPIP 26.9, PFR 18.0, 3-bet 7.3, WTSD 30.6, W$SD 48.8.
+- **Pluribus all-ins:** 92, of which 91 were adjusted exactly and 1 (multiway
+  preflop) by Monte Carlo.
+- **Multiway equity:** a 3-way preflop Monte Carlo agrees with pokerkit's
+  `calculate_equities` within 3 SE. Heads-up results equal `hand_vs_hand`, and
+  side-pot shares match counted outs (`tests/test_multiway.py`).
+
+```
+showdown analyze tests/fixtures/hh
+showdown analyze data/external/phh/repo/data/pluribus     # about 100 s
+py gate.py --full
+```

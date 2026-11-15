@@ -7,7 +7,7 @@ A heads-up poker lab in Python:
 - a push/fold bot you can play against in a local browser page;
 - a hand-history analyzer that grades real hands against the solved strategy.
 
-**Status: Phases 1 to 5 done (2026-11-14). Gates A to E PASS.** See
+**Status: Phases 1 to 6 done (2026-11-14). Gates A to F PASS.** See
 [`GATES.md`](GATES.md) for every number.
 
 - **Solver.** CFR and CFR+ are **bit-identical to OpenSpiel's** on Kuhn and
@@ -35,8 +35,13 @@ A heads-up poker lab in Python:
   bot-vs-bot hands through pokerkit's state machine, the result lands within
   0.19 SE of the solver's value.
 
-Next is Phase 6: the hand-history analyzer. Phases 4 to 7 run as one
-autonomous stretch (SCOPE A5, `docs/plan-phases-4-7.md`).
+- **Analyzer.** `showdown analyze` reads PHH files and PokerStars text through
+  pokerkit. It reports VPIP, PFR, 3-bet, WTSD, W$SD and bb/100 (DECISIONS 25).
+  It adjusts all-in hands to EV, including multiway and side pots (DECISIONS
+  26). It grades short heads-up hands against push/fold Nash (DECISIONS 27).
+  - On a hand-built fixture of 34 hands, all 945 hand-counted stat values
+    match, and all 17 all-in EV values match to 1e-6 bb.
+  - All 10,000 Pluribus hands parse.
 
 ## Try it
 
@@ -48,6 +53,7 @@ showdown equity "TT+,AK" "22-99"                # Monte Carlo, with a standard e
 showdown matrix show AKs QQ                     # exact, from data/preflop_169_exact.npz
 showdown pushfold chart 10                      # SB jam and BB call charts at 10 bb
 showdown play                                   # trainer and Leduc in your browser, 127.0.0.1 only
+showdown analyze path/to/hands                  # PHH files or PokerStars .txt exports
 ```
 
 ## Start here
@@ -90,10 +96,10 @@ src/showdown/
   pushfold.py push/fold solve, charts, Gate D comparison
   cfr/        compiled tree, CFR and CFR+, best response, exploitability
   equity/     cards and classes, ranges, exact, Monte Carlo, 169x169 matrix
-  cli.py      showdown solve | equity | matrix | pushfold | play   (analyze: Phase 6)
+  cli.py      showdown solve | equity | matrix | pushfold | play | analyze
   engine/     pokerkit adapter: one heads-up push/fold hand
   bot/        strategies and grading, play sessions, the 127.0.0.1 server and page
-  hh/         hand-history parsing, stats, all-in EV (Phase 6)
+  hh/         replay through pokerkit, stats, all-in EV, push/fold grading
 data/preflop_169.npz         Monte Carlo matrix, Gate C evidence (DECISIONS 18)
 data/preflop_169_exact.npz   exact matrix, the push/fold payoffs (DECISIONS 21)
 data/pushfold.json           push/fold solutions at 1 to 20 bb (DECISIONS 22)
@@ -116,15 +122,16 @@ the versions pinned in `pyproject.toml`.
 
 ## Reference data (downloaded, never committed)
 
-Two files are used only as outside answers in tests and spikes. They live in
-the gitignored `data/external/`, pinned by SHA-256 in DECISIONS 20. The fetch
-commands are in [`docs/gate-d-reference.md`](docs/gate-d-reference.md).
+Three data sets are used only as outside answers in tests and spikes. They live
+in the gitignored `data/external/`, pinned by SHA-256 (DECISIONS 20 and 25).
+The fetch commands are in [`docs/gate-d-reference.md`](docs/gate-d-reference.md).
 `py gate.py --full` fails without them.
 
 | Source | License | Used for |
 |---|---|---|
 | [HoldemResources.net](https://www.holdemresources.net/hune) heads-up push/fold raw data | none stated | Gate D reference |
 | [b-inary/poker-cfr](https://github.com/b-inary/poker-cfr) exact preflop equity table | BSD-2-Clause | checks every cell of the exact matrix |
+| [phh-dataset](https://github.com/uoftcprg/phh-dataset) Pluribus hands (10,000, commit e47fbd5) | MIT | Gate F parse rate; Done 4 |
 
 ## Not this
 

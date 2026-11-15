@@ -1,0 +1,10 @@
+# 10 bb: Vil jams AKs, Hero calls 99 and flops a set.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [20, 20]
+actions = ['d dh p1 9s9c', 'd dh p2 AhKh', 'p2 cbr 20', 'p1 cc', 'p2 sm AhKh', 'p1 sm 9s9c', 'd db 2c7d9h', 'd db 3s', 'd db Jc']
+players = ['Hero', 'Vil']
+finishing_stacks = [40, 0]

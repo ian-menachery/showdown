@@ -1,0 +1,10 @@
+# Ann wins Cat's 6 and Bob's 2.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100]
+actions = ['d dh p1 AhAd', 'd dh p2 7c2d', 'd dh p3 KcQc', 'p3 cbr 6', 'p1 cbr 20', 'p2 f', 'p3 f']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [108, 98, 94]

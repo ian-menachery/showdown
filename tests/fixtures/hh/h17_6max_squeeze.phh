@@ -1,0 +1,10 @@
+# Eve wins 6 + 6 + 1 + 2.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100, 100, 100, 100]
+actions = ['d dh p1 7h2c', 'd dh p2 AhKd', 'd dh p3 QcQd', 'd dh p4 9s8s', 'd dh p5 AcAs', 'd dh p6 Jd3c', 'p3 cbr 6', 'p4 cc', 'p5 cbr 24', 'p6 f', 'p1 f', 'p2 f', 'p3 f', 'p4 f']
+players = ['Ann', 'Bob', 'Cat', 'Dan', 'Eve', 'Fay']
+finishing_stacks = [99, 98, 94, 94, 115, 100]

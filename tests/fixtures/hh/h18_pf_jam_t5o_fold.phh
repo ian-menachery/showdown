@@ -1,0 +1,10 @@
+# 10 bb: Hero jams T5o, Vil folds.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [20, 20]
+actions = ['d dh p1 8c3d', 'd dh p2 Th5c', 'p2 cbr 20', 'p1 f']
+players = ['Vil', 'Hero']
+finishing_stacks = [18, 22]

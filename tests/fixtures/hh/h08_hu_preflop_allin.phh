@@ -1,0 +1,10 @@
+# AA holds: Dan +100.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [100, 100]
+actions = ['d dh p1 AsAh', 'd dh p2 KdKc', 'p2 cbr 6', 'p1 cbr 100', 'p2 cc', 'p1 sm AsAh', 'p2 sm KdKc', 'd db 2c7d9h', 'd db 3s', 'd db Jc']
+players = ['Dan', 'Eve']
+finishing_stacks = [200, 0]

@@ -1,0 +1,10 @@
+# KK hits a 2-outer on the river: Dan +100.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [100, 100]
+actions = ['d dh p1 KsKh', 'd dh p2 AsAd', 'p2 cbr 6', 'p1 cc', 'd db 2c7d9h', 'p1 cc', 'p2 cbr 10', 'p1 cc', 'd db 3s', 'p1 cc', 'p2 cbr 84', 'p1 cc', 'p2 sm AsAd', 'p1 sm KsKh', 'd db Kd']
+players = ['Dan', 'Eve']
+finishing_stacks = [200, 0]

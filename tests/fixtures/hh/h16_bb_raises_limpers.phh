@@ -1,0 +1,10 @@
+# Bob wins 2 + 2.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100]
+actions = ['d dh p1 5h6h', 'd dh p2 AdKc', 'd dh p3 8s9s', 'p3 cc', 'p1 cc', 'p2 cbr 10', 'p3 f', 'p1 f']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [98, 104, 98]

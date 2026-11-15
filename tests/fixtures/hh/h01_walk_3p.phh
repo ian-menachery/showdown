@@ -1,0 +1,10 @@
+# BTN and SB fold; BB wins the small blind.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100]
+actions = ['d dh p1 4c5d', 'd dh p2 KdKs', 'd dh p3 7h2s', 'p3 f', 'p1 f']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [99, 101, 100]

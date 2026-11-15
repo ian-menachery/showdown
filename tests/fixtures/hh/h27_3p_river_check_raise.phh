@@ -1,0 +1,10 @@
+# Pot 89; Bob's set beats AA.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100]
+actions = ['d dh p1 6h2s', 'd dh p2 7s7h', 'd dh p3 AsAd', 'p3 cbr 6', 'p1 f', 'p2 cc', 'd db 2c7d9h', 'p2 cc', 'p3 cbr 8', 'p2 cc', 'd db 3s', 'p2 cc', 'p3 cc', 'd db Jc', 'p2 cbr 10', 'p3 cbr 30', 'p2 cc', 'p3 sm AsAd', 'p2 sm 7s7h']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [99, 145, 56]

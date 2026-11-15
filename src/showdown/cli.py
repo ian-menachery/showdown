@@ -9,6 +9,7 @@ showdown matrix show AKs QQ
 showdown pushfold build
 showdown pushfold chart 10
 showdown play
+showdown analyze data/external/phh/repo/data/pluribus
 """
 
 from __future__ import annotations
@@ -96,7 +97,8 @@ def _solve(args: argparse.Namespace) -> int:
             "value_player0": policy_value(tree, average),
             "policy": table,
         }
-        out.write_text(json.dumps(payload, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        text = json.dumps(payload, indent=1, sort_keys=True) + "\n"
+        out.write_text(text, encoding="utf-8", newline="\n")
         print(f"\nwrote {out}")
     return 0
 
@@ -223,6 +225,83 @@ def _play(args: argparse.Namespace) -> int:
     return 0
 
 
+def _fmt(value: float, digits: int = 1) -> str:
+    return "-" if value != value else f"{value:.{digits}f}"  # NaN when there is no denominator
+
+
+def _analyze(args: argparse.Namespace) -> int:
+    from collections import Counter
+
+    from showdown.bot.policy import PushFoldStrategy
+    from showdown.hh.grade import grade_hand
+    from showdown.hh.parse import load
+    from showdown.hh.stats import analyze
+
+    start = time.perf_counter()
+    parsed = load(args.paths, args.format)
+    if not parsed.found:
+        print("no hand histories found")
+        return 1
+    share = parsed.parsed / parsed.found
+    print(f"hands found {parsed.found:,}, parsed {parsed.parsed:,} ({share:.2%})")
+    if parsed.odd_chip:
+        print(f"  {parsed.odd_chip} parsed with an odd-chip split (DECISIONS 25)")
+    for source, reason in parsed.failures[: args.show_failures]:
+        print(f"  FAILED {source}: {reason}")
+    if len(parsed.failures) > args.show_failures:
+        print(f"  ... and {len(parsed.failures) - args.show_failures} more failures")
+    if not parsed.records:
+        return 1
+
+    report, _ = analyze(parsed.records, samples=args.samples, seed=args.seed)
+    rows = sorted(report.players.values(), key=lambda s: (-s.hands, s.name))
+    if args.player:
+        rows = [s for s in rows if s.name in args.player]
+    print()
+    print(
+        f"{'player':<16}{'hands':>7}{'VPIP':>7}{'PFR':>7}{'3bet':>7}{'WTSD':>7}"
+        f"{'W$SD':>7}{'bb/100':>9}{'EV bb/100':>11}"
+    )
+    for s in rows:
+        se = f" +/-{s.ev_bb_per_100_se:.2f}" if s.ev_se_bb_sq > 0 else ""
+        print(
+            f"{s.name[:15]:<16}{s.hands:>7,}{_fmt(s.vpip_pct):>7}{_fmt(s.pfr_pct):>7}"
+            f"{_fmt(s.three_bet_pct):>7}{_fmt(s.wtsd_pct):>7}{_fmt(s.wsd_pct):>7}"
+            f"{_fmt(s.bb_per_100, 2):>9}{_fmt(s.ev_bb_per_100, 2):>11}{se}"
+        )
+    print()
+    print(
+        f"all-in EV: {report.allin_hands} all-in hands; adjusted {report.allin_exact} exactly"
+        f" and {report.allin_monte_carlo} by Monte Carlo ({args.samples:,} runouts, seed"
+        f" {args.seed}); {report.allin_multiway} multiway;"
+        f" {report.allin_unknown_cards} not adjusted (unknown cards)"
+    )
+
+    strategy = PushFoldStrategy.load(args.pushfold)
+    reasons: Counter[str] = Counter()
+    graded: dict[str, list] = {}
+    for record in parsed.records:
+        result = grade_hand(record, strategy)
+        if result.reason:
+            reasons[result.reason] += 1
+        for d in result.decisions:
+            graded.setdefault(d.player, []).append(d)
+    print()
+    gradable = parsed.parsed - sum(reasons.values())
+    print(f"push/fold grading (DECISIONS 27): {gradable} gradable hands")
+    for reason, count in sorted(reasons.items(), key=lambda kv: -kv[1]):
+        print(f"  not gradable, {reason}: {count}")
+    for player, decisions in sorted(graded.items()):
+        if args.player and player not in args.player:
+            continue
+        lost = sum(d.loss for d in decisions)
+        mistakes = sum(d.mistake for d in decisions)
+        print(f"  {player}: {len(decisions)} decisions, {mistakes} mistakes, {lost:.3f} bb lost")
+    print()
+    print(f"{time.perf_counter() - start:.0f} s")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="showdown", description="Heads-up poker lab.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -284,6 +363,18 @@ def build_parser() -> argparse.ArgumentParser:
     play.add_argument("--pushfold", default=pushfold.DEFAULT_SOLUTION)
     play.add_argument("--leduc", default="data/leduc_cfr_plus.json")
     play.set_defaults(handler=_play)
+
+    analyze_cmd = commands.add_parser(
+        "analyze", help="stats, all-in EV and push/fold grading for hand histories"
+    )
+    analyze_cmd.add_argument("paths", nargs="+", help="PHH or PokerStars files, or directories")
+    analyze_cmd.add_argument("--format", choices=["auto", "phh", "pokerstars"], default="auto")
+    analyze_cmd.add_argument("--player", action="append", help="only these players (repeatable)")
+    analyze_cmd.add_argument("--samples", type=int, default=20_000, help="Monte Carlo runouts")
+    analyze_cmd.add_argument("--seed", type=int, default=0)
+    analyze_cmd.add_argument("--show-failures", type=int, default=20)
+    analyze_cmd.add_argument("--pushfold", default=pushfold.DEFAULT_SOLUTION)
+    analyze_cmd.set_defaults(handler=_analyze)
     return parser
 
 

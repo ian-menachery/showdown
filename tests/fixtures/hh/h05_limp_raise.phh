@@ -1,0 +1,10 @@
+# Pot 24 preflop; Ann's flop bet uncalled: Ann +16.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100]
+actions = ['d dh p1 QhQd', 'd dh p2 8c8d', 'd dh p3 JsTs', 'p3 cc', 'p1 cbr 8', 'p2 cc', 'p3 cc', 'd db 2c7d9h', 'p1 cbr 10', 'p2 f', 'p3 f']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [116, 92, 92]

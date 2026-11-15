@@ -1,0 +1,10 @@
+# Main 90 to AA, side 140 to KK; Cat's extra 100 returned.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [30, 100, 200]
+actions = ['d dh p1 AsAh', 'd dh p2 KsKh', 'd dh p3 QsQh', 'p3 cc', 'p1 cc', 'p2 cc', 'd db 2c7d9h', 'p1 cc', 'p2 cc', 'p3 cc', 'd db 3s', 'p1 cc', 'p2 cc', 'p3 cbr 198', 'p1 cc', 'p2 cc', 'p3 sm QsQh', 'p1 sm AsAh', 'p2 sm KsKh', 'd db 8c']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [90, 140, 100]

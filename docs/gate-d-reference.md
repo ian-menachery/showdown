@@ -164,3 +164,17 @@ table to the integer in every cell.
 - Miltersen and Sørensen, "A near-optimal strategy for a heads-up no-limit
   Texas Hold'em poker tournament", AAMAS 2007:
   <https://www.itu.dk/~trbj/papers/poker.pdf>
+
+## Pluribus hands (Phase 6, DECISIONS 25)
+
+The analyzer's real-data check (Gate F, Done 4) uses the 10,000 Pluribus hands
+from the phh-dataset (MIT). Only `data/pluribus` is fetched, at a pinned
+commit, into the gitignored `data/external/phh/`. The slow tests check a
+manifest hash over every file. To fetch it, run this from the repo root:
+
+```
+mkdir -p data/external/phh && cd data/external/phh
+git clone --filter=blob:none --no-checkout --sparse https://github.com/uoftcprg/phh-dataset.git repo
+cd repo && git sparse-checkout set data/pluribus
+git checkout e47fbd5816372360bade4de5d712346fe1bb70f6
+```

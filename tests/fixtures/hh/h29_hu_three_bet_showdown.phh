@@ -1,0 +1,10 @@
+# Dan's jacks make a set on the river: pot 30.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [100, 100]
+actions = ['d dh p1 JhJs', 'd dh p2 AdAh', 'p2 cbr 5', 'p1 cbr 15', 'p2 cc', 'd db 2c7d9h', 'p1 cc', 'p2 cc', 'd db 3s', 'p1 cc', 'p2 cc', 'd db Jc', 'p1 cc', 'p2 cc', 'p1 sm JhJs', 'p2 sm AdAh']
+players = ['Dan', 'Eve']
+finishing_stacks = [115, 85]

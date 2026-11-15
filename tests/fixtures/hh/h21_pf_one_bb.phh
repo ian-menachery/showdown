@@ -1,0 +1,10 @@
+# 1 bb: the BB is all-in from its blind; Hero's call is the jam.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [2, 2]
+actions = ['d dh p1 KhQh', 'd dh p2 3c2d', 'p2 cc', 'p2 sm 3c2d', 'p1 sm KhQh', 'd db 7s8cTd', 'd db 4h', 'd db Jd']
+players = ['Vil', 'Hero']
+finishing_stacks = [4, 0]

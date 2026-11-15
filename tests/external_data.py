@@ -44,6 +44,29 @@ def require(relative: str) -> Path:
     return path
 
 
+PLURIBUS = EXTERNAL / "phh" / "repo" / "data" / "pluribus"
+PLURIBUS_MANIFEST = "9903a6146e6939470e9fec1a3e9984306d8980bcea70f1cef36182151f88e58d"
+"""SHA-256 of "<relative path> <file SHA-256>" lines, sorted by path (DECISIONS 25)."""
+
+
+def require_pluribus() -> Path:
+    """The pinned phh-dataset Pluribus folder, or a test failure saying how to fetch it."""
+    if not PLURIBUS.is_dir():
+        pytest.fail(
+            f"{PLURIBUS} is missing. Fetch it with the commands in docs/gate-d-reference.md "
+            "('Pluribus hands'); DECISIONS 25."
+        )
+    files = sorted(PLURIBUS.rglob("*.phh"), key=lambda p: p.relative_to(PLURIBUS).as_posix())
+    lines = "".join(
+        f"{p.relative_to(PLURIBUS).as_posix()} {hashlib.sha256(p.read_bytes()).hexdigest()}\n"
+        for p in files
+    )
+    digest = hashlib.sha256(lines.encode()).hexdigest()
+    if digest != PLURIBUS_MANIFEST:
+        pytest.fail(f"{PLURIBUS}: manifest {digest} is not the pinned {PLURIBUS_MANIFEST}")
+    return PLURIBUS
+
+
 def binary_equity_numerators() -> np.ndarray:
     """b-inary/poker-cfr's exact table as a 1326 x 1326 int64 array in ALL_COMBOS order.
 

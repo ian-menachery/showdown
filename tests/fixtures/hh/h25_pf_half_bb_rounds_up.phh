@@ -1,0 +1,10 @@
+# 7.5 bb rounds to the 8 bb solution.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [15, 15]
+actions = ['d dh p1 Ks2h', 'd dh p2 Qd9c', 'p2 cbr 15', 'p1 f']
+players = ['Vil', 'Hero']
+finishing_stacks = [13, 17]

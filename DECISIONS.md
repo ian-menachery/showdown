@@ -668,3 +668,136 @@ first two were checked again first-hand.
 
 **Rules out:** grading by the actual combo's equity (the solution is
 class-level), grading Leduc, and letting pokerkit draw any card.
+
+---
+
+### 25. Analyzer input and stat definitions (2026-11-14)
+
+**Decided:** Ian approved the data on 2026-11-14 (SCOPE A5). The definitions
+follow `docs/design-review-phases-5-6.md`, which checked them against
+pokerkit 0.7.7.
+
+**Data.**
+- The Pluribus hands come from `uoftcprg/phh-dataset` (MIT), commit
+  `e47fbd5816372360bade4de5d712346fe1bb70f6`, only `data/pluribus`.
+- They were sparse-cloned into the gitignored `data/external/phh/repo/`:
+  10,000 `.phh` files.
+- They are pinned by a manifest hash: the SHA-256 of the lines
+  "`<path relative to data/pluribus> <file SHA-256>`", sorted by path. Its
+  value is `9903a6146e6939470e9fec1a3e9984306d8980bcea70f1cef36182151f88e58d`.
+- They are read as data and never executed.
+
+**Input.**
+- PHH files go through `HandHistory.load`.
+- PokerStars text goes through `pokerkit.PokerStarsParser`. Files are read as
+  UTF-8 with an optional byte-order mark, and CRLF becomes LF. pokerkit
+  supports only "Hold'em No Limit" and ignores antes and rake.
+
+**When a hand counts as parsed.** pokerkit replays it, and the replayed stacks
+equal the recorded `finishing_stacks` when the file has them.
+- pokerkit splits a pot by whole chips. A source that records half chips on a
+  chop differs by less than one chip per player, with the differences summing
+  to 0. Such a hand counts as parsed, is flagged **odd chip**, and the count is
+  printed. 8 of the 10,000 Pluribus hands are like this.
+- Any other difference is a failure with its reason. Every failure is counted
+  and printed (Gate F).
+- This check exists because pokerkit splits a showdown pot silently when a
+  history lacks its show actions.
+
+**Definitions.** All are per player, per hand.
+- **Raises and blinds.** A raise is any `CompletionBettingOrRaisingTo`, short
+  all-ins included. Posting a blind is never voluntary.
+- **Opportunity.** The player took at least one preflop action. Walks and
+  blinds that are all-in from posting have none.
+- **VPIP.** A preflop call of more than 0, or any preflop raise, out of
+  opportunities. A big blind's check is not VPIP.
+- **PFR.** At least one preflop raise, out of opportunities.
+- **3-bet chance.** The first preflop decision where the player faces exactly
+  one raise, did not make it, and pokerkit allows a raise
+  (`can_complete_bet_or_raise_to()`). It counts at most once per hand, and a
+  limper facing the open counts. A **3-bet** is a raise at that decision.
+- **Saw flop.** A flop was dealt and the player had not folded before it.
+  Players who are all-in count.
+- **WTSD.** The hand ends with at least two players who never folded, and the
+  player is one of them. Mucks count, and so do all-ins that run out.
+  WTSD% = WTSD / saw flop.
+- **W$SD.** WTSD hands in which the player received chips from a pot
+  (`ChipsPushing`), out of WTSD hands. Chops and side pots count. Returned
+  uncalled bets never pass through `ChipsPushing`, so they do not count.
+- **bb/100.** 100 × Σ(payoff / big blind) / hands dealt, walks included. The
+  big blind is `max(blinds_or_straddles[:2])`.
+
+**Rules out:** HUD-style stats beyond these seven in v1, and any stat that
+needs to know who the hero is, except through `--player`.
+
+---
+
+### 26. All-in EV adjustment (2026-11-14)
+
+**Decided:** This includes multiway pots and side pots, as Ian asked on
+2026-11-14.
+
+**Which hands qualify.** At the first replay step where all four hold:
+- no more betting is possible (`all_in_status`);
+- at least two players have not folded;
+- the board has fewer than five cards;
+- every remaining player's hole cards are known.
+
+If a remaining hand is unknown, the hand is counted as "not adjusted" and uses
+its actual result.
+
+**The adjustment.** For every player in a qualifying hand:
+EV net = actual net − chips actually received + expected chips from the pots
+at that moment.
+- The pots are final at that point, because no more betting is possible.
+- Returned uncalled bets never pass through the pots.
+- So a folded player's EV equals their actual result, and the adjustments sum
+  to 0.
+
+**Expected chips** come from `equity.multiway.pot_shares`, over uniform
+runouts:
+- Each pot is split equally among the best hands of its eligible players.
+- Only live hole cards and the board are removed from the deck. Folded cards
+  stay in it, as they would on a site.
+- The method:
+  - **Exact enumeration** when at most two board cards are to come (at most
+    1,081 runouts).
+  - **Exact** for a heads-up hand with five cards to come, through
+    `exact.hand_vs_hand`, with suit-isomorphic pairs sharing one enumeration.
+  - **Seeded Monte Carlo** otherwise (three or more players preflop). It
+    defaults to 20,000 runouts per hand. The seed is the run seed XOR the
+    CRC-32 of the hand's source, so a hand's result does not depend on the
+    files around it. The standard error is reported.
+
+**Rules out:**
+- Removing folded players' cards.
+- Adjusting river all-ins (nothing is left to come).
+- Monte Carlo where exact enumeration is cheap.
+
+---
+
+### 27. Grading real hands against push/fold Nash (2026-11-14)
+
+**Decided:** A hand is graded only when it fits the push/fold game:
+- it is heads-up (two players dealt in);
+- the effective stack, min(SB, BB starting stack) / big blind before the
+  blinds, is at most 20 bb;
+- the small blind's first action is a fold or puts all of its chips in.
+
+**The depth** is floor(effective + 0.5), clamped to 1 to 20 bb. That is the
+nearest solved depth with halves rounded up (Ian chose the nearest depth), and
+it is printed with every grade.
+
+**The big blind** is graded only when it faces that jam and calls or folds. At
+1 bb it has no decision.
+
+**How a decision is graded.** It is the same class-level grade as the trainer
+(DECISIONS 24), against the opponent's Nash strategy at that depth. A combo
+with unknown cards is not graded.
+
+**Hands that don't fit** are counted by reason: "not heads-up", "deeper than
+20 bb", "small blind did not fold or go all-in", and "small blind's cards
+unknown".
+
+**Rules out:** interpolating between depths, and grading limps, min-raises or
+multiway pots, which are not in the game.

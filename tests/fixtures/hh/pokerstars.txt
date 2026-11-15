@@ -1,0 +1,83 @@
+PokerStars Hand #1001: Hold'em No Limit ($0.01/$0.02 USD) - 2026/11/14 12:00:00 ET
+Table 'Fixture' 3-max Seat #3 is the button
+Seat 1: Ann ($2 in chips)
+Seat 2: Bob ($2 in chips)
+Seat 3: Cat ($2 in chips)
+Ann: posts small blind $0.01
+Bob: posts big blind $0.02
+*** HOLE CARDS ***
+Dealt to Ann [As Kd]
+Cat: raises $0.04 to $0.06
+Ann: raises $0.12 to $0.18
+Bob: folds
+Cat: calls $0.12
+*** FLOP *** [2c 7d 9h]
+Ann: bets $0.20
+Cat: folds
+Uncalled bet ($0.20) returned to Ann
+Ann collected $0.38 from pot
+*** SUMMARY ***
+Total pot $0.38 | Rake $0
+Board [2c 7d 9h]
+Seat 1: Ann (small blind) collected ($0.38)
+Seat 2: Bob (big blind) folded before Flop
+Seat 3: Cat (button) folded on the Flop
+
+
+
+PokerStars Hand #1002: Hold'em No Limit ($0.01/$0.02 USD) - 2026/11/14 12:01:00 ET
+Table 'Fixture' 3-max Seat #3 is the button
+Seat 1: Ann ($2 in chips)
+Seat 2: Bob ($2 in chips)
+Seat 3: Cat ($2 in chips)
+Ann: posts small blind $0.01
+Bob: posts big blind $0.02
+*** HOLE CARDS ***
+Dealt to Ann [7c 2h]
+Cat: folds
+Ann: folds
+Uncalled bet ($0.01) returned to Bob
+Bob collected $0.02 from pot
+*** SUMMARY ***
+Total pot $0.02 | Rake $0
+Seat 1: Ann (small blind) folded before Flop
+Seat 2: Bob (big blind) collected ($0.02)
+Seat 3: Cat (button) folded before Flop (didn't bet)
+
+
+
+PokerStars Hand #1003: Hold'em No Limit ($0.01/$0.02 USD) - 2026/11/14 12:02:00 ET
+Table 'Fixture' 3-max Seat #3 is the button
+Seat 1: Ann ($2 in chips)
+Seat 2: Bob ($2 in chips)
+Seat 3: Cat ($2 in chips)
+Ann: posts small blind $0.01
+Bob: posts big blind $0.02
+*** HOLE CARDS ***
+Dealt to Ann [Ah Ad]
+Cat: calls $0.02
+Ann: calls $0.01
+Bob: checks
+*** FLOP *** [2c 7s 9s]
+Ann: checks
+Bob: checks
+Cat: checks
+*** TURN *** [2c 7s 9s] [3d]
+Ann: checks
+Bob: checks
+Cat: checks
+*** RIVER *** [2c 7s 9s 3d] [Jc]
+Ann: checks
+Bob: checks
+Cat: checks
+*** SHOW DOWN ***
+Ann: shows [Ah Ad] (a pair of Aces)
+Bob: shows [Kh Kd] (a pair of Kings)
+Cat: shows [Qh Qd] (a pair of Queens)
+Ann collected $0.06 from pot
+*** SUMMARY ***
+Total pot $0.06 | Rake $0
+Board [2c 7s 9s 3d Jc]
+Seat 1: Ann (small blind) showed [Ah Ad] and won ($0.06) with a pair of Aces
+Seat 2: Bob (big blind) showed [Kh Kd] and lost with a pair of Kings
+Seat 3: Cat (button) showed [Qh Qd] and lost with a pair of Queens

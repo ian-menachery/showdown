@@ -1,0 +1,10 @@
+# Pot 82; Cat's flop bet uncalled: Cat +42, Ann -40, Bob -2.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0]
+blinds_or_straddles = [1, 2, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100]
+actions = ['d dh p1 AsKs', 'd dh p2 3c4d', 'd dh p3 QsQd', 'p3 cbr 6', 'p1 cbr 18', 'p2 f', 'p3 cbr 40', 'p1 cc', 'd db 2c7d9h', 'p1 cc', 'p3 cbr 30', 'p1 f']
+players = ['Ann', 'Bob', 'Cat']
+finishing_stacks = [60, 98, 142]

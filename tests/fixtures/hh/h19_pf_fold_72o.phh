@@ -1,0 +1,10 @@
+# 10 bb: Hero folds 72o.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [20, 20]
+actions = ['d dh p1 9d9h', 'd dh p2 7c2d', 'p2 f']
+players = ['Vil', 'Hero']
+finishing_stacks = [21, 19]

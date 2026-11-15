@@ -1,0 +1,10 @@
+# Walk.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [100, 100, 100, 100, 100, 100]
+actions = ['d dh p1 7h2c', 'd dh p2 AhKd', 'd dh p3 QcQd', 'd dh p4 9s8s', 'd dh p5 4h4d', 'd dh p6 Jd3c', 'p3 f', 'p4 f', 'p5 f', 'p6 f', 'p1 f']
+players = ['Ann', 'Bob', 'Cat', 'Dan', 'Eve', 'Fay']
+finishing_stacks = [99, 101, 100, 100, 100, 100]

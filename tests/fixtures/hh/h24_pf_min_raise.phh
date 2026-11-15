@@ -1,0 +1,10 @@
+# 8 bb, but a min-raise is not in the game.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [16, 16]
+actions = ['d dh p1 Ks2h', 'd dh p2 AdQd', 'p2 cbr 4', 'p1 f']
+players = ['Vil', 'Hero']
+finishing_stacks = [14, 18]

@@ -1,0 +1,10 @@
+# Effective 15 bb; Vil's pair of jacks wins 60, Hero's extra 10 returned.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [1, 2]
+min_bet = 2
+starting_stacks = [30, 40]
+actions = ['d dh p1 KcJh', 'd dh p2 As5d', 'p2 cbr 40', 'p1 cc', 'p2 sm As5d', 'p1 sm KcJh', 'd db 2c7d9h', 'd db 3s', 'd db Jc']
+players = ['Vil', 'Hero']
+finishing_stacks = [60, 10]

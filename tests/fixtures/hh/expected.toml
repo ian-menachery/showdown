@@ -1,0 +1,340 @@
+# Gate F fixture: every stat counted by hand, before the analyzer ran on these hands.
+#
+# Keys per player: opp (took a preflop action), vpip, pfr, tbc (3-bet chance),
+# tb (3-bet made), flop (saw the flop), sd (went to showdown), wsd (won chips at
+# showdown), net (chips). Definitions: DECISIONS 25. Blinds are 1/2 chips, so
+# 1 bb = 2 chips. Seats: heads-up p1 = BB, p2 = SB; otherwise p1 = SB, p2 = BB.
+#
+# [<hand>.ev] gives the all-in EV-adjusted result in chips (DECISIONS 26),
+# with the counting in the comment. [<hand>.grade] gives the push/fold
+# decisions graded (DECISIONS 27), or the reason the hand is not gradable.
+
+[h01_walk_3p]
+# Cat (BTN) folds, Ann (SB) folds: Bob's walk; Bob never acts.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 0, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 1 }
+Cat = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+[h02_limped_flop_bet]
+# Cat limps 2, Ann completes 1, Bob checks (not VPIP). Flop: Bob bets, both fold.
+Ann = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -2 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = 4 }
+Cat = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -2 }
+grade = "not heads-up"
+
+[h03_open_call_showdown]
+# Cat opens 6: Ann and Bob each face exactly one raise (3-bet chances); Ann
+# folds, Bob calls. Checked down; KK beats AQ. Pot 13.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 1, sd = 1, wsd = 1, net = 7 }
+Cat = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -6 }
+grade = "not heads-up"
+
+[h04_three_bet_takes_it]
+# Cat opens 6, Ann 3-bets to 20; Bob now faces two raises (no chance); both fold.
+Ann = { opp = 1, vpip = 1, pfr = 1, tbc = 1, tb = 1, flop = 0, sd = 0, wsd = 0, net = 8 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Cat = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -6 }
+grade = "not heads-up"
+
+[h05_limp_raise]
+# Cat limps, Ann raises to 8 (an open: no raise before it, so not a 3-bet).
+# Bob and Cat each face exactly one raise and call. Ann's flop bet takes it.
+Ann = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = 16 }
+Bob = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 1, sd = 0, wsd = 0, net = -8 }
+Cat = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 1, sd = 0, wsd = 0, net = -8 }
+grade = "not heads-up"
+
+[h06_four_bet]
+# Cat opens, Ann 3-bets to 18, Bob folds (faces two raises), Cat 4-bets to 40
+# (facing two raises: not a 3-bet chance), Ann calls. Ann folds the flop. Pot 82.
+Ann = { opp = 1, vpip = 1, pfr = 1, tbc = 1, tb = 1, flop = 1, sd = 0, wsd = 0, net = -40 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Cat = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = 42 }
+grade = "not heads-up"
+
+[h07_hu_board_chop]
+# Heads-up, Dan BB, Eve SB. Eve completes (VPIP), Dan checks. Broadway on the
+# board: both reach showdown and each gets 2 chips back from the pot (W$SD).
+Dan = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 0 }
+Eve = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 0 }
+grade = "deeper than 20 bb"
+
+[h08_hu_preflop_allin]
+# Eve raises to 6, Dan 3-bets all-in to 100, Eve calls. AsAh vs KdKc: AA holds.
+Dan = { opp = 1, vpip = 1, pfr = 1, tbc = 1, tb = 1, flop = 1, sd = 1, wsd = 1, net = 100 }
+Eve = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -100 }
+grade = "deeper than 20 bb"
+
+[h08_hu_preflop_allin.ev]
+# Pot 200. AsAh vs KdKc preflop: 2*wins + ties = 2,782,682 of 2*C(48,5) =
+# 3,424,608 (b-inary's exact table; also our own enumeration, GATES Gate C).
+# Dan: 200 * 2782682/3424608 - 100. Eve: the negative.
+Dan = 62.510979358805
+Eve = -62.510979358805
+
+[h09_hu_turn_allin]
+# Eve raises, Dan calls (a 3-bet chance he passes). Turn all-in. KsKh vs AsAd
+# on 2c7d9h3s: KK needs one of the two remaining kings (Kd, Kc) among the 44
+# rivers. The board is rainbow and no straight is possible, so AA wins 42/44.
+Dan = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 1, sd = 1, wsd = 1, net = 100 }
+Eve = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -100 }
+grade = "deeper than 20 bb"
+
+[h09_hu_turn_allin.ev]
+# Pot 200. Eve (AA): 200 * 42/44 - 100 = 90.909090... Dan: the negative.
+Dan = -90.909090909091
+Eve = 90.909090909091
+
+[h10_hu_flop_allin]
+# Eve limps, Dan raises to 6, Eve calls (her second decision faces exactly one
+# raise: a 3-bet chance). Flop Kh7c9d all-in: AcAd vs 2s2h, 45 cards left,
+# C(45,2) = 990 runouts. 22 needs a 2 (2c, 2d): 2*43 + 1 = 87 runouts contain
+# one, but in 4 of them (a 2 with As or Ah) AA makes a higher set. No straight,
+# flush or tie is possible. So 22 wins 83/990 and AA 907/990.
+Dan = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 50 }
+Eve = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 1, sd = 1, wsd = 0, net = -50 }
+grade = "deeper than 20 bb"
+
+[h10_hu_flop_allin.ev]
+# Pot 100. Dan (AA): 100 * 907/990 - 50. Eve: the negative.
+Dan = 41.616161616162
+Eve = -41.616161616162
+
+[h11_3way_turn_side_pot]
+# Stacks 30/100/200. Limped, checked to the turn; Cat jams 198, Ann (28) and
+# Bob (98) call all-in; Cat's extra 100 is returned. Main pot 90 {Ann, Bob,
+# Cat}, side pot 140 {Bob, Cat}. River 8c: AA wins the main pot, KK the side.
+Ann = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 60 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 40 }
+Cat = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -100 }
+grade = "not heads-up"
+
+[h11_3way_turn_side_pot.ev]
+# 52 - 6 hole cards - 4 board = 42 rivers; rainbow board, no straights.
+# Main pot: Kd/Kc (2) give KK a set, Qd/Qc (2) give QQ a set, else AA: 38/2/2.
+# Side pot: QQ only with a queen (2), else KK: 40/2.
+# EV = net - received + expected.
+# Ann: 60 - 90 + 90*38/42.  Bob: 40 - 140 + 90*2/42 + 140*40/42.
+# Cat: -100 - 0 + 90*2/42 + 140*2/42.
+Ann = 51.428571428571
+Bob = 37.619047619048
+Cat = -89.047619047619
+
+[h12_6max_bb_three_bet]
+# Cat (UTG) opens 6; Dan, Eve, Fay and Ann each face exactly one raise and fold
+# (3-bet chances); Bob 3-bets to 20, Cat calls (two raises: no chance) and
+# folds the flop. Pot 41.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 1, vpip = 1, pfr = 1, tbc = 1, tb = 1, flop = 1, sd = 0, wsd = 0, net = 21 }
+Cat = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -20 }
+Dan = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Eve = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Fay = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+[h13_6max_walk]
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 0, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 1 }
+Cat = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Dan = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Eve = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Fay = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+[h14_6max_limped_showdown]
+# Cat and Eve limp, Bob checks. Flop: Cat bets 4, Eve folds, Bob calls; checked
+# down. Bob's set of nines beats Cat's jacks. Pot 7 + 8 = 15.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 9 }
+Cat = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -6 }
+Dan = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Eve = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -2 }
+Fay = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+[h15_hu_uncalled_excess]
+# Dan (BB, 200) and Eve (SB, 50) limp and check to the turn; Dan bets 150, Eve
+# calls all-in for 48 and Dan's extra 100 comes back. Eve's KK hits the river
+# king. Dan reaches showdown but receives nothing from a pot (W$SD 0): the
+# returned bet is not a pot win.
+Dan = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -50 }
+Eve = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 50 }
+grade = "deeper than 20 bb"
+
+[h15_hu_uncalled_excess.ev]
+# Pot 100; AsAh vs KsKh on 2c7d9h3s: AA wins 42/44 (as in h09).
+# Dan: -50 - 0 + 100*42/44. Eve: 50 - 100 + 100*2/44.
+Dan = 45.454545454545
+Eve = -45.454545454545
+
+[h16_bb_raises_limpers]
+# Cat and Ann limp; Bob raises to 10 (an open: no raise before it). Cat and Ann
+# each face exactly one raise (3-bet chances) and fold.
+Ann = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Bob = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 4 }
+Cat = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+grade = "not heads-up"
+
+[h17_6max_squeeze]
+# Cat opens 6, Dan calls (3-bet chance passed), Eve squeezes to 24 (3-bet).
+# Fay, Ann and Bob then face two raises (no chance); everyone folds.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Cat = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -6 }
+Dan = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -6 }
+Eve = { opp = 1, vpip = 1, pfr = 1, tbc = 1, tb = 1, flop = 0, sd = 0, wsd = 0, net = 15 }
+Fay = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+[h18_pf_jam_t5o_fold]
+# 10 bb. Hero (SB) jams T5o; Vil (BB) faces an all-in and cannot raise (no
+# 3-bet chance), folds 83o.
+Vil = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Hero = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 2 }
+grade = [
+  { seat = "sb", player = "Hero", depth = 10, class = "T5o", allin = true },
+  { seat = "bb", player = "Vil", depth = 10, class = "83o", allin = false },
+]
+
+[h19_pf_fold_72o]
+Vil = { opp = 0, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 1 }
+Hero = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+grade = [{ seat = "sb", player = "Hero", depth = 10, class = "72o", allin = false }]
+
+[h20_pf_jam_call_99]
+# 10 bb. Vil (SB) jams AhKh, Hero (BB) calls 9s9c and flops a set.
+Hero = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 20 }
+Vil = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -20 }
+grade = [
+  { seat = "sb", player = "Vil", depth = 10, class = "AKs", allin = true },
+  { seat = "bb", player = "Hero", depth = 10, class = "99", allin = true },
+]
+
+[h20_pf_jam_call_99.ev]
+# Pot 40. AhKh vs 9s9c: 2*wins + ties = 1,630,396 of 3,424,608 (b-inary).
+# Vil: 40 * 1630396/3424608 - 20. Hero: the negative.
+Hero = 0.956699277698
+Vil = -0.956699277698
+
+[h21_pf_one_bb]
+# 1 bb. Vil (BB) is all-in from posting the blind and never acts; Hero (SB)
+# calls the rest: that call is the jam. Both see the flop and the showdown.
+Vil = { opp = 0, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 2 }
+Hero = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -2 }
+grade = [{ seat = "sb", player = "Hero", depth = 1, class = "32o", allin = true }]
+
+[h21_pf_one_bb.ev]
+# Pot 4. 3c2d vs KhQh: 2*wins + ties = 1,093,477 of 3,424,608 (b-inary).
+# Hero: 4 * 1093477/3424608 - 2. Vil: the negative.
+Hero = -0.722800390585
+Vil = 0.722800390585
+
+[h22_pf_uneven_15bb]
+# Hero (SB) has 40 chips, Vil (BB) 30: effective 15 bb. Hero jams As5d, Vil
+# calls KcJh all-in; Hero's extra 10 is returned. Vil's jacks win the pot of 60.
+Vil = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 30 }
+Hero = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -30 }
+grade = [
+  { seat = "sb", player = "Hero", depth = 15, class = "A5o", allin = true },
+  { seat = "bb", player = "Vil", depth = 15, class = "KJo", allin = true },
+]
+
+[h22_pf_uneven_15bb.ev]
+# Pot 60. As5d vs KcJh: 2*wins + ties = 1,974,870 of 3,424,608 (b-inary).
+# Hero: -30 - 0 + 60 * 1974870/3424608. Vil: the negative.
+Hero = 4.600222857623
+Vil = -4.600222857623
+
+[h23_pf_too_deep]
+Vil = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Hero = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 2 }
+grade = "deeper than 20 bb"
+
+[h24_pf_min_raise]
+# 8 bb, but Hero min-raises to 4: not a push/fold action. Vil faces one raise
+# and could re-raise (a 3-bet chance), but folds.
+Vil = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Hero = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 2 }
+grade = "small blind did not fold or go all-in"
+
+[h25_pf_half_bb_rounds_up]
+# 15 chips each = 7.5 bb, graded at floor(7.5 + 0.5) = 8 bb.
+Vil = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Hero = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 2 }
+grade = [
+  { seat = "sb", player = "Hero", depth = 8, class = "Q9o", allin = true },
+  { seat = "bb", player = "Vil", depth = 8, class = "K2o", allin = false },
+]
+
+[h26_pf_bb_cards_unknown]
+# Vil's cards are unknown, so only Hero's jam is graded.
+Vil = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Hero = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 2 }
+grade = [{ seat = "sb", player = "Hero", depth = 10, class = "AQs", allin = true }]
+
+[h27_3p_river_check_raise]
+# Cat opens, Ann folds (chance), Bob calls (chance). Bob's flopped set of
+# sevens check-calls the flop, then bets 10 into Cat on the river; Cat raises
+# to 30, Bob calls. Pot 13 + 16 + 60 = 89.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 1, vpip = 1, pfr = 0, tbc = 1, tb = 0, flop = 1, sd = 1, wsd = 1, net = 45 }
+Cat = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -44 }
+grade = "not heads-up"
+
+[h28_3p_sb_complete]
+Ann = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = 4 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -4 }
+Cat = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+[h29_hu_three_bet_showdown]
+# Eve opens to 5, Dan 3-bets to 15, Eve calls; checked down; Dan's river set wins 30.
+Dan = { opp = 1, vpip = 1, pfr = 1, tbc = 1, tb = 1, flop = 1, sd = 1, wsd = 1, net = 15 }
+Eve = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -15 }
+grade = "deeper than 20 bb"
+
+[h30_6max_sb_steal]
+Ann = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 2 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 1, tb = 0, flop = 0, sd = 0, wsd = 0, net = -2 }
+Cat = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Dan = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Eve = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Fay = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+[h31_6max_four_way_flop]
+# Cat, Dan and Fay limp, Bob checks; Dan's flop bet takes the pot of 9.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -1 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -2 }
+Cat = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -2 }
+Dan = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = 7 }
+Eve = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+Fay = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -2 }
+grade = "not heads-up"
+
+# --- PokerStars text: pokerstars.txt holds three hands at $0.01/$0.02 ----------
+# net is in dollars here; 1 bb = $0.02.
+
+["pokerstars.txt#1"]
+# Cat opens to $0.06, Ann 3-bets to $0.18, Bob folds (two raises), Cat calls.
+# Ann bets the flop, Cat folds. Ann wins $0.38 of which $0.18 was hers.
+Ann = { opp = 1, vpip = 1, pfr = 1, tbc = 1, tb = 1, flop = 1, sd = 0, wsd = 0, net = 0.20 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -0.02 }
+Cat = { opp = 1, vpip = 1, pfr = 1, tbc = 0, tb = 0, flop = 1, sd = 0, wsd = 0, net = -0.18 }
+grade = "not heads-up"
+
+["pokerstars.txt#2"]
+# Cat and Ann fold: Bob's walk.
+Ann = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = -0.01 }
+Bob = { opp = 0, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0.01 }
+Cat = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 0, sd = 0, wsd = 0, net = 0 }
+grade = "not heads-up"
+
+["pokerstars.txt#3"]
+# Limped three ways and checked down; all three show; Ann's aces win $0.06.
+Ann = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 1, net = 0.04 }
+Bob = { opp = 1, vpip = 0, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -0.02 }
+Cat = { opp = 1, vpip = 1, pfr = 0, tbc = 0, tb = 0, flop = 1, sd = 1, wsd = 0, net = -0.02 }
+grade = "not heads-up"
