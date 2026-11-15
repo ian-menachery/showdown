@@ -1203,3 +1203,131 @@ amendment.
 Wiring the model into the advisor (preflop suggestions above 20 bb, and the
 helper's villain ranges) is a separate step. It needs its own entry and an
 extension of Gate G, after Ian's OK.
+
+---
+
+### 35. The preflop model in the advisor, and Gate G extended (2026-11-15)
+
+**Decided:** Ian approved the wiring and these choices on 2026-11-15. It
+uses the Gate P model (DECISIONS 34) at R_oop = 0.90.
+
+**Preflop above 20 bb: the model answers its six decisions.**
+
+| `--facing` | Decision | Model node |
+|---|---|---|
+| `sb_first` | SB first in | `""` |
+| `bb_vs_raise` | BB facing the open | `r` |
+| `sb_vs_3bet` | SB facing the BB's 3-bet | `rr` |
+| `bb_vs_4bet_jam` | BB facing the SB's jam over the 3-bet | `rrj` |
+| `sb_vs_jam` | SB facing the BB's jam over the open | `rj` |
+| `bb_vs_jam` | BB facing the SB's first-in jam | `j` |
+
+- **The depth** follows DECISIONS 34's lookup rule and is printed.
+- **The suggestion** is the class's most likely action at that node. Ties go
+  to the earlier action in fold, call, raise, all-in order.
+- **What is shown with it:**
+  - every action's frequency (the mix);
+  - "depends on R" when DECISIONS 34's flag is set;
+  - the source, "model chart, R 0.90, D bb", never "Nash".
+- **Names.** The model's "all-in" is shown as "jam". A raise carries its size:
+  2.5 bb for the SB's open, and 3× the open faced for the BB's 3-bet (the
+  model's ratio).
+- **20 bb or less is unchanged** (DECISIONS 32). Push/fold answers `sb_first`
+  and `bb_vs_jam`. The other four decisions, and `other` at any depth, get
+  "no suggestion".
+
+**Raise sizes: map and flag** (Ian's choice).
+- For `bb_vs_raise` and `sb_vs_3bet`, the villain's raise-to is read from
+  the spot as (pot + to call) / 2, so these spots need a to-call above 0.
+- The model's answer is given at any size. When the raise-to differs from the
+  model's (2.5 or 7.5 bb) by more than 0.05 bb, the suggestion says so, for
+  example "model assumes a 2.5 bb open; you face 3.5 bb".
+
+**A reach rule (added with this entry, after measuring the model).**
+- **The problem.** The model's strategy at a decision it almost never reaches
+  is not advice. At 50 bb, for example, the BB never 3-bets to 7.5, so:
+  - the stored answer to a 3-bet has the SB calling with 72o 84% of the time;
+  - the BB's answer to a 4-bet jam is an untouched 50/50.
+- **The measurement.** It was taken before this rule was written. The figure
+  is the percentage of deals that reach each node at R 0.90:
+
+  | Depth | `r` | `rr` | `rrj` | `rj` | `j` |
+  |---|---|---|---|---|---|
+  | 25 | 56.9 | 0.000 | 0.000 | 16.2 | 2.25 |
+  | 30 | 61.2 | 0.000 | 0.000 | 16.2 | 1.72 |
+  | 40 | 70.4 | 0.001 | 0.000 | 15.9 | 0.001 |
+  | 50 | 72.5 | 0.004 | 0.000 | 15.3 | 0.001 |
+  | 60 | 77.3 | 0.642 | 0.049 | 14.0 | 0.001 |
+  | 70 | 80.9 | 1.87 | 0.124 | 12.6 | 0.001 |
+  | 80 | 82.8 | 5.36 | 0.350 | 9.67 | 0.001 |
+  | 90 | 84.4 | 7.00 | 0.412 | 6.98 | 0.001 |
+  | 100 | 84.5 | 9.32 | 0.512 | 5.04 | 0.002 |
+
+- **The rule.** A decision is answered from the model only if the model
+  reaches its node in at least **0.1% of deals** at the looked-up depth.
+  Otherwise the advisor gives "no suggestion: the model almost never reaches
+  this decision at D bb".
+  - The bar sits in clear gaps for `rr` and `j`.
+  - Of `rrj`, it excludes only 60 bb (0.049%).
+- **What this costs.** A first-in jam at 40 bb or more, and a 3-bet to about
+  7.5 bb at 50 bb or less, get no suggestion. Answering an opponent who
+  deviates from the model like that is Phase 12's job (exploiting).
+
+**Postflop: the model's ranges, weighted** (Ian's choice).
+- **The default villain range** comes from the model at the looked-up depth,
+  with 25 bb for every stack of 25 bb or less. A class's weight is the product
+  of the villain's own action frequencies along the line:
+
+  | Pot | Villain | Weight |
+  |---|---|---|
+  | single-raised, `rc` | SB | P(raise first in) |
+  | single-raised, `rc` | BB | P(call the open) |
+  | 3-bet, `rrc` | BB | P(3-bet the open) |
+  | 3-bet, `rrc` | SB | P(raise first in) × P(call the 3-bet) |
+
+  Each combo carries its class's weight. A custom `--villain` range still
+  overrides it (DECISIONS 32).
+- **The same reach rule applies.** When the model reaches the pot (`rc` or
+  `rrc`) in less than 0.1% of deals, the helper uses the fixed top-%
+  default from DECISIONS 32, labelled as such. That covers 3-bet pots at 50 bb
+  and below.
+- **Fixed defaults stay selectable.** `showdown advise --ranges fixed` gives
+  DECISIONS 32's behaviour.
+- **Weighted equity.**
+  - `exact.range_vs_range` and `montecarlo.monte_carlo` take optional
+    villain combo weights. A pair's weight is its villain combo's.
+  - With no weights, both run their current code unchanged. Gate C's results
+    cannot move.
+
+**Gate G, extended.** All of these must pass, along with Gate G's existing
+bars (DECISIONS 32):
+1. **New spots.** A new fixture has at least 30 preflop spots above 20 bb:
+   - at least 4 for each of the six decisions, at depths where the model
+     reaches it;
+   - at least 4 that must get "no suggestion" (unreached decisions, the four
+     non-push/fold decisions at 20 bb or less, and `other`).
+
+   The depth, decision, action and R flag of each spot are written by hand
+   from `showdown preflop chart`. Its mix must equal the stored model to
+   1e-12.
+2. **Sizes.** At least 2 spots face a non-model raise size. Each gets the
+   size note and the model's answer. A suggested 3-bet is 3× the open faced.
+3. **Model ranges.**
+   - At 100 bb, for 3 classes in each of the four ranges, the weights equal
+     the stored frequencies multiplied by hand.
+   - At least 4 turn or river spots against a model range match a separate
+     weighted brute-force count with phevaluator, to 1e-12.
+   - At least 2 flop spots land within 3 SE of exact weighted enumeration.
+   - A 3-bet pot at 50 bb uses the fixed default, with its label.
+4. **The old fixture.** 42 of the 43 old spots keep their answers, run with
+   `--ranges fixed`. The 43rd is AsKd as the SB first in at 40 bb. Its answer
+   was "no suggestion until D3 picks a source", so it now expects the model's
+   answer, by design.
+5. **Latency.** The 95th percentile over old and new spots is at most
+   300 ms, measured as DECISIONS 32 sets out.
+6. **The log.** Every suggestion is logged, with its mix and notes.
+
+**Rules out:**
+- Calling the model's answers Nash.
+- Answering from a node below the reach bar.
+- Moving any bar after results are seen, except by a dated amendment.
