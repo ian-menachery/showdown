@@ -841,3 +841,50 @@ and 1, and the 3 locked cases agree exactly.
 - Choosing a different hash seed after seeing results.
 - Widening the 3 SE bar.
 - Any test oracle whose randomness is not reproducible from the test itself.
+
+---
+
+### 29. A narrow exception to DECISIONS 9: a suggest-only advisor for disclosed play-money games (2026-11-15)
+
+**Decided:** Ian approved this on 2026-11-15 (SCOPE A6), from his live-advisor
+scope.
+- **The exception.** Live, suggest-only advice is allowed only in **private
+  play-money games where every player knows** the advisor is running. Poker
+  Now is first.
+- **The advisor shows; it never acts.** No auto-clicking or any other
+  automated action. Ian parked auto-clicking for later, and it would need its
+  own amendment, because it would make the advisor a bot.
+- **It is visible.** It is never hidden from screen sharing or recording. No
+  stealth or overlay-hiding features, including those in "Open Cluely"-style
+  tools.
+- **Never with real money, and never on ClubWPT Gold.** DECISIONS 13 stands
+  unchanged. The README warning stands too.
+- **Reading Poker Now.**
+  - Poker Now's Terms of Service (effective 2024-11-01, read 2026-11-15)
+    forbid using "an automatic device (such as a robot or spider) or manual
+    process to copy or 'scrape' the Services ... without our express written
+    permission".
+  - They also forbid harvesting data, network monitoring and reverse
+    engineering.
+  - Ian chose to read the screen anyway, at his own account's risk.
+  - The reader looks only at his own display: screen capture of the table
+    window. It never touches Poker Now's network traffic, its code or its
+    servers.
+
+**Why:** Ian wants fast, sensible suggestions in friendly games where everyone
+knows, with speed over precision. DECISIONS 9 existed to keep the project clear
+of sites and games where assistance is cheating. This exception keeps that
+protection everywhere else.
+
+**Still out of scope until their own amendments:**
+- Postflop solving: the TexasSolver spike may run, because it only measures.
+- Serving a table beyond localhost (DECISIONS 12): the self-hosted table.
+
+**Rules out:**
+- Real-money tables, ClubWPT, and any site whose terms ban assistance
+  outright.
+- Auto-action and stealth.
+
+**Not decided here:** whether captured screens may go to a cloud AI (Open
+Cluely's design). The plan recommends against it, for speed and for friends'
+privacy, and leaves the choice to Ian.

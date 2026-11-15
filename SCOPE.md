@@ -80,9 +80,11 @@ copying source files into this repo (DECISIONS 3).
 
 This list is load-bearing. Anything on it is a scope amendment, not a good idea.
 
-- **Anything that touches live play.** No HUD, overlay, table scraping, folder
-  watcher during a session, or real-time advice. The analyzer reads completed
-  hand histories only (DECISIONS 9).
+- **Anything that touches live play,** with one narrow exception (A6,
+  DECISIONS 29): a suggest-only advisor for private play-money games where
+  every player knows. Outside it, there is no HUD, overlay, table scraping,
+  folder watcher during a session, or real-time advice, and the analyzer reads
+  completed hand histories only (DECISIONS 9).
 - Connecting to any real-money site, and bots that play on any site.
 - Full NLHE solving, postflop solving, any abstraction beyond push/fold, limp or
   min-raise options, antes, ICM.
@@ -243,3 +245,4 @@ was settled on 2026-11-14 by DECISIONS 20 and 22. Question 5 was answered on
 | A3 | 2026-11-14 | Analyzer data is the phh-dataset (Pluribus hands for Done 4 and Gate F), plus ClubWPT Gold under DECISIONS 13. Scraping, screen-reading and OCR of any client are out of scope. | Ian plays on ClubWPT Gold. pokerkit has no parser for it, no export format is documented, and the site bans tools that "scrape hand history data". |
 | A4 | 2026-11-14 | Phases 1 to 3 run in a single session instead of one per session. | Ian asked for the early core phases to be built while he was away, with no questions. Calls that would have been his are recorded in DECISIONS 14 onward. The per-phase gates still apply. |
 | A5 | 2026-11-14 | Phases 4 to 7 run as one autonomous stretch instead of one per session. Commits and pushes happen at each gate PASS. A gate failure gets one reproduce-and-fix; a second failure stops the run. No public actions, no new dependencies, and only one approved download (the phh-dataset Pluribus hands). | Ian asked for a long plan that could run without questions, and answered every open call up front (`docs/plan-phases-4-7.md`; design facts in `docs/design-review-phases-5-6.md`). Gates still apply. |
+| A6 | 2026-11-15 | A narrow exception to DECISIONS 9 (DECISIONS 29). A suggest-only live advisor is in scope for private play-money games (Poker Now first) where every player knows. It never runs for real money, never on ClubWPT (DECISIONS 13), never clicks, and is never hidden from screen sharing. Postflop solving and serving beyond localhost stay out of scope until their own amendments. | Ian's live-advisor scope (2026-11-15); plan in `docs/plan-live-advisor.md`. |
