@@ -561,3 +561,20 @@ showdown advise --hero KhKd --seat bb --stack 50 --facing bb_vs_jam --pot 51 --t
 .venv\Scripts\python -m pytest tests/test_gate_j.py -s
 .venv\Scripts\python -m pytest tests/test_gate_j_slow.py -m slow
 ```
+
+## Push/fold exploit charts (DECISIONS 37): PASS (2026-11-15)
+
+Evidence: `tests/test_pushfold_exploit.py` (fast suite). The bars were
+pre-registered in DECISIONS 37 (commit 02e5be1) before any code.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. EVs equal the compiled tree's own `best_response` and `policy_value` | 5 and 15 bb, both seats, reads of 15% and 60%: equal to the 12th decimal (e.g. 15 bb vs SB jams top 60%: 0.176805107161 both ways) | to 1e-9 | PASS |
+| 2. The measured numbers | 10 bb vs BB calls top 15%: best response +0.427, Nash +0.133 over the game value. 20 bb vs SB jams any two: gain +0.747 bb/hand (+37.3 bb/100) | to 1e-3 | PASS |
+| 3. Risk never beats the game value | worst over 1–20 bb, both seats, reads 15/50/100% | ≤ 1e-5 | PASS |
+| 4. The chart is the per-class argmax, and equals the tree's pure best response away from ties | every case in bar 1 | exact | PASS |
+
+```
+showdown pushfold exploit 10 --villain-calls 15
+showdown pushfold exploit 20 --villain-jams 100
+```

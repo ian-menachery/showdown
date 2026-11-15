@@ -258,6 +258,12 @@ logged hands, shrinking toward Nash, and the simulation gate.
   jam-vs-range helper. `--villain` or `--villain-top N` gives the best
   response to Ian's read against any jam, beside the Nash or model answer.
   Labelled defaults fill the jams the model skips.
+- **Push/fold exploit charts are built** (DECISIONS 37, PASS):
+  `showdown pushfold exploit <stack> --villain-calls N | --villain-jams N`
+  prints the best response to a read, its gain over Nash, and its risk if the
+  read is wrong.
+- **Spike S4 (postflop-solver) and the PHH leak study are pre-registered**
+  (DECISIONS 38, 39).
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D2, which waits until option 1 starts;

@@ -8,6 +8,7 @@ showdown matrix build --exact
 showdown matrix show AKs QQ
 showdown pushfold build
 showdown pushfold chart 10
+showdown pushfold exploit 10 --villain-calls 15
 showdown play
 showdown analyze data/external/phh/repo/data/pluribus
 showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5
@@ -208,6 +209,25 @@ def _pushfold_chart(args: argparse.Namespace) -> int:
     print()
     print(f"BB calls a jam with {result.call_share():.1%} of hands")
     print(pushfold.chart(result.call))
+    return 0
+
+
+def _pushfold_exploit(args: argparse.Namespace) -> int:
+    from showdown.exploit import exploit, report
+
+    solution = pushfold.PushFoldSolution.load(args.file)
+    matrix = preflop_matrix.PreflopMatrix.load(solution.matrix_path)
+    try:
+        e = exploit(
+            solution,
+            matrix,
+            args.stack,
+            villain_calls=args.villain_calls,
+            villain_jams=args.villain_jams,
+        )
+    except ValueError as error:
+        raise SystemExit(f"bad read: {error}") from None
+    print(report(e))
     return 0
 
 
@@ -449,6 +469,19 @@ def build_parser() -> argparse.ArgumentParser:
     pf_chart.add_argument("stack", type=float, help="effective stack in bb, before blinds")
     pf_chart.add_argument("--file", default=pushfold.DEFAULT_SOLUTION)
     pf_chart.set_defaults(handler=_pushfold_chart)
+    pf_exploit = pf_commands.add_parser(
+        "exploit", help="best response to a read, its gain and its risk (DECISIONS 37)"
+    )
+    pf_exploit.add_argument("stack", type=float, help="effective stack in bb, before blinds")
+    read = pf_exploit.add_mutually_exclusive_group(required=True)
+    read.add_argument(
+        "--villain-calls", type=float, metavar="N", help="you are the SB; the BB calls the top N%%"
+    )
+    read.add_argument(
+        "--villain-jams", type=float, metavar="N", help="you are the BB; the SB jams the top N%%"
+    )
+    pf_exploit.add_argument("--file", default=pushfold.DEFAULT_SOLUTION)
+    pf_exploit.set_defaults(handler=_pushfold_exploit)
 
     play = commands.add_parser("play", help="local browser page: push/fold trainer and Leduc")
     play.add_argument("--port", type=int, default=0, help="default: any free port")
