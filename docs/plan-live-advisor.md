@@ -186,6 +186,47 @@ Decisions for Ian when this phase starts:
 - which postflop tendencies to track first;
 - how the overlay shows two actions.
 
+#### Phase 12, slice 1: the jam-vs-range helper (planned 2026-11-15, DECISIONS 36)
+
+Ian supplies the read; the helper gives the best response to it. It answers
+call or fold against an all-in at `bb_vs_jam`, `sb_vs_jam` and
+`bb_vs_4bet_jam`:
+- with `--villain` or `--villain-top N`, at any depth, beside the Nash or
+  model answer;
+- without a range, only where nothing answers today, using a labelled default:
+  the top 20% for a first-in jam, the top 8% for a 4-bet jam.
+
+Its equity is exact and instant: the matrix, weighted by the combos left after
+the hero's cards (DECISIONS 36 has the proof). Gate J holds it to a Nash and
+model best response, to board enumeration, to hand-worked spots, and to the
+300 ms bar.
+
+Build steps, each checked before the next:
+1. **`src/showdown/live/jam.py`:**
+   - the class weights of a whole-class range, or an error for a partial one;
+   - the exact equity E;
+   - the price, the call or fold, the EV relative to folding, and the close
+     flag.
+2. **`Spot` and `Advisor`:**
+   - `villain_top` and its checks;
+   - the routing: a range from Ian, then Nash or the model, then the
+     default, then no suggestion;
+   - the note comparing the answer with Nash or the model;
+   - `--villain-top` postflop.
+3. **CLI:** `--villain-top`, and output that prints the EV against folding,
+   "close" and the Nash or model note.
+4. **Gate J tests:**
+   - `tests/test_gate_j.py`, with bars 1, 3 and 4, and the fixture
+     `tests/fixtures/live/jam_spots.toml`;
+   - `tests/test_gate_j_slow.py`, with bar 2;
+   - the two Gate G spots that move by design;
+   - the latency script extended to the new spots.
+5. **Record:** GATES.md, this plan's status, memory; commit, push, and
+   `py gate.py --full`.
+
+Later slices of Phase 12, unchanged above: the opponent model built from
+logged hands, shrinking toward Nash, and the simulation gate.
+
 ### Later, each needing its own amendment first
 - **A self-hosted table for friends (Ian ticked this).** It means serving
   beyond 127.0.0.1, which DECISIONS 12 forbids. It would replace screen
@@ -213,6 +254,8 @@ Decisions for Ian when this phase starts:
   mix, the R flag and a raise-size note. The model is never used where it reaches
   a decision in less than 0.1% of deals. The postflop helper defaults to the
   model's weighted ranges, and `--ranges fixed` restores the fixed ranges.
+- **Phase 12, slice 1 is planned** (DECISIONS 36; SCOPE A8): the
+  jam-vs-range helper and Gate J. It is waiting for Ian's go-ahead to build.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D2, which waits until option 1 starts;

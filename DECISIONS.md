@@ -1331,3 +1331,117 @@ bars (DECISIONS 32):
 - Calling the model's answers Nash.
 - Answering from a node below the reach bar.
 - Moving any bar after results are seen, except by a dated amendment.
+
+---
+
+### 36. The jam-vs-range helper, Phase 12's first slice, and Gate J pre-registered (2026-11-15)
+
+**Decided:** Ian chose these on 2026-11-15. SCOPE amendment A8 brings an
+exploitative answer, shown beside the Nash or model one, into scope for this
+helper. It is the first, manual slice of Phase 12 (`docs/plan-live-advisor.md`):
+Ian supplies the read; the opponent model comes later.
+
+**What it answers:** call or fold against an all-in, at three decisions:
+
+| Decision | The jam | Pot | To call |
+|---|---|---|---|
+| `bb_vs_jam` | the SB's first-in jam | S + 1 | S − 1 |
+| `sb_vs_jam` | the BB's jam over the open | S + 2.5 | S − 2.5 |
+| `bb_vs_4bet_jam` | the SB's jam over the 3-bet | S + 7.5 | S − 7.5 |
+
+The pot and to-call come from the spot (`--pot`, `--to-call`). The table shows
+them at the model's sizes, with S the effective stack. A jam decision without
+a to-call above 0 is an error.
+
+**When it runs** (Ian ticked both):
+- **With a range from Ian** (`--villain` or `--villain-top N`), it answers
+  every one of the three decisions, at any depth, including 20 bb or less.
+  This is the exploit view.
+  - Its answer is the suggestion.
+  - The Nash (push/fold) or model answer is shown beside it, when one
+    exists. The note says whether they agree, and what the helper's choice
+    gains against that range, in bb.
+- **Without a range,** it fills the jams that get no answer today:
+  - `bb_vs_jam` above 20 bb where the model's reach rule skips it (40 bb and
+    deeper): the labelled default is the **top 20%**;
+  - `bb_vs_4bet_jam` at 60 bb or less, which push/fold has no 3-bet for and
+    the model skips: the labelled default is the **top 8%**;
+  - `sb_vs_jam` at 20 bb or less: no default was set, so it stays "no
+    suggestion: give --villain or --villain-top".
+- **Every other case is unchanged.** Push/fold answers `bb_vs_jam` at 20 bb
+  or less, and the model answers jams it reaches (DECISIONS 32, 35).
+
+**The range.**
+- `--villain-top N` (0 < N ≤ 100) is the top N% by equity against a random
+  hand, in whole classes, as `top_range` builds the postflop defaults. The
+  label gives the share it actually covers.
+- It is also accepted wherever `--villain` is, postflop included.
+- `--villain` and `--villain-top` together are an error.
+- **Preflop, a range must be whole hand classes** (`AKs`, not `AhKh`), or the
+  spot is an error. Whole classes are what make the equity exact.
+- A preflop `--villain` on a decision that isn't one of the three jams is an
+  error, rather than being silently ignored.
+
+**The equity, exact and instant.**
+- Hero hand h is in class i. The villain's class j carries weight w_j: 1 for
+  Ian's range, or the solution's frequency in the bar 1 checks.
+- n_j counts the combos of class j that share no card with h.
+- M is the exact 169 × 169 matrix (DECISIONS 21).
+- Then E = Σ_j w_j · n_j · M[i, j] / Σ_j w_j · n_j.
+
+This is exact for the specific hand h. Every combo of class i is a suit
+relabelling of h, and every class j is closed under relabelling, so h's
+average equity against class j equals the class average M[i, j]. Bar 2 checks
+this against board enumeration.
+
+**The call rule** (Ian's choice: pot odds, flag close calls).
+- **Call** if E ≥ to call / (pot + to call). There is no margin, because no
+  later street can waste the equity.
+- **The EV is shown relative to folding:** E · (pot + to call) − to call, in
+  bb.
+- **"close"** is flagged when |E − price| < 0.02.
+- The source reads "jam vs range: exact equity", and the range is labelled as
+  custom, as `--villain-top`, or as the assumed default.
+- Ian did not choose the break-even-width readout, so it is not built.
+
+**Gate J.** All of these must pass, and every existing gate must still pass:
+1. **It reproduces Nash and the model.** The villain range is the solution's
+   own jam range, weighted by its frequencies, and the call rule is the one
+   above.
+   - Push/fold: the BB facing the SB's jam, at every depth from 1 to 20 bb.
+   - The model, at the decisions it reaches:
+     - `j` at 25 and 30 bb;
+     - `rj` at every grid depth;
+     - `rrj` at 70 to 100 bb.
+
+   The helper's call or fold must equal the solution's for every class the
+   solution plays purely (≥ 0.99). The exception is a class whose EV of
+   calling, relative to folding, is within 0.001 bb of zero. It counts as
+   indifferent, and the number of such classes is reported.
+2. **The equity is exact.** On at least 5 spots of a specific hand against a
+   small whole-class range, the matrix equity equals exact board enumeration
+   over every villain combo (`hand_vs_hand`), to 1e-9. These run in the slow
+   suite.
+3. **Hand-worked spots.** A fixture of at least 10 spots, each with its
+   price, call or fold, and EV worked out by hand from `showdown matrix show`
+   values. It covers:
+   - at least 2 close calls;
+   - the exploit view at 20 bb or less, beside Nash;
+   - both defaults;
+   - `--villain-top`;
+   - the errors (a partial class, a missing to-call, both range flags).
+4. **Latency.** The 95th percentile over every Gate G and Gate J spot is at
+   most 300 ms, by DECISIONS 32's method.
+
+**Changes to Gate G's fixture, by design.**
+- Two of the extended fixture's "no suggestion" spots now get the default
+  answer:
+  - KhKd facing a first-in jam at 50 bb;
+  - AhAd facing a 4-bet jam at 60 bb.
+- They move to Gate J's fixture. No other Gate G spot changes.
+
+**Rules out:**
+- Calling the helper's answer Nash.
+- A margin on the call rule.
+- Partial-class ranges preflop.
+- Moving any bar after results are seen, except by a dated amendment.
