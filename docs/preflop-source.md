@@ -11,6 +11,9 @@ opponent's preflop range, and so does the flop library planned next. Above
 20 bb, the preflop source therefore answers both questions: what to suggest
 before the flop, and which range the helper assumes after it.
 
+**Decided 2026-11-15:** Ian chose option 1 (SCOPE A7, DECISIONS 33). The R
+sweep that decision called for is in the last section.
+
 ## The short answer
 
 | | 1. Our CFR prototype | 2. A licensed published chart | 3. Push/fold only |
@@ -72,19 +75,23 @@ The tree has 485,538 nodes and 1,014 infosets at every depth. Push/fold's has
 | 25 bb, R 0.9 | 2.5e-4 | −0.059 | 41 / 57 / 2% | 15 / 56 / 0 / 29% | *33 / 52 / 16%* | *96%* | 31% | 23% |
 | 50 bb, R 1 | 7.2e-4 | −0.089 | 37 / 63 / 0% | 0 / 82 / 9 / 8% | 40 / 47 / 13% | 36% | 15% | *9%* |
 | 50 bb, R 0.9 | 4.6e-4 | +0.037 | 27 / 73 / 0% | 9 / 70 / 0 / 21% | *11 / 78 / 11%* | *30%* | 15% | *11%* |
-| 100 bb, R 1 | 1.6e-3 | −0.098 | 38 / 62 / 0% | 0 / 80 / 20 / 0% | 27 / 64 / 9% | 19% | 9% | *4%* |
+| 100 bb, R 1 | 1.6e-3 | −0.098 | 38 / 62 / 0% | 0 / 80 / 20 / 0% | 27 / 64 / 9% | 19% | *9%* | *4%* |
 | 100 bb, R 0.9 | 1.0e-3 | +0.122 | 16 / 84 / 0% | 5 / 78 / 11 / 6% | 0 / 94 / 6% | 16% | 7% | *6%* |
 
 How to read it:
 - Each cell is a share of the hands that reach that spot, counted in combos.
   Card removal against the opponent's range is ignored here; it is counted
   in the solve itself.
-- *Italic* cells are off the equilibrium path. The opponent's action that
-  leads there is taken with 0.06% of hands or less:
-  - the BB's 3-bet at 20 and 25 bb, and at 50 bb with R 0.9;
-  - the SB's first-in jam at 50 and 100 bb.
+- *Italic* cells are rarely reached. An action on the way there, by either
+  player, is taken with 0.06% of hands or less:
+  - the BB's 3-bet at 20 and 25 bb, and at 50 bb with R 0.9. This makes both
+    the SB's answer to it and the BB's later call of a 4-bet jam rare;
+  - the SB's first-in jam at 50 and 100 bb;
+  - the BB's jam over the raise at 100 bb with R 1.
 
-  Strategies there are barely trained and should not be read as advice.
+  When the opponent's action is the rare one, the spot's regrets are barely
+  trained. When the player's own action is, its averaged strategy is
+  dominated by early iterations. Either way, it should not be read as advice.
 
 ### Checks
 
@@ -298,3 +305,68 @@ any use.
   chosen by judgment.
 - A sweep over R from 0.8 to 1.0 would show how much the choice matters
   before it is fixed.
+
+## The R sweep (DECISIONS 33), 2026-11-15
+
+DECISIONS 33 asks for this sweep before R is fixed. It is a measurement: it
+sets nothing, and Gate P's numbers are Ian's to choose.
+
+- **The runs.** R_oop took the values 1.00, 0.95, 0.90, 0.85 and 0.80, at 25,
+  50 and 100 bb: 15 solves at 300 iterations each.
+- **Exploitability** was 2.4e-4 to 1.6e-3 bb/hand, largest at 100 bb.
+- **Determinism.** The R 1.00 and 0.90 solves reproduce S3's exactly.
+- **Where the details are.** The spike's docstring has the commands, the
+  timings and the full output.
+
+TV is the mean total-variation distance from the R 0.9 strategy: 0 means the
+same, 1 means disjoint. * marks a rarely reached node.
+
+| Stack | R_oop | SB value | SB first in: fold / raise / jam | BB vs raise: fold / call / 3-bet / jam | TV: first in / vs raise / vs 3-bet |
+|---|---|---|---|---|---|
+| 25 bb | 1.00 | −0.131 | 46 / 45 / 9% | 1 / 76 / 0 / 23% | 0.12 / 0.21 / 0.20* |
+| 25 bb | 0.95 | −0.095 | 42 / 55 / 2% | 6 / 69 / 0 / 25% | 0.02 / 0.13 / 0.08* |
+| 25 bb | 0.90 | −0.059 | 41 / 57 / 2% | 15 / 56 / 0 / 29% | reference |
+| 25 bb | 0.85 | −0.029 | 39 / 60 / 1% | 24 / 45 / 0 / 31% | 0.03 / 0.13 / 0.07* |
+| 25 bb | 0.80 | −0.003 | 33 / 66 / 1% | 33 / 34 / 0 / 33% | 0.10 / 0.23 / 0.13* |
+| 50 bb | 1.00 | −0.089 | 37 / 63 / 0% | 0 / 82 / 9 / 8% | 0.09 / 0.24 / 0.42* |
+| 50 bb | 0.95 | −0.025 | 31 / 69 / 0% | 4 / 77 / 4 / 15% | 0.04 / 0.13 / 0.15* |
+| 50 bb | 0.90 | +0.037 | 27 / 73 / 0% | 9 / 70 / 0 / 21% | reference |
+| 50 bb | 0.85 | +0.091 | 21 / 79 / 0% | 15 / 62 / 0 / 23% | 0.06 / 0.09 / 0.22* |
+| 50 bb | 0.80 | +0.144 | 18 / 82 / 0% | 22 / 50 / 0 / 28% | 0.09 / 0.21 / 0.25* |
+| 100 bb | 1.00 | −0.098 | 38 / 62 / 0% | 0 / 80 / 20 / 0% | 0.22 / 0.15 / 0.35 |
+| 100 bb | 0.95 | +0.001 | 26 / 74 / 0% | 3 / 80 / 17 / 0% | 0.11 / 0.10 / 0.11 |
+| 100 bb | 0.90 | +0.122 | 16 / 84 / 0% | 5 / 78 / 11 / 6% | reference |
+| 100 bb | 0.85 | +0.229 | 7 / 93 / 0% | 9 / 76 / 2 / 14% | 0.09 / 0.16 / 0.06 |
+| 100 bb | 0.80 | +0.317 | 1 / 99 / 0% | 11 / 73 / 0 / 16% | 0.15 / 0.21 / 0.16* |
+
+**Between 0.85 and 0.95,** the band around the default, compared directly:
+
+| Stack | TV: first in / vs raise / vs 3-bet | Classes that switch pure action: first in / vs raise |
+|---|---|---|
+| 25 bb | 0.05 / 0.26 / 0.14* | 1 / 16 |
+| 50 bb | 0.10 / 0.19 / 0.31* | 9 / 15 |
+| 100 bb | 0.20 / 0.26 / 0.14 | 16 / 23 |
+
+What it shows:
+- **The SB's value rises steadily as R falls,** at every depth. Each 0.05
+  step adds about 0.03 bb/hand at 25 bb, 0.06 at 50 bb and 0.09 to 0.12 at
+  100 bb.
+- **The BB's answer to the open moves most.** As R falls, the BB folds more
+  hands:
+  - at 25 bb, from 1% at R 1.00 to 33% at R 0.80;
+  - at 100 bb, from 0% to 11%.
+
+  At 100 bb its 3-bet to 7.5 fades from 20% to nothing, and jams replace it.
+  Between 0.85 and 0.95, 15 to 23 classes switch their pure action facing
+  the open.
+- **At 100 bb the SB's first-in folds fall from 38% to 1%** across the
+  sweep, and from 26% to 7% between 0.95 and 0.85. At 25 bb, first-in play
+  barely moves inside that band (TV 0.05).
+- **Calls against a jam over the open, or against a first-in jam, barely
+  move.** TV is 0.07 or less across the sweep, and 0.05 or less between 0.85
+  and 0.95, because an all-in pot does not depend on R. The BB's call of the
+  SB's 4-bet jam moves more: up to 0.17 at 100 bb, where it is reached,
+  because the SB's 4-bet range there shifts with R.
+- **The SB's answer to a 3-bet is rarely reached** at 25 bb (every R), at
+  50 bb (R 0.90 and below) and at 100 bb (R 0.80), because the BB stops
+  3-betting small there. Those strategies are not advice at any R.

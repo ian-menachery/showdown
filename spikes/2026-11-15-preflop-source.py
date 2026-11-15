@@ -76,6 +76,71 @@ Results, 2026-11-15 (300 CFR+ iterations per full-game solve):
 - R moves the strategy far more than solver error does. At 100 bb the SB
   value swings by 0.22 bb/hand, and the mean total-variation distance at the
   main nodes is 0.09 to 0.41. docs/preflop-source.md has the details.
+
+The R sweep (DECISIONS 33), run 2026-11-15 from 13:58:30 to 14:21:31, after
+Gate G's latency check:
+
+- **What.** R_oop 1.00, 0.95, 0.90, 0.85 and 0.80 at 25, 50 and 100 bb: 15
+  solves at 300 iterations each, the same count as S3. One process per stack,
+  each with its own `--save`:
+
+      .venv\Scripts\python -I spikes\2026-11-15-preflop-source.py --stacks 25 --r-oop 1.0 0.95 0.9 0.85 0.8 --skip-continuity --no-charts --save <s25.json>
+
+  Then the same with `--stacks 50` and `--stacks 100`.
+- **Report.** This combines the saved runs without solving anything:
+
+      .venv\Scripts\python -I spikes\2026-11-15-preflop-source.py --from-json <s25.json> <s50.json> <s100.json>
+
+  Add `--reference-r 0.95` to compare against 0.95 instead of 0.9. The report
+  prints every run, then a table comparing each R_oop with the reference. It
+  shows exploitability, SB value, range shares at the first three nodes, the
+  mean total-variation distance by node, and the classes whose pure action
+  flips.
+- **Results.** TV is measured from the R_oop 0.9 strategy, and * marks a
+  rarely reached node.
+
+  | Stack | R_oop | Exploitability | SB value | SB first in f/r/j | BB vs raise f/c/3b/j | TV: first in / vs raise / vs 3-bet |
+  |---|---|---|---|---|---|---|
+  | 25 | 1.00 | 2.6e-04 | -0.131 | 46 / 45 / 9% | 1 / 76 / 0 / 23% | 0.121 / 0.213 / 0.195* |
+  | 25 | 0.95 | 2.4e-04 | -0.095 | 42 / 55 / 2% | 6 / 69 / 0 / 25% | 0.024 / 0.133 / 0.084* |
+  | 25 | 0.90 | 2.5e-04 | -0.059 | 41 / 57 / 2% | 15 / 56 / 0 / 29% | reference |
+  | 25 | 0.85 | 3.1e-04 | -0.029 | 39 / 60 / 1% | 24 / 45 / 0 / 31% | 0.033 / 0.125 / 0.070* |
+  | 25 | 0.80 | 4.2e-04 | -0.003 | 33 / 66 / 1% | 33 / 34 / 0 / 33% | 0.096 / 0.228 / 0.126* |
+  | 50 | 1.00 | 7.2e-04 | -0.089 | 37 / 63 / 0% | 0 / 82 / 9 / 8% | 0.092 / 0.240 / 0.415* |
+  | 50 | 0.95 | 5.9e-04 | -0.025 | 31 / 69 / 0% | 4 / 77 / 4 / 15% | 0.038 / 0.125 / 0.153* |
+  | 50 | 0.90 | 4.6e-04 | +0.037 | 27 / 73 / 0% | 9 / 70 / 0 / 21% | reference |
+  | 50 | 0.85 | 3.9e-04 | +0.091 | 21 / 79 / 0% | 15 / 62 / 0 / 23% | 0.064 / 0.089 / 0.218* |
+  | 50 | 0.80 | 4.1e-04 | +0.144 | 18 / 82 / 0% | 22 / 50 / 0 / 28% | 0.094 / 0.207 / 0.254* |
+  | 100 | 1.00 | 1.6e-03 | -0.098 | 38 / 62 / 0% | 0 / 80 / 20 / 0% | 0.219 / 0.149 / 0.348 |
+  | 100 | 0.95 | 1.1e-03 | +0.001 | 26 / 74 / 0% | 3 / 80 / 17 / 0% | 0.106 / 0.103 / 0.108 |
+  | 100 | 0.90 | 1.0e-03 | +0.122 | 16 / 84 / 0% | 5 / 78 / 11 / 6% | reference |
+  | 100 | 0.85 | 1.1e-03 | +0.229 | 7 / 93 / 0% | 9 / 76 / 2 / 14% | 0.091 / 0.159 / 0.059 |
+  | 100 | 0.80 | 9.2e-04 | +0.317 | 1 / 99 / 0% | 11 / 73 / 0 / 16% | 0.151 / 0.210 / 0.163* |
+
+- **0.85 against 0.95,** directly (`--reference-r 0.95`):
+
+  | Stack | TV: first in / vs raise / vs 3-bet | Pure flips: first in / vs raise |
+  |---|---|---|
+  | 25 | 0.054 / 0.256 / 0.144* | 1 / 16 classes |
+  | 50 | 0.102 / 0.192 / 0.311* | 9 / 15 |
+  | 100 | 0.197 / 0.260 / 0.139 | 16 / 23 |
+
+  Calls against a jam over the open, or against a first-in jam, move by 0.05
+  or less.
+- **Determinism.** The R_oop 1.00 and 0.90 solves reproduce S3's to every
+  printed digit.
+- **Timing.**
+  - Compiling took 0.8 to 4.5 s, and an iteration 0.68 to 1.25 s.
+  - The R_oop 0.95 and 0.90 solves ran slower (1.0 to 1.25 s per iteration
+    against 0.68 to 0.80) in all three processes at the same time. Other
+    load on the laptop is the likely cause; it was not investigated.
+  - Results do not depend on timing.
+- **Two changes from S3's output:**
+  - TV is now weighted by the reference run's reach. S3's figures above
+    were weighted by the R = 1 run's, so re-running S3 prints slightly
+    different TVs, for example 0.237 rather than 0.259 at 20 bb.
+  - Rarely reached nodes are marked `*`: one player's actions leading there
+    are taken less than 0.1% of the time.
 """
 
 from __future__ import annotations
@@ -354,24 +419,27 @@ def mixed_share(run: Run, hist: str) -> float:
     return float(w @ (pure_action(run.strategy[hist][1]) < 0) / w.sum())
 
 
-OFF_PATH = 0.001
-"""A node is off the equilibrium path when the opponent's actions leading there are this rare."""
+RARE = 0.001
+"""A node is rarely reached when either player's actions leading there are this rare."""
 MAIN_NODES = ("", "r", "rr")
 
 
-def opponent_reach(run: Run, hist: str) -> float:
-    """Probability that the opponent of the player acting at `hist` takes the actions leading there.
+def node_reach(run: Run, hist: str) -> tuple[float, float]:
+    """(own, opponent): how likely each player is to take its actions leading to `hist`.
 
-    Each factor is the opponent's share at an earlier node (card removal ignored).
+    Each factor is that player's share at an earlier node (card removal ignored).
+    Rare opponent actions leave the node's regrets barely trained; rare own actions
+    leave its average strategy dominated by early iterations. Either way it is not advice.
     """
-    p = 1.0
-    for k in range(1 - len(hist) % 2, len(hist), 2):
-        p *= range_shares(run, hist[:k])[ACTION_NAMES[CODE.index(hist[k])]]
-    return p
+    actor = len(hist) % 2
+    reach = [1.0, 1.0]
+    for k in range(len(hist)):
+        reach[k % 2] *= range_shares(run, hist[:k])[ACTION_NAMES[CODE.index(hist[k])]]
+    return reach[actor], reach[1 - actor]
 
 
 def off_path(run: Run, hist: str) -> bool:
-    return opponent_reach(run, hist) < OFF_PATH
+    return min(node_reach(run, hist)) < RARE
 
 
 # --- reporting ----------------------------------------------------------------------------
@@ -452,9 +520,9 @@ def _tv_cell(ref: Run, run: Run, hist: str) -> str:
 def print_r_comparison(full: dict[tuple[float, float], Run], reference: float) -> None:
     """Every R_oop at each stack against the `reference` R_oop (DECISIONS 33's sweep)."""
     print(f"\n## How the strategy moves with R, against R_oop {reference:g}")
-    print("Shares are of the hands reaching each node. * marks an off-path node: the")
-    print(f"opponent's actions leading there are taken less than {OFF_PATH:.1%} of the time,")
-    print("so its strategy is barely trained. TV is the mean total-variation distance from")
+    print("Shares are of the hands reaching each node. * marks a rarely reached node: one")
+    print(f"player's actions leading there are taken less than {RARE:.1%} of the time, so")
+    print("its strategy is not advice. TV is the mean total-variation distance from")
     print(f"the R_oop {reference:g} strategy, weighted by that strategy's reach (0 = same, 1 = disjoint).")
     print()
     print("| Stack | R_oop | Exploitability | SB value | SB first in f/r/j | BB vs raise f/c/3b/j "
@@ -522,65 +590,60 @@ def main() -> int:
     parser.add_argument("--stacks", type=float, nargs="+", default=[20, 25, 50, 100])
     parser.add_argument("--r-oop", type=float, nargs="+", default=[1.0, 0.9])
     parser.add_argument("--skip-continuity", action="store_true")
+    parser.add_argument("--reference-r", type=float, default=0.9,
+                        help="the R_oop every other R_oop is compared against (default 0.9)")
+    parser.add_argument("--no-charts", action="store_true", help="skip the 13x13 first-in charts")
     parser.add_argument("--save", type=Path, help="write every run as JSON here")
+    parser.add_argument("--from-json", type=Path, nargs="+", metavar="JSON",
+                        help="report on runs written by --save instead of solving")
     args = parser.parse_args()
 
-    if sys.platform == "win32":  # leave the CPU to S2's timed solves first
-        import ctypes
-
-        kernel32 = ctypes.windll.kernel32
-        kernel32.SetPriorityClass(kernel32.GetCurrentProcess(), 0x00000040)  # IDLE
-
     started = time.strftime("%Y-%m-%d %H:%M:%S")
-    print(f"S3 preflop spike, started {started}")
-    matrix = PreflopMatrix.load(MATRIX)
     runs: list[Run] = []
-    if not args.skip_continuity:
-        runs.append(continuity(matrix))
+    if args.from_json:
+        print(f"S3 preflop spike: report on {len(args.from_json)} saved file(s), {started}")
+        for path in args.from_json:
+            runs += [from_json(d) for d in json.loads(path.read_text(encoding="utf-8"))]
+        for run in runs:
+            if run.raises:
+                print_run(run)
+    else:
+        if sys.platform == "win32":  # leave the CPU to any timed run (S2, Gate G) first
+            import ctypes
 
-    checkpoints = (50, 100, 200)
-    full: dict[tuple[float, float], Run] = {}
-    for stack in args.stacks:
-        for r in args.r_oop:
-            label = f"{stack:g} bb, R_oop {r:g}"
-            print(f"\n## {label}", flush=True)
-            run = solve(label, stack, matrix, r_oop=r, iterations=args.iterations,
-                        checkpoints=checkpoints)
-            full[(stack, r)] = run
-            runs.append(run)
-            print_run(run)
+            kernel32 = ctypes.windll.kernel32
+            kernel32.SetPriorityClass(kernel32.GetCurrentProcess(), 0x00000040)  # IDLE
 
-    print("\n## How the ranges move with R (R_oop 1 vs 0.9)")
-    print("Mean total-variation distance per node (0 = same strategy, 1 = disjoint),")
-    print("weighted by the R = 1 reach, and classes whose pure action flips.")
-    rs = sorted(args.r_oop, reverse=True)
-    for stack in args.stacks:
-        if len(rs) < 2:
-            break
-        a, b = full[(stack, rs[0])], full[(stack, rs[1])]
-        print(f"\n{stack:g} bb: SB value {a.value_sb:+.4f} -> {b.value_sb:+.4f}")
-        for hist in a.strategy:
-            sa, sb = range_shares(a, hist), range_shares(b, hist)
-            moves = ", ".join(f"{k} {sa[k]:.1%}->{sb[k]:.1%}" for k in sa)
-            flips = switches(a, b, hist)
-            print(f"  {NODE_LABELS[hist]:<20} TV {tv_distance(a, b, hist):.3f}; {moves}")
-            if flips:
-                print(f"    pure flips ({len(flips)}): {', '.join(flips)}")
+        print(f"S3 preflop spike, started {started}")
+        matrix = PreflopMatrix.load(MATRIX)
+        if not args.skip_continuity:
+            runs.append(continuity(matrix))
+        for stack in args.stacks:
+            for r in args.r_oop:
+                label = f"{stack:g} bb, R_oop {r:g}"
+                print(f"\n## {label}", flush=True)
+                run = solve(label, stack, matrix, r_oop=r, iterations=args.iterations,
+                            checkpoints=(50, 100, 200))
+                runs.append(run)
+                print_run(run)
 
-    if 20 in args.stacks and not args.skip_continuity:
+    full = {(run.stack, run.r_oop): run for run in runs if run.raises}
+    print_r_comparison(full, args.reference_r)
+
+    twenty = sorted((r for s, r in full if np.isclose(s, 20)), reverse=True)
+    if twenty:
         ref = pf.PushFoldSolution.load(PUSHFOLD).at(20)
         print("\n## 20 bb: the full game vs push/fold")
-        for r in args.r_oop:
-            run = full[(20, r)]
+        for r in twenty:
+            run = full[(20.0, r)]
             bound = ref.value_sb - ref.exploitability - run.exploitability
             print(f"R_oop {r:g}: full-game SB value {run.value_sb:+.4f}, push/fold "
                   f"{ref.value_sb:+.4f}; gain {run.value_sb - ref.value_sb:+.4f} bb/hand; "
                   f"sanity (full >= push/fold - exploitabilities): "
                   f"{'ok' if run.value_sb >= bound else 'FAILED'}")
 
-    for stack in args.stacks:
-        for r in args.r_oop:
-            run = full[(stack, r)]
+    if not args.no_charts:
+        for (_, _), run in sorted(full.items(), key=lambda kv: (kv[0][0], -kv[0][1])):
             print(f"\nSB first-in chart, {run.label}: raise % (then all-in %)")
             actions, table = run.strategy[""]
             print(pf.chart(table[:, actions.index(RAISE)]))
