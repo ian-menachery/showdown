@@ -86,7 +86,7 @@ py gate.py
 - a check that the tree is clean and HEAD is pushed.
 
 It uses `.venv` automatically. `py gate.py --full` adds the slow gate-evidence
-tests (about 25 minutes). They include:
+tests (about 17 minutes on an idle 16-core machine). They include:
 - OpenSpiel's 200-iteration Leduc run;
 - exact preflop enumerations;
 - a 10 bb push/fold re-solve;

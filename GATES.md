@@ -365,8 +365,16 @@ py gate.py --full
 
 | # | Definition | Evidence | Result |
 |---|---|---|---|
-| 1 | `py gate.py` exits zero: ruff, format, pytest with ≥ 80% coverage, a clean tree, HEAD pushed | It passes at every phase commit; coverage is 97%. `py gate.py --full` also passes; see the run recorded below | PASS |
+| 1 | `py gate.py` exits zero: ruff, format, pytest with ≥ 80% coverage, a clean tree, HEAD pushed | It passes at every phase commit. `py gate.py --full` passed at e667ded with 97.8% coverage; see the final run recorded below | PASS |
 | 2 | Gates A to F all PASS | the sections above | PASS |
 | 3 | `showdown play` opens a local page, and a full push/fold trainer session and a full Leduc session can each be played in the browser | Played by hand in the browser pane: fixed and random depth, both seats, graded decisions, the board and result after a call, the summary, and Leduc in both seats (Gate E) | PASS |
 | 4 | `showdown analyze <file>` prints the stats table for the phh-dataset Pluribus hands | 10,000 hands parsed; a table of 14 players with all-in EV and grading summaries; about 100 s (Gate F) | PASS |
 | 5 | The README states what is borrowed and under which license, what is built, every gate result and the known limits | the README after the Phase 7 truth pass | PASS |
+
+**Final full run (2026-11-14, commit e667ded).** `py gate.py --full` passed:
+ruff, format, all tests including slow ones, coverage 97.8%, a clean tree, and
+HEAD pushed. It took 16 min 56 s on an idle 16-core machine.
+
+The previous full run, at commit 640b178, failed one Gate C case. It drew
+beyond 3 SE from pokerkit's then-irreproducible sample. The cause was found
+and fixed once (DECISIONS 28), without changing the bar.
