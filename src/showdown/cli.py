@@ -8,6 +8,7 @@ showdown matrix build --exact
 showdown matrix show AKs QQ
 showdown pushfold build
 showdown pushfold chart 10
+showdown play
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import argparse
 import json
 import sys
 import time
+import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -203,6 +205,24 @@ def _pushfold_chart(args: argparse.Namespace) -> int:
     return 0
 
 
+def _play(args: argparse.Namespace) -> int:
+    from showdown.bot.policy import LeducStrategy, PushFoldStrategy
+    from showdown.bot.server import App, PlayServer
+
+    app = App(PushFoldStrategy.load(args.pushfold), LeducStrategy.load(args.leduc))
+    server = PlayServer(app, args.port)
+    print(f"showdown play: {server.url}  (127.0.0.1 only; Ctrl+C to stop)")
+    if not args.no_browser:
+        webbrowser.open(server.url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("stopped")
+    finally:
+        server.server_close()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="showdown", description="Heads-up poker lab.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -257,6 +277,13 @@ def build_parser() -> argparse.ArgumentParser:
     pf_chart.add_argument("stack", type=float, help="effective stack in bb, before blinds")
     pf_chart.add_argument("--file", default=pushfold.DEFAULT_SOLUTION)
     pf_chart.set_defaults(handler=_pushfold_chart)
+
+    play = commands.add_parser("play", help="local browser page: push/fold trainer and Leduc")
+    play.add_argument("--port", type=int, default=0, help="default: any free port")
+    play.add_argument("--no-browser", action="store_true", help="print the URL only")
+    play.add_argument("--pushfold", default=pushfold.DEFAULT_SOLUTION)
+    play.add_argument("--leduc", default="data/leduc_cfr_plus.json")
+    play.set_defaults(handler=_play)
     return parser
 
 

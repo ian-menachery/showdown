@@ -205,6 +205,31 @@ def closed_form_exploitability(
     return float((sb_best + bb_best) / 2)
 
 
+def sb_action_values(
+    call: np.ndarray, stack: float, matrix: PreflopMatrix
+) -> tuple[np.ndarray, np.ndarray]:
+    """Per SB class, the SB's EV in bb of folding and of jamming against `call` (DECISIONS 24)."""
+    w, showdown = _terms(stack, matrix)
+    jam = (w * ((1 - call)[None, :] * BB_FOLD + call[None, :] * showdown)).sum(axis=1)
+    return np.full(169, SB_FOLD), jam / w.sum(axis=1)
+
+
+def bb_action_values(
+    push: np.ndarray, stack: float, matrix: PreflopMatrix
+) -> tuple[np.ndarray, np.ndarray]:
+    """Per BB class facing a jam, the BB's EV in bb of folding and of calling against `push`.
+
+    A class that no SB jam can meet (impossible with any real strategy, since
+    every jam range is weighted by card removal) gets NaN.
+    """
+    w, showdown = _terms(stack, matrix)
+    weight = w * push[:, None]
+    total = weight.sum(axis=0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        call = (weight * -showdown).sum(axis=0) / total
+    return np.full(169, -BB_FOLD), call
+
+
 # --- Gate D comparison ----------------------------------------------------------------
 
 

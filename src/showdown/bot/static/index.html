@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="showdown-token" content="{{TOKEN}}">
+<title>showdown play</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #dcdad4;
+    --accent: #1f6f5c; --accent-ink: #ffffff; --warn: #a2401f; --good: #1f6f5c;
+    --card: #ffffff; --red: #b3261e; --black: #1d1d1f; --felt: #e8efe9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151618; --panel: #1f2023; --ink: #ececee; --muted: #9a9aa2; --line: #34353a;
+      --accent: #4fb596; --accent-ink: #0d1412; --warn: #f08a65; --good: #4fb596;
+      --card: #f4f3ef; --red: #c0352b; --black: #1d1d1f; --felt: #1d2622;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 14px 16px; margin-bottom: 14px; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+       margin: 0 0 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  select, input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+                  background: var(--bg); color: var(--ink); min-width: 110px; }
+  button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--accent);
+           background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  .table { background: var(--felt); border-radius: 10px; padding: 14px; }
+  .cards { display: flex; gap: 6px; min-height: 64px; align-items: center; flex-wrap: wrap; }
+  .card { width: 44px; height: 62px; border-radius: 6px; background: var(--card);
+          border: 1px solid #b9b7b0; display: flex; align-items: center; justify-content: center;
+          font-weight: 650; font-size: 18px; color: var(--black); }
+  .card.red { color: var(--red); }
+  .card.back { background: repeating-linear-gradient(45deg, #2e5d50, #2e5d50 4px, #3a7062 4px, #3a7062 8px);
+               border-color: #2e5d50; }
+  .label { font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+  .actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .log { font-size: 14px; margin: 10px 0 0; padding-left: 18px; }
+  .grade { margin-top: 10px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); }
+  .grade.bad { border-color: var(--warn); }
+  .grade b.bad { color: var(--warn); } .grade b.ok { color: var(--good); }
+  .result { margin-top: 10px; font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .stat .v { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .error { color: var(--warn); min-height: 1.2em; margin: 6px 0 0; }
+  .hidden { display: none; }
+  .note { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>showdown</h1>
+  <p class="sub">Heads-up push/fold trainer against Nash, and Leduc hold'em against a CFR+ bot.
+     Served on 127.0.0.1 only.</p>
+
+  <section id="setup">
+    <h2>New session</h2>
+    <div class="row">
+      <label>Game
+        <select id="game">
+          <option value="pushfold">Push/fold trainer</option>
+          <option value="leduc">Leduc vs CFR+ bot</option>
+        </select>
+      </label>
+      <label>Your seat
+        <select id="seat"></select>
+      </label>
+      <label id="mode-wrap">Stack depth
+        <select id="depth_mode">
+          <option value="fixed">Fixed</option>
+          <option value="random">Random 2–20 bb each hand</option>
+        </select>
+      </label>
+      <label id="depth-wrap">Effective stack (bb)
+        <input id="depth" type="number" min="1" max="20" step="1" value="10">
+      </label>
+      <button id="start">Start session</button>
+    </div>
+    <p class="error" id="error"></p>
+  </section>
+
+  <section id="play" class="hidden">
+    <h2 id="play-title">Hand</h2>
+    <div class="table">
+      <div class="label" id="bot-label">Bot</div>
+      <div class="cards" id="bot-cards"></div>
+      <div class="label" id="board-label">Board</div>
+      <div class="cards" id="board"></div>
+      <div class="label" id="you-label">You</div>
+      <div class="cards" id="your-cards"></div>
+    </div>
+    <ol class="log" id="log"></ol>
+    <div id="grades"></div>
+    <div class="result" id="result"></div>
+    <div class="actions" id="actions"></div>
+  </section>
+
+  <section id="summary-box" class="hidden">
+    <h2>Session</h2>
+    <div class="stats" id="stats"></div>
+    <p class="note" id="summary-note"></p>
+  </section>
+</main>
+
+<script>
+"use strict";
+const TOKEN = document.querySelector('meta[name="showdown-token"]').content;
+const SUITS = { c: "♣", d: "♦", h: "♥", s: "♠" };
+let session = null;
+let game = null;
+
+const $ = (id) => document.getElementById(id);
+
+async function api(path, body) {
+  const options = body === undefined
+    ? { method: "GET" }
+    : { method: "POST", headers: { "Content-Type": "application/json", "X-Showdown-Token": TOKEN },
+        body: JSON.stringify(body) };
+  const response = await fetch(path, options);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || response.statusText);
+  return data;
+}
+
+function seatOptions() {
+  const seat = $("seat");
+  seat.replaceChildren();
+  const options = $("game").value === "pushfold"
+    ? [["alternate", "Alternate"], ["sb", "Small blind (jam or fold)"], ["bb", "Big blind (call or fold)"]]
+    : [["alternate", "Alternate"], ["first", "First to act"], ["second", "Second to act"]];
+  for (const [value, text] of options) {
+    const option = document.createElement("option");
+    option.value = value; option.textContent = text; seat.append(option);
+  }
+  const pushfold = $("game").value === "pushfold";
+  $("mode-wrap").classList.toggle("hidden", !pushfold);
+  $("depth-wrap").classList.toggle("hidden", !pushfold || $("depth_mode").value === "random");
+}
+
+function card(text) {
+  const div = document.createElement("div");
+  if (!text) { div.className = "card back"; return div; }
+  const suit = text.slice(-1);
+  div.className = "card" + (suit === "h" || suit === "d" ? " red" : "");
+  div.textContent = text.slice(0, -1) + (SUITS[suit] || suit);
+  return div;
+}
+
+function leducCard(text) {
+  // Leduc cards are rank + suit letter (s or h): show them like hold'em cards.
+  return text ? card(text[0] + text[1]) : card(null);
+}
+
+function setCards(id, list) {
+  $(id).replaceChildren(...list.map((c) => card(c)));
+}
+
+function fmt(x, digits = 3) { return (x >= 0 ? "+" : "") + x.toFixed(digits); }
+
+function stat(value, key) {
+  const div = document.createElement("div");
+  div.className = "stat";
+  const v = document.createElement("div"); v.className = "v"; v.textContent = value;
+  const k = document.createElement("div"); k.className = "k"; k.textContent = key;
+  div.append(v, k);
+  return div;
+}
+
+function showSummary(s) {
+  $("summary-box").classList.remove("hidden");
+  const stats = $("stats");
+  if (s.game === "pushfold") {
+    stats.replaceChildren(
+      stat(String(s.hands), "hands"),
+      stat(String(s.decisions), "decisions graded"),
+      stat(String(s.mistakes), "mistakes (> 0.001 bb)"),
+      stat(s.bb_lost.toFixed(3), "bb lost vs Nash"),
+      stat(s.bb_lost_per_decision.toFixed(4), "bb lost per decision"),
+      stat(fmt(s.net_bb, 2), "realised result (bb)"));
+    $("summary-note").textContent =
+      "Grades are EV losses against the opponent's Nash strategy at each hand's depth; the realised result includes card luck.";
+  } else {
+    stats.replaceChildren(
+      stat(String(s.hands), "hands"),
+      stat(fmt(s.net_chips, 0), "net chips"),
+      stat(fmt(s.net_per_hand, 3), "chips per hand"));
+    $("summary-note").textContent = "The bot plays a CFR+ strategy with exploitability 0.00026 chips per hand.";
+  }
+}
+
+function logLines(events) {
+  $("log").replaceChildren(...events.map((e) => {
+    const li = document.createElement("li");
+    const who = e.who === "you" ? "You" : e.who === "bot" ? "Bot" : "Dealer";
+    // Push/fold events say "all-in"; show it as a jam (SB) or a call (BB).
+    const text = !e.seat ? e.action
+      : e.action === "fold" ? "fold"
+      : e.seat === "sb" ? "jam all-in" : "call all-in";
+    li.textContent = e.seat ? `${who} (${e.seat.toUpperCase()}): ${text}` : `${who}: ${text}`;
+    return li;
+  }));
+}
+
+function button(text, onClick, secondary) {
+  const b = document.createElement("button");
+  b.textContent = text; b.onclick = onClick;
+  if (secondary) b.className = "secondary";
+  return b;
+}
+
+function renderPushfold(v) {
+  $("play-title").textContent = `Hand ${v.hand} · ${v.depth} bb effective · you are the ${v.seat.toUpperCase()}`;
+  $("bot-label").textContent = "Bot";
+  setCards("bot-cards", v.result ? v.result.bot_cards : [null, null]);
+  $("board-label").classList.toggle("hidden", !(v.result && v.result.board.length));
+  setCards("board", v.result ? v.result.board : []);
+  $("you-label").textContent = `You · ${v.class}`;
+  setCards("your-cards", v.cards);
+  logLines(v.events);
+  $("grades").replaceChildren(...v.grades.map((g) => {
+    const div = document.createElement("div");
+    div.className = "grade" + (g.mistake ? " bad" : "");
+    const verdict = document.createElement("b");
+    verdict.className = g.mistake ? "bad" : "ok";
+    verdict.textContent = g.mistake ? `Lost ${g.loss.toFixed(3)} bb` : "Nash-consistent";
+    const nashWord = v.seat === "sb" ? "jams" : "calls";
+    const detail = document.createTextNode(
+      ` · you chose ${g.chosen === "all-in" ? (v.seat === "sb" ? "jam" : "call") : "fold"}` +
+      ` · EV fold ${fmt(g.ev_fold)} bb, EV ${v.seat === "sb" ? "jam" : "call"} ${fmt(g.ev_allin)} bb` +
+      ` · Nash ${nashWord} ${(100 * g.nash_allin).toFixed(0)}%`);
+    div.append(verdict, detail);
+    return div;
+  }));
+  $("result").textContent = v.result ? `Result: ${fmt(v.result.net_bb, 2)} bb` : "";
+  const actions = $("actions");
+  if (v.your_turn) {
+    actions.replaceChildren(
+      button(v.seat === "sb" ? "Jam all-in" : "Call all-in", () => act("all-in")),
+      button("Fold", () => act("fold"), true));
+  } else {
+    actions.replaceChildren(button("Next hand", deal));
+  }
+}
+
+function renderLeduc(v) {
+  $("play-title").textContent = `Hand ${v.hand} · pot ${v.pot} · you act ${v.seat}`;
+  $("bot-label").textContent = "Bot";
+  $("bot-cards").replaceChildren(leducCard(v.result ? v.result.bot_card : null));
+  $("board-label").classList.remove("hidden");
+  $("board-label").textContent = "Public card";
+  $("board").replaceChildren(...(v.public ? [leducCard(v.public)] : []));
+  $("you-label").textContent = "You";
+  $("your-cards").replaceChildren(leducCard(v.card));
+  logLines(v.events);
+  $("grades").replaceChildren();
+  $("result").textContent = v.result ? `Result: ${fmt(v.result.net_chips, 0)} chips` : "";
+  const actions = $("actions");
+  if (v.your_turn) {
+    actions.replaceChildren(...v.actions.map((a) =>
+      button(a.label[0].toUpperCase() + a.label.slice(1), () => act(a.action), a.action === "fold")));
+  } else {
+    actions.replaceChildren(button("Next hand", deal));
+  }
+}
+
+function render(v) {
+  $("error").textContent = "";
+  if (v.hand === undefined) { showSummary(v.summary); return; }
+  $("play").classList.remove("hidden");
+  (v.game === "pushfold" ? renderPushfold : renderLeduc)(v);
+  showSummary(v.summary);
+}
+
+async function guarded(fn) {
+  try { render(await fn()); } catch (error) { $("error").textContent = error.message; }
+}
+
+async function start() {
+  game = $("game").value;
+  await guarded(async () => {
+    const v = await api("/api/session", {
+      game, seat: $("seat").value, depth_mode: $("depth_mode").value, depth: Number($("depth").value),
+    });
+    session = v.session;
+    return api("/api/hand", { session });
+  });
+}
+
+function deal() { return guarded(() => api("/api/hand", { session })); }
+function act(action) { return guarded(() => api("/api/act", { session, action })); }
+
+$("game").onchange = seatOptions;
+$("depth_mode").onchange = seatOptions;
+$("start").onclick = start;
+seatOptions();
+</script>
+</body>
+</html>

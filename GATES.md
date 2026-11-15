@@ -237,3 +237,51 @@ showdown pushfold build          # about 20 minutes on 16 cores; reproduces data
 showdown pushfold chart 10
 py gate.py --full
 ```
+
+---
+
+## Gate E: bot and engine: PASS (2026-11-14)
+
+Evidence: `tests/test_gate_e.py` (fast suite) and `tests/test_gate_e_slow.py`
+(slow suite). The design is in DECISIONS 23 and 24.
+
+| Check | Measured | Bar | Result |
+|---|---|---|---|
+| 20,000 bot-vs-bot hands at 10 bb through pokerkit's state machine (seed 20261114) | realised SB −0.03940 bb/hand, SE 0.03202 (SD 4.528); solver value −0.04537; z = +0.19 | within 3 SE | PASS |
+| A scripted human seat through the play page's HTTP API, push/fold | 20 hands: alternating seats at 10 bb, BB at random depth, SB at 1 bb, BB at 2 bb | 20 complete hands | PASS |
+| A scripted human seat through the HTTP API, Leduc | 20 hands: alternating and second seat, with random legal actions | 20 complete hands | PASS |
+
+Backstops. The 3 SE test alone is too weak to catch a seat swap or a
+chip-unit error; see risk 1 in the design review.
+- **Every simulated hand's payoff fits the model:** −0.5, +1 or ±10. Every
+  called hand's winner agrees with our own evaluator (`evaluate`), so pokerkit's
+  showdown and ours never disagree.
+- **Jam rate:** 0.5804 against the solution's 0.5828 (0.8 SE).
+- **Call rate:** 0.3601 against 0.3664 (1.4 SE). The bar is 4 SE.
+- **Seats:** pokerkit's heads-up state has player 0 posting 2 chips (BB) and
+  player 1 posting 1 (SB), and the SB acts first. A fixed-card AA vs KK hand
+  pays exactly −0.5, +1 and +10. A split pays 0. At 1 bb the BB has no
+  decision.
+- **API scripts:**
+  - Every finished hand's result fits the model.
+  - The bot's cards never appear before the hand ends.
+  - Summary totals equal the sum of the per-hand grades and results.
+  - Host-header and token checks return 403. Bad bodies return 400 or 413.
+  - Every route the page calls exists, and the page loads nothing from the
+    network.
+- **Grading:** the per-class best-response sums reproduce
+  `closed_form_exploitability` to 1e-12. Every action that Nash plays purely
+  loses less than 0.001 bb at 2, 10 and 20 bb.
+
+**Done 3, checked by hand in the browser pane on 2026-11-14:**
+- A push/fold session at a fixed 10 bb, alternating seats. It showed a graded
+  mistake (T5o jam: "Lost 0.239 bb", Nash jams 0%), a Nash-consistent BB fold
+  (96s), the board and the bot's cards after a call, and the summary.
+- A random-depth session (4 bb, then 19 bb), including a bot fold.
+- A Leduc session: two hands covering a check-call-showdown, the public card,
+  a bot fold, and both seats.
+
+```
+showdown play                 # opens http://127.0.0.1:<port>/
+py gate.py --full
+```

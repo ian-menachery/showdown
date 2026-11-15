@@ -576,3 +576,95 @@ exploitability and value only. Nothing was compared against the reference.
   dated amendment.
 - Comparing at other depths in place of these.
 - Scoring a class that is mixed on either side.
+
+---
+
+### 23. `showdown play`: a stdlib server on 127.0.0.1 with a small JSON API (2026-11-14)
+
+**Decided:** Ian chose this on 2026-11-14 (SCOPE A5), and it completes
+DECISIONS 12.
+- **The server.** `http.server.ThreadingHTTPServer` is bound to `127.0.0.1`
+  only, on `--port` (default 0, so the OS picks a free port). Nothing else in
+  the code can set the host.
+- **Request checks.**
+  - Any request whose `Host` header is not `127.0.0.1:<port>` or
+    `localhost:<port>` gets 403.
+  - Each launch makes a random token, written into the page. Every POST must
+    carry it in `X-Showdown-Token`, or it gets 403.
+- **Endpoints.** All take and return JSON.
+  - `GET /` serves the page, which is packaged in `showdown/bot/static/`. There
+    is no CDN and nothing loads from the network.
+  - `POST /api/session` takes the game ("pushfold" or "leduc"), the seat ("sb",
+    "bb" or "alternate"; for Leduc "first", "second" or "alternate"), the depth
+    mode ("fixed" or "random") and the depth (1 to 20).
+  - `POST /api/hand` deals the next hand and runs the bot until it is your
+    turn.
+  - `POST /api/act` applies your action, runs the bot, and finishes the hand
+    when it is over.
+  - `GET /api/summary?session=<id>`.
+- **Sessions.** They live in memory, keyed by a random id, with one lock per
+  session. There are no accounts and nothing is saved (DECISIONS 12).
+- **Hidden information.** No response contains the bot's cards before the hand
+  is over.
+- **Random depth.** "random" draws an integer from 2 to 20 bb each hand.
+- **Opening the page.** `showdown play` prints the URL and opens it with
+  `webbrowser`, unless `--no-browser` is given.
+
+**Why:**
+- **No new dependencies.** The standard library is enough for one page and four
+  endpoints, and DECISIONS 12 makes the lightest option the default.
+- **The checks.** Checking the Host header blocks DNS-rebinding pages. The
+  per-launch token stops other local pages from posting actions.
+
+**Rules out:** binding to any other address, CORS headers, cookies, persistence,
+and loading anything from the network into the page.
+
+---
+
+### 24. The pokerkit adapter, the bots, and how decisions are graded (2026-11-14)
+
+**Decided:** These facts come from `docs/design-review-phases-5-6.md`, and the
+first two were checked again first-hand.
+- **Seats.** In pokerkit's heads-up state, player 0 is the **big blind** and
+  player 1 is the **small blind** and button, who acts first preflop (pokerkit
+  swaps the blinds when there are two players). `engine.pokerkit_adapter` pins
+  `BB_SEAT = 0` and `SB_SEAT = 1`.
+- **Chips.** They are integers scaled ×2: blinds (1, 2), `min_bet` 2, stacks
+  2S. Payoffs are divided by 2 to give bb. A replay checked every case: SB fold
+  −0.5, BB fold +1, called jams ±S, a split 0, and at 1 bb no BB decision.
+- **Dealing.** Our own `random.Random(seed)` draws 9 cards. Hole and board
+  dealing are explicit and never automated, because pokerkit's own shuffle uses
+  the global `random`.
+- **The push/fold bot** plays the committed `data/pushfold.json` at the hand's
+  depth. It jams or calls when `rng.random()` is below its probability for its
+  class.
+- **The Leduc bot** plays `data/leduc_cfr_plus.json`: `cfr_plus` with 1,000
+  iterations, written by `showdown solve leduc --iterations 1000 --out ...`.
+  Leduc hands run on our own `games/leduc.py`, because pokerkit has no Leduc
+  state machine.
+- **Grading** is per decision, at the class level, against the opponent's Nash
+  strategy at that depth, using the exact matrix:
+  - **SB with class i:** EV(fold) = −0.5. EV(jam) is the pair-weighted average
+    over j of (1 − c_j)·1 + c_j·S(2E_ij − 1).
+  - **BB with class j, facing a jam:** EV(fold) = −1. EV(call) is the average
+    of −S(2E_ij − 1) over i, weighted by w_ij·p_i.
+  - **bb lost** = max(EV) − EV(chosen). A decision is a **mistake** when it
+    loses more than 0.001 bb.
+  - The session summary counts decisions, not hands, because at 1 bb the BB has
+    no decision. It shows bb lost (total and per decision), the mistakes, and
+    the realised result in bb.
+- **Leduc** is played but not graded. SCOPE asks only for a session against
+  the CFR bot.
+
+**Why:**
+- **Class level.** It is the abstraction the solution is defined on, so a
+  grade means the same thing as the chart.
+- **Grading against the opponent's Nash strategy.** It measures the gap to
+  equilibrium play, which is what a trainer teaches.
+- **Gate E's backstops.** Gate E's 3 SE test alone is too weak to catch a seat
+  swap or a chip-unit error (the design review, risk 1). So Gate E also checks
+  every simulated hand's payoff against the model, and the overall jam and call
+  rates against the solution.
+
+**Rules out:** grading by the actual combo's equity (the solution is
+class-level), grading Leduc, and letting pokerkit draw any card.
