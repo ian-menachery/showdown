@@ -27,6 +27,9 @@ SHA256 = {
     "b-inary/heads_up_pre_flop_equity.bin": (
         "006404b36d257fc9455da0d0f0ab89aef3e80ece56c8f3e770bad926cfe5ec8a"
     ),
+    "texassolver/TexasSolver-v0.2.0-Windows.zip": (
+        "0a9122fa0cd9384e6c1cbe0492e8a3b8ac7809890c649e1a53f77a59d6d50a7c"
+    ),
 }
 
 

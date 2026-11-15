@@ -962,3 +962,32 @@ privacy, and leaves the choice to Ian.
 per street is the "speed beats precision" tree from his scope. Fixing the
 flops and ranges in advance means the gate measures the solver, not choices
 made after seeing results.
+
+**Gate S2 run details, fixed before the first S2 solve (2026-11-15).**
+- **The download:** `TexasSolver-v0.2.0-Windows.zip`, SHA-256
+  `0a9122fa0cd9384e6c1cbe0492e8a3b8ac7809890c649e1a53f77a59d6d50a7c`. It has
+  4,790 members, none with an absolute or `..` path. The binary is
+  `console_solver.exe`, run as
+  `--input_file F --resource_dir resources --mode holdem`.
+- **A sanity run.** The bundled sample (pot 4, stack 10) ran 10 iterations in
+  11.6 s on 16 threads and wrote its JSON. The JSON has the flop root's
+  actions and per-hand strategy, with bet sizes in absolute chips. Player 1
+  is out of position.
+- **Fixed now:**
+  - `set_print_interval 10`, the solver's default. TexasSolver checks the
+    accuracy target only when it prints.
+  - `set_dump_rounds 1`: only the flop decision is dumped.
+  - The reported exploitability is the last "Total exploitability" line in
+    the log.
+  - Each solve has a 120 s timeout. A solve that times out counts as over
+    both time bars and as failing the exploitability bar.
+- **The order.** Solves run flop by flop. For each flop, the spots go SRP25,
+  SRP50, SRP100, 3BP50, 3BP100.
+- **The stop-early rule.** After at least the first two flops (10 solves, one
+  per spot per flop), the run stops as soon as FAIL is certain:
+  - more than 50 of the 100 solves already over 10 s (the median cannot
+    pass);
+  - or more than 5 over 20 s (the 95th percentile cannot pass);
+  - or any solve above 2% of the pot.
+  
+  Stopping early only saves time. It cannot turn a FAIL into a PASS.
