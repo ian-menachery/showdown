@@ -2,13 +2,11 @@
 
 import itertools
 import math
-import random
 from pathlib import Path
 
 import pytest
 from phevaluator import evaluate_cards
-from pokerkit import Card, Deck, StandardHighHand, calculate_equities
-from pokerkit import parse_range as pokerkit_range
+from pokerkit_oracle import equities as pokerkit_equities
 
 from showdown.equity.cards import card_str, class_index, parse_cards
 from showdown.equity.exact import class_vs_class, hand_vs_hand
@@ -88,20 +86,24 @@ def test_exact_equals_phevaluator_enumeration(hero, villain, board) -> None:
     assert (ours.win, ours.tie, ours.outcomes) == _phevaluator_exact(h, v, b)
 
 
+POKERKIT_SAMPLES = 4_000
+
+
+@pytest.fixture(scope="module")
+def pokerkit_results() -> dict[tuple[str, str, str], float]:
+    """One reproducible pokerkit draw per matchup (DECISIONS 28)."""
+    cases = [
+        ((hero, villain), board, POKERKIT_SAMPLES, sum(map(ord, hero + villain + board)))
+        for hero, villain, board in MATCHUPS
+    ]
+    return {m: r[0] for m, r in zip(MATCHUPS, pokerkit_equities(cases), strict=True)}
+
+
 @pytest.mark.parametrize(("hero", "villain", "board"), MATCHUPS)
-def test_exact_within_3_se_of_pokerkit(hero, villain, board) -> None:
-    samples = 4_000
+def test_exact_within_3_se_of_pokerkit(pokerkit_results, hero, villain, board) -> None:
+    samples = POKERKIT_SAMPLES
     exact = hand_vs_hand(_combo(hero), _combo(villain), parse_cards(board)).equity
-    random.seed(sum(map(ord, hero + villain + board)))  # pokerkit samples from `random`
-    theirs = calculate_equities(
-        (pokerkit_range(hero), pokerkit_range(villain)),
-        tuple(Card.parse(board)) if board else (),
-        2,
-        5,
-        Deck.STANDARD,
-        (StandardHighHand,),
-        sample_count=samples,
-    )[0]
+    theirs = pokerkit_results[(hero, villain, board)]
     se = math.sqrt(exact * (1 - exact) / samples)  # upper bound for a [0, 1] score
     assert abs(theirs - exact) <= 3 * se + 1e-12
 

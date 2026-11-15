@@ -1,7 +1,7 @@
 """Expected pot shares for all-in hands, any number of players and side pots (DECISIONS 26)."""
 
 import pytest
-from pokerkit import Deck, StandardHighHand, calculate_equities, parse_range
+from pokerkit_oracle import equities as pokerkit_equities
 
 from showdown.equity.cards import parse_cards
 from showdown.equity.exact import hand_vs_hand
@@ -70,15 +70,8 @@ def test_three_way_preflop_monte_carlo_agrees_with_pokerkit() -> None:
     shares = pot_shares(hands, (), [(pot, (0, 1, 2))], samples=20_000, seed=7)
     assert shares.method == "monte-carlo"
     assert sum(shares.expected.values()) == pytest.approx(pot, abs=1e-6)
-    oracle = calculate_equities(
-        tuple(parse_range(r) for r in ("AsAh", "KdKc", "7s6s")),
-        (),
-        2,
-        5,
-        Deck.STANDARD,
-        (StandardHighHand,),
-        sample_count=4000,
-    )
+    # One reproducible pokerkit draw (DECISIONS 28).
+    (oracle,) = pokerkit_equities([(("AsAh", "KdKc", "7s6s"), "", 4000, 7)])
     for seat, equity in enumerate(oracle):
         # Combined SE: ours, plus pokerkit's (at most sqrt(e(1-e)/n) of the pot).
         se = (shares.se[seat] ** 2 + pot**2 * equity * (1 - equity) / 4000) ** 0.5

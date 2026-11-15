@@ -801,3 +801,43 @@ unknown".
 
 **Rules out:** interpolating between depths, and grading limps, min-raises or
 multiway pots, which are not in the game.
+
+---
+
+### 28. pokerkit as a test oracle runs with a fixed hash seed (2026-11-14)
+
+**What happened.** The final `py gate.py --full` of the autonomous run failed
+on one case: `test_gate_c_slow.py::test_exact_within_3_se_of_pokerkit[JdTd-9c9s-]`.
+All the other 288 tests passed, and every earlier full run had passed that
+case.
+
+**Reproduced first** (the gate-failure rule, SCOPE A5):
+- **Alone, it passes.** Run five times on its own, the case passed.
+- **The cause is the deck order.** pokerkit samples with the global `random`
+  module from a deck whose order depends on Python's per-process string
+  hashing. So the test's `random.seed(...)`, despite its comment, never made
+  the oracle reproducible.
+- **The proof.** Run under eight values of `PYTHONHASHSEED`, the same case gave
+  z = −0.04, +0.68, +0.84, +0.41, +1.89, +0.20, −1.19 and −1.02.
+- **Our side is not in question.** Our exact value for the same matchup equals
+  phevaluator's enumeration exactly, in a test that passed in the same run.
+- **The failure was a tail draw.** It was a draw beyond 3 SE in a test that had
+  silently been random all along. With 20 cases at 3 SE, about 5% of full runs
+  fail somewhere even when both sides are right.
+
+**Decided:** `tests/pokerkit_oracle.py` runs pokerkit's `calculate_equities` in
+a subprocess:
+- `PYTHONHASHSEED=0` is fixed in advance, before any result under it was
+  seen.
+- `random` is seeded per case, as before.
+
+Gate C's pokerkit check and the 3-way test in `tests/test_multiway.py` both use
+it. **The 3 SE bar does not change.** The oracle is now one fixed,
+reproducible draw. Two separate runs gave identical results, and all 20 Gate C
+cases pass: max |z| 2.14 over the 17 cases with an equity strictly between 0
+and 1, and the 3 locked cases agree exactly.
+
+**Rules out:**
+- Choosing a different hash seed after seeing results.
+- Widening the 3 SE bar.
+- Any test oracle whose randomness is not reproducible from the test itself.

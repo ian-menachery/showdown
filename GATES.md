@@ -87,7 +87,7 @@ batches, seed 20261114, 1,290 s on 16 cores (DECISIONS 18).
 | eval7 vs phevaluator on random 7-card showdowns | 100,000 of 100,000 agree | all agree | PASS |
 | AsAh vs KdKc, exact over 1,712,304 boards | win 0.8106458, tie 0.0038182, equity 0.8125549 | 0.81065 / 0.00382 / 0.81255 ± 1e-5 | PASS |
 | 20 matchups (3 preflop, 8 flop, 6 turn, 3 river): eval7 enumeration vs phevaluator enumeration | 20 of 20 identical (win, tie, outcome count) | exact | PASS |
-| Same 20 matchups vs pokerkit `calculate_equities`, 4,000 samples each | 20 of 20 within 3 SE | within 3 SE | PASS |
+| Same 20 matchups vs pokerkit `calculate_equities`, 4,000 samples each | 20 of 20 within 3 SE (re-run on 2026-11-14 with a reproducible oracle, DECISIONS 28: max \|z\| 2.14) | within 3 SE | PASS |
 | Monte Carlo calibration: AsAh vs KdKc, 1,000 samples, 200 seeds | 189 of 200 within ±2 SE (0.945) | 0.90 to 0.99 (0.954 expected) | PASS |
 | Matrix symmetry M[i,j] + M[j,i] = 1 | exact, holds by construction (DECISIONS 18) | within cell error | PASS |
 | Matrix SE, off-diagonal cells | max 0.00169, median 0.00116 | every cell ≤ 0.002 | PASS |
@@ -157,6 +157,13 @@ Bugs found by these tests before the gate was declared:
   16/44 winning rivers for AsKs vs QhQd on Ts9s2dJc. The code said 13/44, and
   the code was right: a king gives QQ the straight K-Q-J-T-9. The test was
   corrected, with that reasoning written into it.
+
+**Note added 2026-11-14 (DECISIONS 28).** The pokerkit comparison was not
+reproducible as first written. pokerkit's sample depends on Python's
+per-process string hashing, so `random.seed` alone did not fix it. The
+final full run of the autonomous stretch drew one case beyond 3 SE. The
+oracle now runs with a fixed hash seed. The bar is unchanged, and all 20
+cases pass, identically on repeated runs.
 
 Full-suite run: 156 passed in 4 min 57 s, coverage 99%. In that run Gate B
 measured ours at 16.9 s against OpenSpiel's 60.7 s, which still passes. The
