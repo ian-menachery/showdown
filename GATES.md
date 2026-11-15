@@ -378,3 +378,32 @@ HEAD pushed. It took 16 min 56 s on an idle 16-core machine.
 The previous full run, at commit 640b178, failed one Gate C case. It drew
 beyond 3 SE from pokerkit's then-irreproducible sample. The cause was found
 and fixed once (DECISIONS 28), without changing the bar.
+
+---
+
+## Phase 8 spikes (live advisor)
+
+### Gate S2: TexasSolver flop speed: FAIL (2026-11-15)
+
+Evidence: `spikes/2026-11-15-texassolver-speed.py`. The bar, the grid, the tree
+and the stop-early rule were all fixed in DECISIONS 30 before the first solve.
+TexasSolver v0.2.0 runs as a separate program with 16 threads.
+
+| Check | Measured (10 solves on 2 flops; then stopped early) | Bar | Result |
+|---|---|---|---|
+| Median wall time per solve | 120 s (timeout) | ≤ 10 s | FAIL |
+| 95th percentile | 120 s | ≤ 20 s | FAIL |
+| Exploitability | 3BP 1.33–1.81% of pot; SRP 3.1–356% (never converged) | ≤ 2% of pot | FAIL |
+
+- **Single-raised pots** (25, 50 and 100 bb): all six hit the 120 s timeout
+  without converging.
+- **3-bet pots** (50 and 100 bb): converged, but took 50 to 76 s.
+- **Contention.** The second flop ran while a separate session's CFR spike
+  shared the CPU: 11 iterations against 51 on the first. The first flop alone
+  is 6 to 12 times over the bar, so contention cannot change the verdict.
+- **Not retuned,** as DECISIONS 30 requires. Ian's fallback is in DECISIONS
+  31.
+
+```
+.venv\Scripts\python -I spikes\2026-11-15-texassolver-speed.py
+```

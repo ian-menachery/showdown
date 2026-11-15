@@ -991,3 +991,37 @@ made after seeing results.
   - or any solve above 2% of the pot.
   
   Stopping early only saves time. It cannot turn a FAIL into a PASS.
+
+---
+
+### 31. After S2 failed: V1 is preflop suggestions plus a postflop equity helper; a flop library comes next (2026-11-15)
+
+**Decided:** Ian chose "go with 2 now then 1" on 2026-11-15, from the
+fallbacks offered when Gate S2 failed (GATES.md: single-raised pots never
+converged in 120 s, and 3-bet pots took 50 to 76 s).
+
+1. **Now (V1).**
+   - **Preflop suggestions:** push/fold Nash at 20 bb or less (Gate D). Above
+     20 bb, the source Ian picks in D3 after spike S3.
+   - **A postflop helper, not a solver:**
+     - the hero's equity against the villain's range on the current board;
+     - the pot odds;
+     - a call/fold (and bet/check) hint from simple, stated rules.
+   - The helper's rules and its Gate G are pre-registered in a later DECISIONS
+     entry, after Ian approves them.
+2. **Next (option 1).**
+   - **The flop library:** solve the common heads-up flop spots offline, in
+     overnight runs, and look them up during play.
+   - **The turn and river:** solve them live, only once a new pre-registered
+     speed gate (S2b) passes on those smaller trees.
+   - Bringing postflop solving into scope (decision D2) still needs its own
+     amendment when option 1 starts.
+
+**Why:** V1 is useful within days, and "speed beats precision" (Ian's
+scope). S2 showed that live flop solves are minutes, not seconds, on this
+laptop.
+
+**Rules out:**
+- Shrinking S2's tree or loosening its bar after the fact (DECISIONS 30).
+- Calling the helper's hints "GTO". They are labelled as equity heuristics on
+  screen and in the log.

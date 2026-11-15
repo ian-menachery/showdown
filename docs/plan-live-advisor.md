@@ -145,6 +145,22 @@ to F (DECISIONS 11).
   next to the GTO one; multiway pots.
 - **Auto-clicking (parked by Ian).** It would make the advisor a bot.
 
+## Status, 2026-11-15
+
+- **D1, D4 and D6 are decided** (DECISIONS 30): a local reader, TexasSolver
+  downloaded and pinned, and practice hands from Poker Now self-play, the
+  public datasets and PokerStars play money (after sessions only).
+- **Gate S2 failed** (GATES.md). Single-raised pots never converged in 120 s,
+  and 3-bet pots took 50 to 76 s.
+- **Ian's fallback** (DECISIONS 31): V1 is preflop suggestions plus a
+  postflop equity and pot-odds helper. A precomputed flop library, with live
+  turn and river solves behind a new gate S2b, comes next.
+- **Still open:**
+  - D3, the preflop source above 20 bb, which waits for spike S3;
+  - S1, which waits for Ian's screenshots;
+  - D2, which waits until option 1 starts;
+  - D5, the self-hosted table.
+
 ## Open decisions for Ian
 
 | # | Decision | Recommendation |
