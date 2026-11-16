@@ -1804,3 +1804,31 @@ headline goal, exploiting deviations.
 3. The library builder.
 4. Ian starts the 3BP100 run, overnight.
 5. The advisor lookup, then Gate L.
+
+**Amendment to DECISIONS 40 (2026-11-16), while building the library and
+before any library run.**
+- **Coverage order means per flop.** Flops are sorted by how many of the
+  22,100 dealt flops each one stands for, most first. Ties are broken by a
+  shuffle with seed 20261116.
+
+  | Weight | Flops |
+  |---|---|
+  | 24 | the 286 rainbow flops |
+  | 12 | the 858 two-tone flops and the 312 paired flops, interleaved |
+  | 4 | the 286 monotone flops and the 13 trips flops |
+
+  The list above put paired flops with monotone ones. Per flop, though, a
+  paired flop is dealt as often as a two-tone one, so this order maximises
+  coverage for each flop solved.
+- **Storage:**
+  - one gzipped JSON file per flop, holding the four nodes;
+  - a line in `manifest.jsonl` once that file is written;
+  - hands are keyed as showdown writes them, high card first.
+
+  A run resumes from the manifest. It refuses to mix bridge binaries in one
+  spot's library.
+- **Power:**
+  - it checks AC power before every flop, not only at the start;
+  - it asks Windows to keep the system awake while it runs.
+- **A failed flop** (a bridge error or the 30-minute timeout) is logged and
+  left out of the manifest, so the next run retries it.

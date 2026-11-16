@@ -227,7 +227,7 @@ Build steps, each checked before the next:
 Later slices of Phase 12, unchanged above: the opponent model built from
 logged hands, shrinking toward Nash, and the simulation gate.
 
-### Phase 13 (planned 2026-11-15; steps 1–2 built, Gate X FAIL on X3): postflop solving ahead of time (D2, DECISIONS 40)
+### Phase 13 (planned 2026-11-15; steps 1–3 built, Gate X FAIL on X3): postflop solving ahead of time (D2, DECISIONS 40)
 
 Gate S4 showed b-inary's postflop-solver takes 0.5 to 2 minutes per flop on
 this laptop. That is too slow for live play, but fine between sessions and
@@ -270,6 +270,13 @@ Rough compute, from S4's times:
 
 The single-raised libraries therefore grow over several nights. Coverage is
 reported as the share of dealt flops solved.
+
+Measured with the model's ranges, which are wider than S4's top-% ones:
+- **3BP100:** the builder's first real flop (Qc8d3h) took 67 s. At that rate
+  all 1,755 flops take about 33 h, or four or five 8-hour nights.
+- **SRP50:** Gate X's 10 baselines had a median of 115 s, about 56 h in all.
+
+Each flop's file is about 9 KB gzipped.
 
 ### Later, each needing its own amendment first
 - **A self-hosted table for friends (Ian ticked this).** It means serving
@@ -335,7 +342,14 @@ reported as the share of dealt flops solved.
     of its range, and the lock also takes away the BB's raise.
   - The bridge reproduces S4's opposite result with S4's ranges, so this is
     not a bug.
-  - The library builder (step 3) is next, on Ian's word.
+- **The library builder is built** (step 3; DECISIONS 40 amended 2026-11-16
+  on flop order, storage and power):
+  - `showdown postflop library build --spot 3BP100 --until 07:00` and
+    `showdown postflop library status`;
+  - it is resumable, refuses to run on battery, and keeps the laptop awake;
+  - nothing is in `data/library/` yet.
+
+  Step 4, the first overnight 3BP100 run, starts only when Ian runs it.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table.

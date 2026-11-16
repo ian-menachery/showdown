@@ -21,6 +21,9 @@ venv/
 # for the HRC file, so neither is committed; tests pin their SHA-256.
 /data/external/
 
+# The flop library: large, rebuilt from the AGPL bridge, never committed (DECISIONS 40).
+/data/library/
+
 # Local Claude Code launch config for the play-page preview; machine-specific.
 /.claude/
 

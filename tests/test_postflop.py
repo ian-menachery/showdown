@@ -3,14 +3,15 @@
 Everything that runs the bridge is in test_gate_x.py (slow).
 """
 
+import datetime as dt
 import itertools
 import json
 
 import pytest
 
 from showdown.cli import main
-from showdown.equity.cards import parse_cards
-from showdown.postflop import bridge, exploit
+from showdown.equity.cards import cards_str, parse_cards
+from showdown.postflop import bridge, exploit, library
 from showdown.postflop.flops import (
     SUIT_PERMUTATIONS,
     canonical,
@@ -152,6 +153,117 @@ def test_bridge_errors_and_cache(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(bridge, "SOLVER_DIR", tmp_path / "no-solver")
     with pytest.raises(bridge.BridgeError, match="is missing"):
         bridge.build()
+
+
+def test_library_order_keys_and_deadline() -> None:
+    order = library.coverage_order()
+    weights = [flop_weights()[f] for f in order]
+    assert len(set(order)) == 1755 and weights == sorted(weights, reverse=True)
+    assert (weights.count(24), weights.count(12), weights.count(4)) == (286, 858 + 312, 286 + 13)
+    assert order == library.coverage_order()
+    assert library.hand_key("2cAh") == "Ah2c" and library.hand_key("KdKs") == "KsKd"
+    night = dt.datetime(2026, 11, 16, 23, 0)
+    assert library.deadline("07:00", night) == dt.datetime(2026, 11, 17, 7, 0)
+    assert library.deadline("23:30", night) == dt.datetime(2026, 11, 16, 23, 30)
+    assert isinstance(library.on_ac_power(), bool)
+    library._keep_awake(True)
+    library._keep_awake(False)
+
+
+def _fake_solve(spec: dict, **_) -> dict:
+    reports = []
+    for path in spec["report"]:
+        if path == ["Check", "Bet"]:
+            reports.append({"path": path, "reached": False})
+            continue
+        hands, actions = ["2cAh", "KdKs"], ["Check", "Bet(17)"]
+        strategy = [0.254, 1.0, 0.746, 0.0]  # per action, then per hand
+        reports.append(
+            {
+                "path": path,
+                "reached": True,
+                "player": 0,
+                "actions": actions,
+                "hands": hands,
+                "strategy": strategy,
+            }
+        )
+    return {
+        "reports": reports,
+        "exploitability_pct": 1.5,
+        "iterations": 60,
+        "build_s": 1.0,
+        "solve_s": 9.0,
+    }
+
+
+@pytest.fixture
+def fake_library(tmp_path, monkeypatch):
+    monkeypatch.setattr(library, "LIBRARY", tmp_path)
+    monkeypatch.setattr(bridge, "binary_sha256", lambda: "a" * 64)
+    monkeypatch.setattr(bridge, "solve", _fake_solve)
+    monkeypatch.setattr(library, "on_ac_power", lambda: True)
+    monkeypatch.setattr(library, "_keep_awake", lambda on: None)
+    return tmp_path
+
+
+def test_library_build_writes_and_resumes(fake_library, monkeypatch) -> None:
+    order = [cards_str(f) for f in library.coverage_order()]
+    log: list[str] = []
+    assert library.build("SRP50", max_flops=3, log=log.append) == 3
+    assert list(library.manifest("SRP50")) == order[:3]
+    data = library.load("SRP50", order[0])
+    assert (data["spot"], data["weight"], data["binary"]) == ("SRP50", 24, "a" * 64)
+    assert data["nodes"][""]["hands"] == {"Ah2c": [25, 75], "KsKd": [100, 0]}
+    assert data["nodes"]["Check Bet"] == {"reached": False}
+    assert "coverage 0.3%" in log[2]
+    # A torn last line is ignored, then sealed off so the next row stays readable.
+    with (fake_library / "SRP50" / "manifest.jsonl").open("a", encoding="utf-8") as f:
+        f.write('{"flop": "x')
+    assert library.build("SRP50", max_flops=2, log=log.append) == 2
+    assert list(library.manifest("SRP50")) == order[:5]
+    assert library.status_line("SRP50").startswith("SRP50: 5 of 1755 flops, coverage 0.5%;")
+    assert library.status_line("SRP25") == "SRP25: nothing solved yet"
+
+
+def test_library_build_stops_and_refuses(fake_library, monkeypatch) -> None:
+    log: list[str] = []
+    monkeypatch.setattr(library, "on_ac_power", lambda: False)
+    with pytest.raises(library.LibraryError, match="not on AC power"):
+        library.build("3BP100", log=log.append)
+    power = iter([True, False])
+    monkeypatch.setattr(library, "on_ac_power", lambda: next(power))
+    assert library.build("3BP100", log=log.append) == 1
+    assert "went on battery" in log[-2]
+    monkeypatch.setattr(library, "on_ac_power", lambda: True)
+    night = dt.datetime(2026, 11, 16, 23, 0)
+    assert library.build("3BP100", until=night, now=lambda: night, log=log.append) == 0
+    assert "past 23:00" in log[-2]
+
+    def broken(spec, **_):
+        raise bridge.BridgeError("the solve took longer than 1800 s")
+
+    monkeypatch.setattr(bridge, "solve", broken)
+    assert library.build("3BP100", max_flops=1, log=log.append) == 0
+    assert "FAILED, will retry next run" in log[-2] and len(library.manifest("3BP100")) == 1
+    monkeypatch.setattr(bridge, "binary_sha256", lambda: "b" * 64)
+    with pytest.raises(library.LibraryError, match="another bridge binary"):
+        library.build("3BP100", log=log.append)
+
+
+def test_library_commands(fake_library, monkeypatch, capsys) -> None:
+    with pytest.raises(SystemExit, match="bad --until"):
+        main(["postflop", "library", "build", "--spot", "SRP25", "--until", "7am"])
+    power = iter([True, False])
+    monkeypatch.setattr(library, "on_ac_power", lambda: next(power))
+    assert main(["postflop", "library", "build", "--spot", "SRP25", "--until", "07:00"]) == 0
+    assert main(["postflop", "library", "status"]) == 0
+    out = capsys.readouterr().out
+    assert "building SRP25 until" in out and "SRP25: 1 of 1755 flops" in out
+    assert "3BP100: nothing solved yet" in out
+    monkeypatch.setattr(library, "on_ac_power", lambda: False)
+    with pytest.raises(SystemExit, match="not on AC power"):
+        main(["postflop", "library", "build", "--spot", "SRP25"])
 
 
 def test_command_rejects_bad_spots() -> None:

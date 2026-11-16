@@ -10,6 +10,7 @@ showdown pushfold build
 showdown pushfold chart 10
 showdown pushfold exploit 10 --villain-calls 15
 showdown postflop exploit --stack 50 --flop Kc7d6c --hero sb --read never-folds
+showdown postflop library build --spot 3BP100 --until 07:00
 showdown play
 showdown analyze data/external/phh/repo/data/pluribus
 showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5
@@ -258,6 +259,31 @@ def _postflop_exploit(args: argparse.Namespace) -> int:
     except bridge.BridgeError as error:
         raise SystemExit(str(error)) from None
     print(exploit.report_text(result))
+    return 0
+
+
+def _library_build(args: argparse.Namespace) -> int:
+    import datetime as dt
+
+    from showdown.postflop import bridge, library
+
+    try:
+        until = library.deadline(args.until, dt.datetime.now()) if args.until else None
+    except ValueError:
+        raise SystemExit(f"bad --until {args.until!r}: use HH:MM, like 07:00") from None
+    print(f"building {args.spot}" + (f" until {until:%a %H:%M}" if until else ""), flush=True)
+    try:
+        library.build(args.spot, until=until, log=lambda line: print(line, flush=True))
+    except (library.LibraryError, bridge.BridgeError) as error:
+        raise SystemExit(str(error)) from None
+    return 0
+
+
+def _library_status(args: argparse.Namespace) -> int:
+    from showdown.postflop import library
+
+    for spot in [args.spot] if args.spot else library.SPOTS:
+        print(library.status_line(spot))
     return 0
 
 
@@ -533,6 +559,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="the villain's leak, locked at its first flop decision",
     )
     post_exploit.set_defaults(handler=_postflop_exploit)
+    post_library = post_commands.add_parser("library", help="the overnight flop library")
+    library_commands = post_library.add_subparsers(dest="library_command", required=True)
+    spots = ["3BP100", "SRP25", "SRP50", "SRP100"]
+    lib_build = library_commands.add_parser(
+        "build", help="solve flops in coverage order; resumable; needs AC power"
+    )
+    lib_build.add_argument("--spot", choices=spots, required=True)
+    lib_build.add_argument("--until", metavar="HH:MM", help="start no flop after this time")
+    lib_build.set_defaults(handler=_library_build)
+    lib_status = library_commands.add_parser("status", help="flops solved and coverage")
+    lib_status.add_argument("--spot", choices=spots)
+    lib_status.set_defaults(handler=_library_status)
 
     play = commands.add_parser("play", help="local browser page: push/fold trainer and Leduc")
     play.add_argument("--port", type=int, default=0, help="default: any free port")
