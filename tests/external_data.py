@@ -30,6 +30,11 @@ SHA256 = {
     "texassolver/TexasSolver-v0.2.0-Windows.zip": (
         "0a9122fa0cd9384e6c1cbe0492e8a3b8ac7809890c649e1a53f77a59d6d50a7c"
     ),
+    # 20.3 GB: verified in chunks by spikes/2026-11-15-phh-leaks.py, never by require()
+    # (DECISIONS 39).
+    "phh-zenodo/poker-hand-histories.zip": (
+        "65d566e7a3387b4c3ec28213b5416a8a36a4f4f1cf822771b77f5232fbba3281"
+    ),
 }
 
 

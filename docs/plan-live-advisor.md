@@ -266,8 +266,16 @@ logged hands, shrinking toward Nash, and the simulation gate.
   faster than TexasSolver: 3-bet-pot flops take 7 to 18 s. Single-raised pots
   still take 28 s to over 120 s. Its node locking works: against a BB who never
   folds, the solved SB value-bets more and bluffs less.
-- **The PHH leak study is pre-registered** (DECISIONS 39, amended: the online
-  hands have no stacks, so no jam measures).
+- **The PHH leak study is done** (DECISIONS 39, amended: the online hands have
+  no stacks, so it has no jam measures). It covers 21.6 M hands from 2009
+  (`docs/human-leaks.md`). The 3.1 M heads-up hands give priors for the
+  opponent model:
+
+  | VPIP | PFR | 3-bet | Flop c-bet | Fold to flop c-bet |
+  |---|---|---|---|---|
+  | 49% | 34% | 14% | 63% | 45% |
+
+  About a fifth of the regulars at 6-max are loose (VPIP at least 40%).
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D2, which waits until option 1 starts;
