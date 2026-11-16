@@ -9,6 +9,7 @@ showdown matrix show AKs QQ
 showdown pushfold build
 showdown pushfold chart 10
 showdown pushfold exploit 10 --villain-calls 15
+showdown postflop exploit --stack 50 --flop Kc7d6c --hero sb --read never-folds
 showdown play
 showdown analyze data/external/phh/repo/data/pluribus
 showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5
@@ -228,6 +229,35 @@ def _pushfold_exploit(args: argparse.Namespace) -> int:
     except ValueError as error:
         raise SystemExit(f"bad read: {error}") from None
     print(report(e))
+    return 0
+
+
+def _postflop_build(args: argparse.Namespace) -> int:
+    from showdown.postflop import bridge
+
+    try:
+        exe = bridge.build()
+    except bridge.BridgeError as error:
+        raise SystemExit(str(error)) from None
+    print(f"built {exe}")
+    print(f"sha256 {bridge.binary_sha256()}")
+    return 0
+
+
+def _postflop_exploit(args: argparse.Namespace) -> int:
+    from showdown.postflop import bridge, exploit
+    from showdown.postflop.spot import FlopSpot, SpotError
+
+    try:
+        spot = FlopSpot.make(args.pot_type, args.stack, args.flop)
+    except (SpotError, ValueError) as error:
+        raise SystemExit(f"bad spot: {error}") from None
+    print("solving twice (without and with the read); this takes a few minutes...", flush=True)
+    try:
+        result = exploit.run(spot, args.hero, args.read)
+    except bridge.BridgeError as error:
+        raise SystemExit(str(error)) from None
+    print(exploit.report_text(result))
     return 0
 
 
@@ -482,6 +512,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     pf_exploit.add_argument("--file", default=pushfold.DEFAULT_SOLUTION)
     pf_exploit.set_defaults(handler=_pushfold_exploit)
+
+    post = commands.add_parser("postflop", help="postflop solving ahead of time (DECISIONS 40)")
+    post_commands = post.add_subparsers(dest="postflop_command", required=True)
+    post_build = post_commands.add_parser(
+        "build", help="build the AGPL solver bridge in bridges/postflop (needs Rust)"
+    )
+    post_build.set_defaults(handler=_postflop_build)
+    post_exploit = post_commands.add_parser(
+        "exploit", help="your flop strategy with and without one locked read about the villain"
+    )
+    post_exploit.add_argument("--pot-type", choices=["srp", "3bp"], default="srp")
+    post_exploit.add_argument("--stack", type=float, required=True, help="effective stack in bb")
+    post_exploit.add_argument("--flop", required=True, help="e.g. Kc7d6c")
+    post_exploit.add_argument("--hero", choices=["sb", "bb"], required=True)
+    post_exploit.add_argument(
+        "--read",
+        choices=["never-folds", "over-folds", "never-bets", "always-bets"],
+        required=True,
+        help="the villain's leak, locked at its first flop decision",
+    )
+    post_exploit.set_defaults(handler=_postflop_exploit)
 
     play = commands.add_parser("play", help="local browser page: push/fold trainer and Leduc")
     play.add_argument("--port", type=int, default=0, help="default: any free port")

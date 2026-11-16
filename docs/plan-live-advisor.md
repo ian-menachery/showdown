@@ -227,7 +227,7 @@ Build steps, each checked before the next:
 Later slices of Phase 12, unchanged above: the opponent model built from
 logged hands, shrinking toward Nash, and the simulation gate.
 
-### Phase 13 (planned 2026-11-15): postflop solving ahead of time (D2, DECISIONS 40)
+### Phase 13 (planned 2026-11-15; steps 1–2 built, Gate X FAIL on X3): postflop solving ahead of time (D2, DECISIONS 40)
 
 Gate S4 showed b-inary's postflop-solver takes 0.5 to 2 minutes per flop on
 this laptop. That is too slow for live play, but fine between sessions and
@@ -309,7 +309,8 @@ reported as the share of dealt flops solved.
 - **Gate S4 failed** (GATES.md). b-inary's postflop-solver is 4 to 10 times
   faster than TexasSolver: 3-bet-pot flops take 7 to 18 s. Single-raised pots
   still take 28 s to over 120 s. Its node locking works: against a BB who never
-  folds, the solved SB value-bets more and bluffs less.
+  folds, the solved SB value-bets more and bluffs less with S2's top-% ranges.
+  With the model's ranges it does not (Gate X).
 - **The PHH leak study is done** (DECISIONS 39, amended: the online hands have
   no stacks, so it has no jam measures). It covers 21.6 M hands from 2009
   (`docs/human-leaks.md`). The 3.1 M heads-up hands give priors for the
@@ -321,11 +322,22 @@ reported as the share of dealt flops solved.
 
   About a fifth of the regulars at 6-max are loose (VPIP at least 40%).
 - **D2 is decided** (DECISIONS 40; SCOPE A9): postflop solving ahead of time,
-  as exploit solves and an overnight flop library (Phase 13). Nothing is built
-  yet.
+  as exploit solves and an overnight flop library (Phase 13).
+- **Exploit solves are built** (Phase 13, build steps 1 and 2):
+  - the AGPL bridge in `bridges/postflop/`, built by `showdown postflop build`;
+  - `showdown postflop exploit`.
+
+  **Gate X failed on X3 only** (GATES.md):
+  - The lock holds, every solve converges (SRP50: median 115 s, max 508 s),
+    and the hero bluffs more against `over-folds` on all 10 flops.
+  - Against `never-folds`, the SB's weakest third bet less on only 3 of 10
+    flops. With the model's ranges the SB already bets its 33% size with most
+    of its range, and the lock also takes away the BB's raise.
+  - The bridge reproduces S4's opposite result with S4's ranges, so this is
+    not a bug.
+  - The library builder (step 3) is next, on Ian's word.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
-  - D2, which waits until option 1 starts;
   - D5, the self-hosted table.
 
 ## Open decisions for Ian

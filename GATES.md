@@ -625,3 +625,70 @@ pre-registered in DECISIONS 37 (commit 02e5be1) before any code.
 showdown pushfold exploit 10 --villain-calls 15
 showdown pushfold exploit 20 --villain-jams 100
 ```
+
+## Gate X: exploit solves between sessions: FAIL, X3 only (2026-11-15)
+
+Evidence: `tests/test_gate_x.py` (`py gate.py --full`). The bars, the reads
+and the seed were pre-registered in DECISIONS 40 (commit 3511218) before any
+bridge code.
+- **The engine:** postflop-solver at 9d1509f, through the AGPL bridge in
+  `bridges/postflop/` (binary SHA-256 c45af752…).
+- **The spot:** SRP50, the hero as the SB, the model's ranges at 50 bb,
+  tree T1.
+- **The flops:** 10, seed 20261116.
+- **Solves:** 30: one baseline per flop, shared by both reads, and one
+  locked solve per read.
+- **Cached** under `data/external/postflop-solver/cache/gate-x`, so a rerun
+  with the same binary replays them.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. The lock holds | all 20 locked solves: the reported strategy at the locked node equals the lock for every hand | to 1e-6 | PASS |
+| 2. Convergence | all 30 solves 1.30–1.95% of the pot, in 50–110 iterations; median 115 s, max 508 s (QcJdTh baseline) | ≤ 2% within 10 min | PASS |
+| 3. Against `never-folds`, the weakest third bets less | falls on 3 flops (Tc6c2c 87→85%, KcQc2c 85.5→85.4%, Qc6c2c 90→84%); rises on 7 | ≥ 8 of 10 | **FAIL** |
+| 4. Against `over-folds`, the weakest third bets more | rises on 10 flops (e.g. Tc5d3c 76→99%, Jc7d7c 80→100%) | ≥ 8 of 10 | PASS |
+| 5. The command prints both strategies and both EVs | CLI test at 25 bb, `never-bets` | — | PASS |
+
+Against `never-folds`, the SB's first flop decision after a check:
+
+| Flop | Bets overall | Weakest third | Middle | Strongest | SB EV, bb |
+|---|---|---|---|---|---|
+| Tc5d3c | 77 → 90% | 76 → 80% | 71 → 95% | 84 → 95% | 3.07 → 3.23 |
+| Tc6c2c | 87 → 93% | 87 → 85% | 81 → 98% | 92 → 97% | 3.27 → 3.50 |
+| KcQc2c | 83 → 94% | 85.5 → 85.4% | 74 → 99% | 91 → 97% | 3.38 → 3.72 |
+| Qc6c2c | 89 → 93% | 90 → 84% | 84 → 98% | 94 → 97% | 3.30 → 3.56 |
+| AhAdAc | 100 → 100% | 100 → 100% | 100 → 100% | 100 → 100% | 4.03 → 4.20 |
+| Jc8d8c | 78 → 100% | 84 → 100% | 70 → 100% | 81 → 100% | 3.34 → 3.73 |
+| QcJdTh | 98 → 99% | 97 → 99% | 96 → 99% | 99 → 100% | 3.85 → 4.17 |
+| KcQd3d | 88 → 98% | 90 → 96% | 82 → 99% | 90 → 99% | 3.40 → 3.76 |
+| Jc7d7c | 71 → 100% | 80 → 100% | 59 → 100% | 74 → 100% | 3.22 → 3.56 |
+| Kc9c2d | 90 → 98% | 91 → 96% | 88 → 99% | 92 → 99% | 3.37 → 3.69 |
+
+Reading:
+- **Not a bridge bug.** S4 ran the same lock on SRP50 Kc7d6c through its own
+  bridge, with S2's top-% ranges: the weakest third's betting fell from 53.8%
+  to 37.1%. This bridge, with those ranges, gives 53.3% to 34.2%, and overall
+  betting rises from 51.3% to 65.6% (S4: 53.1% to 67.2%). It is kept in the
+  file as `test_the_bridge_reproduces_s4s_node_lock`, which is evidence, not a
+  bar.
+- **The ranges make the difference.** With the model's ranges the solved SB
+  already bets its 33% size with 71–100% of its range after a check, and with
+  76–100% of its weakest third. There is little bluffing left to cut.
+- **Probably the lock's other half.** The lock is DECISIONS 40's: the BB
+  "calls with every hand, never folds or raises". So it also takes away the
+  BB's check-raise, and the BB reaches the turn with every weak hand, while
+  turn and river play stays solved. A small bet then gains for every third.
+  Which part drives it is not measured.
+- **What it means for play.** The command's answers are solver answers for
+  these ranges and this tree. "Bluff less against a station" is not what they
+  say for the SB's flop bet at 50 bb. The 25 bb check before the gate pointed
+  the same way: Kc7d6c, weakest third 82% to 91%.
+- **No bar was moved.** X3 is a strict expected failure in the test file, so
+  a pass would show up.
+- **The `never-folds` text** in the command's output now says "never raises"
+  too, matching DECISIONS 40's wording.
+
+```
+showdown postflop exploit --stack 50 --flop Tc5d3c --hero sb --read never-folds
+.venv\Scripts\python -m pytest tests/test_gate_x.py -m slow -s -rxX
+```

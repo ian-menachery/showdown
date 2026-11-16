@@ -1,0 +1,16 @@
+# showdown's bridge to b-inary's postflop-solver (DECISIONS 38, 40).
+# It links postflop-solver, which is AGPL-3.0-or-later, so the bridge is too.
+# Build it with `showdown postflop build`; the solver checkout and the binary
+# stay in the gitignored data/external/postflop-solver/ and are never distributed.
+[package]
+name = "showdown-postflop-bridge"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "AGPL-3.0-or-later"
+
+[dependencies]
+# Only `rayon`: the optional `bincode` feature (saving trees) pins a bincode
+# pre-release that now resolves to an incompatible version (Gate S4's record).
+postflop-solver = { path = "../../data/external/postflop-solver/solver", default-features = false, features = ["rayon"] }
+serde_json = "1"
