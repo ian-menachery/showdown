@@ -408,6 +408,53 @@ TexasSolver v0.2.0 runs as a separate program with 16 threads.
 .venv\Scripts\python -I spikes\2026-11-15-texassolver-speed.py
 ```
 
+### Gate S4: postflop-solver flop speed: FAIL (2026-11-15)
+
+Evidence: `spikes/2026-11-15-postflop-solver-speed.py`. The grid, the ranges,
+the tree, the settings, the bars and the stop-early rule were fixed in
+DECISIONS 38 (commit 02e5be1) before the first solve. The grid is S2's own,
+loaded from S2's spike module.
+- **The engine:** b-inary/postflop-solver at 9d1509f, through our JSON bridge,
+  as a separate process.
+- **The build:** Rust 1.100.0 (gnu), with two build fixes, recorded in the
+  spike before any solve:
+  - the optional `bincode` feature is off, because its pinned pre-release
+    now resolves to an incompatible version;
+  - `dangerous_implicit_autorefs` is allowed (Ian's choice).
+
+| Check | Measured (10 solves on 2 flops; then stopped early) | Bar | Result |
+|---|---|---|---|
+| Median wall time per solve | 47.6 s | ≤ 10 s | FAIL |
+| 95th percentile | 120 s (3 timeouts) | ≤ 20 s | FAIL |
+| Exploitability | every finished solve 1.47–1.83% of pot; 3 timeouts unmeasured | ≤ 2% of pot | FAIL |
+
+| Spot | postflop-solver (S4) | TexasSolver (S2), same flops |
+|---|---|---|
+| 3BP50 | 6.7, 10.3 s | 65.2, 49.6 s |
+| 3BP100 | 12.6, 17.6 s | 67.1, 76.2 s |
+| SRP25 | 27.7, 72.1 s | timeout, timeout |
+| SRP50 | 67.6 s, timeout | timeout, timeout |
+| SRP100 | timeout, timeout | timeout, timeout |
+
+- **4 to 10 times faster than TexasSolver, but still not live speed for
+  single-raised pots.** Those pots have wide ranges, deep stacks and 2.4 to
+  3.8 GB trees.
+- **Contention.** Other projects' jobs were running, using about one core of
+  16. Single-raised pots are 60% of the grid and would need to run 3 to 6 times
+  faster to pass, so contention cannot change the verdict.
+- **Reported, not gated:**
+  - **Node locking works.** On SRP50, Kc7d6c, the BB was locked to never fold to
+    the SB's 33% flop bet. The SB's betting after a check rose from 53.1% to
+    67.2%, while its betting with its weakest third of hands fell from 53.8%
+    to 37.1%: more value bets, fewer bluffs.
+  - **The model ranges** gave similar times. 3BP50 was skipped, because the
+    model never 3-bets small at 50 bb.
+- **Not retuned,** as DECISIONS 38 requires.
+
+```
+.venv\Scripts\python -I spikes\2026-11-15-postflop-solver-speed.py
+```
+
 ---
 
 ## Gate G: the V1 advisor: PASS (2026-11-15)
