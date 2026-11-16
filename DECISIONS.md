@@ -1628,3 +1628,41 @@ S2's stop-early rule applies: a run stops only once its FAIL is certain.
 **Rules out:**
 - Committing third-party data.
 - Treating these rates as facts about Ian's friends.
+
+**Amendment to DECISIONS 39 (2026-11-15), after the first look at the file
+format and before any measurement.**
+- **What the data turned out to be.** The download matches Zenodo's size and
+  md5. Its online hands are `data/handhq/`: 21,782 `.phhs` files, 16.3 GB,
+  in 27 site-and-stake folders from July 2009. These hands record:
+  - no stacks (`starting_stacks = [inf, ...]`);
+  - no winnings;
+  - hidden hole cards for most players.
+- **Two parts of the entry can't be done:**
+  - `hh/parse.py`'s filter, which replays each hand to its finishing stacks,
+    has nothing to reconcile.
+  - The 20 bb-or-less jam measures need effective stacks and all-ins, which
+    are unknown here. They are dropped.
+- **Instead, the hands are read from the zip directly,** with no extraction
+  at all. Each hand's PHH action list is parsed by the spike.
+  - A hand counts if its variant is no-limit hold'em (`NT`), it has two or more
+    players, and every action parses and belongs to a dealt-in player.
+  - Every other hand is counted, with its reason.
+- **The measures, from the action lists:**
+  - **VPIP:** the player's first voluntary preflop action is a call (`cc`
+    with chips owed) or a raise (`cbr`). The big blind checking is not VPIP.
+  - **PFR:** the player raises preflop.
+  - **3-bet:** the player acts preflop facing exactly one raise: a chance.
+    Raising then is a 3-bet.
+  - **Flop continuation bet:** the last preflop raiser sees the flop and
+    acts before anyone bets: a chance. Betting then is a continuation bet.
+  - **Fold to a continuation bet:** a player's first action facing that bet,
+    before any raise of it, is a fold.
+- **The figures:**
+  - **Grouping:** by table size (heads-up, 3 to 6, 7 or more) and by stake.
+  - **Spread across players:** for players with at least 500 hands, the
+    quartiles of VPIP and PFR, and the shares of players with VPIP at least
+    40% and at most 15%.
+  - **Sample sizes:** with every figure.
+- **The SHA-256 of the 20 GB zip** is computed in chunks by the spike and
+  pinned in `tests/external_data.py`. `require()` reads whole files, so no
+  test reads this one.
