@@ -1666,3 +1666,141 @@ format and before any measurement.**
 - **The SHA-256 of the 20 GB zip** is computed in chunks by the spike and
   pinned in `tests/external_data.py`. `require()` reads whole files, so no
   test reads this one.
+
+---
+
+### 40. D2: postflop solving comes in, for exploit solves between sessions and an overnight flop library; Gates X and L pre-registered (2026-11-15)
+
+**Decided:** Ian chose these on 2026-11-15, after Gate S4. SCOPE amendment A9
+brings postflop solving into scope, for use ahead of time only.
+
+**Why.** S4 measured b-inary's postflop-solver at 0.5 to 2 minutes per
+flop. That is too slow for live play, but fine between sessions and
+overnight. Its node locking works: a BB locked to never fold makes the
+solved SB value-bet more and bluff less. That makes it the tool for Ian's
+headline goal, exploiting deviations.
+
+**Common to both uses.**
+- **The engine:**
+  - postflop-solver at `9d1509fe5077d019825f833eed04b16d342dfda1`;
+  - Rust 1.100.0, `x86_64-pc-windows-gnu`, with only the `rayon` feature
+    and `-A dangerous_implicit_autorefs`, as built for S4.
+- **The bridge:** our own Rust program, in `bridges/postflop/`, committed
+  with an AGPL-3.0-or-later notice because it links the solver.
+  - The solver checkout and the compiled binary stay in the gitignored
+    `data/external/postflop-solver/`. They are never distributed.
+  - showdown calls the binary as a separate process (DECISIONS 29).
+  - `showdown postflop build` builds it.
+- **The ranges** are the preflop model's weighted ranges (DECISIONS 35):
+  - single-raised pots use the `rc` line;
+  - 3-bet pots use the `rrc` line.
+- **The pot sizes** are the model's: 5 bb after an open and call, 15 bb after
+  a 3-bet and call. The stack behind is S − 2.5 or S − 7.5 bb. Chips are
+  0.1 bb, so bet sizes round finely.
+- **The tree is T1,** as S4 built it: 33% / 66% / 75% bets plus all-in, 60%
+  raises plus all-in, no turn donk bets, and a 75% river donk.
+- **The target** is 2% of the pot (`compute_exploitability`), with at most
+  1,000 iterations.
+
+**1. Exploit solves: `showdown postflop exploit`.**
+- **Input:** a pot type (`srp` or `3bp`), an effective stack, a flop, the
+  hero's seat, and one read about the villain's first flop decision:
+
+  | Read | The villain's lock |
+  |---|---|
+  | `never-folds` | Facing the hero's flop bet, calls with every hand, never folds or raises |
+  | `over-folds` | Facing the hero's flop bet, folds its weakest 70% of hands by flop equity, calls the rest |
+  | `never-bets` | When checked to, or first to act, always checks |
+  | `always-bets` | When checked to, or first to act, always makes its 33% bet |
+
+  The lock covers that one flop decision. Turn and river play stays solved.
+- **The output:**
+  - the hero's flop strategy with and without the lock: action frequencies
+    overall, and for the strongest, middle and weakest thirds of its hands
+    by equity;
+  - the hero's EV in each solve;
+  - each solve's exploitability.
+
+  The EV change includes the villain's own loss from the leak, so it is not
+  labelled as "gain from adapting".
+- **Gate X.** Its test set is SRP50, with the hero as the SB, on 10 flops
+  drawn with seed 20261116 from the 1,755 suit-distinct flops, written into
+  the test.
+  1. **The lock holds:** at the locked node, the villain's solved strategy
+     equals the lock for every hand, to 1e-6.
+  2. **Convergence:** every test solve reaches 2% of the pot within
+     10 minutes.
+  3. **Direction against `never-folds`:** the hero's betting with its weakest
+     third falls on at least 8 of the 10 flops.
+  4. **Direction against `over-folds`:** the hero's betting with its weakest
+     third rises on at least 8 of the 10 flops.
+  5. **The command** prints both strategies and both EVs. A CLI test checks
+     this.
+
+**2. The overnight flop library.**
+- **Spots:**
+  - 3-bet pots at 100 bb, the depth the model reaches;
+  - single-raised pots at 25, 50 and 100 bb.
+- **Flops.** All 1,755 suit-distinct flops are solved, in coverage order:
+  - suit patterns that are dealt most often (rainbow, then two-tone, then
+    monotone and paired) come first;
+  - ties are broken with seed 20261116.
+
+  So the library is useful early and grows each night.
+- **What is stored, per flop:** each player's per-hand action frequencies
+  at the flop's first decisions:
+  - the OOP first to act;
+  - the IP after a check;
+  - the IP facing an OOP bet;
+  - the OOP facing an IP bet after a check.
+
+  Frequencies are whole percentages. Each flop's exploitability, iterations
+  and solve time go into a manifest.
+- **Where it lives:** `data/library/` (gitignored; the library could exceed
+  100 MB). The manifest's summary is committed with each gate record.
+- **Runs** (Ian's choice: overnight, on AC):
+  - `showdown postflop library build --spot 3BP100 --until 07:00` runs only
+    when Ian starts it;
+  - it refuses to start on battery;
+  - it resumes where it stopped, one flop per process;
+  - each solve has a 30-minute safety timeout.
+- **Live use.** `showdown advise` answers a flop decision from the library
+  when every one of these holds:
+  1. the spot uses the default (model) ranges, not a custom `--villain`;
+  2. the pot type has a library at the depth nearest the effective stack
+     (single-raised pots: 25, 50, 100 bb; 3-bet pots: 100 bb for stacks of 60
+     bb and more);
+  3. the flop, up to suit symmetry, is solved;
+  4. the decision is one of the stored four.
+
+  The suggestion is the hand's most likely action, shown with its mix and
+  labelled "flop library, R 0.90, D bb". A bet size the tree doesn't use gets
+  a size note, as preflop does. Everything else keeps the equity helper.
+- **Gate L,** run once a spot's library has at least 100 flops:
+  1. **Accuracy:** every stored flop's exploitability is at most 2% of the
+     pot.
+  2. **Suit symmetry:** for 1,000 random (flop, hand, suit permutation)
+     triples, the lookup on the permuted flop and hand equals the stored
+     canonical entry exactly.
+  3. **Stability:** 10 random stored flops, solved again from scratch, give
+     root frequencies within 0.02 of the stored ones, by mean absolute
+     difference over hands and actions.
+  4. **Latency:** the 95th percentile over every Gate G and Gate J spot,
+     plus 20 library lookups, is at most 300 ms (DECISIONS 32's method).
+  5. **Nothing else moves:** every Gate G and Gate J spot keeps its answer.
+     Their flop spots use custom ranges or fixed ranges, which never touch the
+     library.
+
+**Rules out:**
+- Solving during live play.
+- Approximating an unsolved flop by a "similar" one. That would need its own
+  decision.
+- Committing AGPL binaries or the solver's source.
+- Moving any bar after results are seen, except by a dated amendment.
+
+**Build order:**
+1. The bridge and `showdown postflop build`.
+2. `showdown postflop exploit`, then Gate X.
+3. The library builder.
+4. Ian starts the 3BP100 run, overnight.
+5. The advisor lookup, then Gate L.

@@ -227,6 +227,50 @@ Build steps, each checked before the next:
 Later slices of Phase 12, unchanged above: the opponent model built from
 logged hands, shrinking toward Nash, and the simulation gate.
 
+### Phase 13 (planned 2026-11-15): postflop solving ahead of time (D2, DECISIONS 40)
+
+Gate S4 showed b-inary's postflop-solver takes 0.5 to 2 minutes per flop on
+this laptop. That is too slow for live play, but fine between sessions and
+overnight. Its node locking works. Ian chose two uses:
+- **Exploit solves:**
+  `showdown postflop exploit --pot-type srp --stack 50 --flop Kc7d6c --hero sb --read never-folds`
+  gives the hero's flop strategy with and without one locked villain read
+  (never folds, over-folds, never bets, always bets), with EVs. Gate X checks
+  that the lock holds, that every solve converges, and that the strategy
+  moves the right way on 10 flops.
+- **An overnight flop library:**
+  - 3-bet pots at 100 bb, and single-raised pots at 25, 50 and 100 bb;
+  - all 1,755 suit-distinct flops, solved in coverage order;
+  - started by Ian, on AC power, and resumable.
+
+  `showdown advise` looks a flop decision up there when it can, and keeps the
+  equity helper otherwise. Gate L checks accuracy, suit symmetry, stability,
+  latency, and that no Gate G or Gate J answer moves.
+
+Both use the preflop model's ranges, the model's open and 3-bet sizes, tree T1,
+and a 2% target. The bridge is committed in `bridges/postflop/` under
+AGPL-3.0. The solver and the binary stay gitignored.
+
+Build order:
+1. The bridge and `showdown postflop build`.
+2. Exploit solves, then Gate X.
+3. The library builder.
+4. Ian starts the first overnight run (3BP100, about 15 hours over one or two
+   nights).
+5. The advisor lookup, then Gate L.
+
+Rough compute, from S4's times:
+
+| Spot | Per flop | 1,755 flops |
+|---|---|---|
+| 3BP100 | about 30 s | about 15 h |
+| SRP25 | about 50 s | about 24 h |
+| SRP50 | about 100 s | about 49 h |
+| SRP100 | over 2 minutes, not yet measured | more than 60 h |
+
+The single-raised libraries therefore grow over several nights. Coverage is
+reported as the share of dealt flops solved.
+
 ### Later, each needing its own amendment first
 - **A self-hosted table for friends (Ian ticked this).** It means serving
   beyond 127.0.0.1, which DECISIONS 12 forbids. It would replace screen
@@ -276,6 +320,9 @@ logged hands, shrinking toward Nash, and the simulation gate.
   | 49% | 34% | 14% | 63% | 45% |
 
   About a fifth of the regulars at 6-max are loose (VPIP at least 40%).
+- **D2 is decided** (DECISIONS 40; SCOPE A9): postflop solving ahead of time,
+  as exploit solves and an overnight flop library (Phase 13). Nothing is built
+  yet.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D2, which waits until option 1 starts;
@@ -286,7 +333,7 @@ logged hands, shrinking toward Nash, and the simulation gate.
 | # | Decision | Recommendation |
 |---|---|---|
 | D1 | Read locally, or send screenshots to a cloud AI (Open Cluely) | Local: fast, free, and friends' names stay on this machine |
-| D2 | Bring postflop solving into scope through TexasSolver | Decide after S2's numbers |
+| D2 | Bring postflop solving into scope | Decided (DECISIONS 40, SCOPE A9): postflop-solver, ahead of time only; exploit solves and an overnight flop library |
 | D3 | Preflop source above 20 bb | Decided: our own model at R 0.90 (DECISIONS 33, 34); Gate P PASS |
 | D4 | Approve downloading the TexasSolver release (AGPL-3.0, from GitHub; the file and size will be stated before download) | Needed for S2 |
 | D5 | A self-hosted table, and its amendment to DECISIONS 12 | Later. Screen reading comes first, as Ian chose |
