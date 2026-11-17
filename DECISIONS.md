@@ -1832,3 +1832,142 @@ before any library run.**
   - it asks Windows to keep the system awake while it runs.
 - **A failed flop** (a bridge error or the 30-minute timeout) is logged and
   left out of the manifest, so the next run retries it.
+
+---
+
+### 41. Milestone 1: replay a saved heads-up hand, with advice at each hero decision from the real hand state; Gate R pre-registered (2026-11-16)
+
+**Decided:** Ian asked for this on 2026-11-16, after a read-only audit of the
+advisor. The audit found that `showdown advise` has no hand state. It is one
+stateless call per decision, and `Spot` holds neither the action so far nor
+the stack behind. So a river spot at 25 bb with 2.5 bb behind was told
+"BET 33.75 bb". This is step 1 of the plan to live play. The live tracker
+(step 2), range narrowing (step 3) and the preflop fix (step 4) each get
+their own entries.
+
+**Scope:** replaying saved hands and keeping recommendations legal. The
+decision rules (DECISIONS 32, 35 and 36) do not change.
+- **Not in scope:**
+  - narrowing the opponent's range by the action;
+  - the screen reader and the overlay;
+  - hands with three or more players, which get "no suggestion".
+
+**Hand state:** `src/showdown/live/hand.py`.
+- **How it is built.** A PHH hand replays through pokerkit one operation at
+  a time, as `hh/replay.py` does. pokerkit's seat order holds: player 0 is
+  the BB, player 1 the SB.
+- **Before every player decision it records:**
+  - the street and the board;
+  - the action history so far;
+  - the pot (everything in the middle, including this street's bets);
+  - the amount to call;
+  - both players' remaining stacks;
+  - the legal actions:
+    - fold, only when facing a bet;
+    - check or call, with the amount;
+    - bet or raise, with pokerkit's smallest and largest raise-to.
+- **After every action** it records the pot and both stacks, for
+  reconciliation.
+- **What it derives from the history,** which `showdown advise` makes Ian
+  type:
+  - **The preflop decision.** The voluntary preflop actions so far, written
+    as `r` (a raise), `j` (a raise to at least the effective stack) and `c`
+    (a call), map to DECISIONS 35's nodes:
+
+    | Line so far | Decision |
+    |---|---|
+    | (nothing) | `sb_first` |
+    | `r` | `bb_vs_raise` |
+    | `rr` | `sb_vs_3bet` |
+    | `rrj` | `bb_vs_4bet_jam` |
+    | `rj` | `sb_vs_jam` |
+    | `j` | `bb_vs_jam` |
+    | anything else, such as a limp | `other`, which gives no suggestion |
+
+  - **The pot type after the flop:**
+    - `rc` is `srp`;
+    - `rrc` is `3bp`;
+    - any other line uses the closer of the two, with a printed note: a
+      limped pot uses `srp`, a 4-bet pot uses `3bp`.
+- **Heads-up only.** A hand with more than two players dealt in raises an
+  error naming the count.
+
+**`Spot` and `Advisor`:** reused, not rewritten.
+- **`Spot` gains three optional fields:**
+  - `history`, the action lines;
+  - `stack_behind_bb`, the hero's remaining stack;
+  - `legal`, the legal actions.
+
+  With these unset, every `showdown advise` output is unchanged.
+- **`Advisor.suggest` ends with a legal-action check whenever `legal` is
+  set:**
+  - It never shows an action that isn't legal:
+    - "fold" with nothing to call becomes "check";
+    - a bet or raise with no raise allowed becomes "call" when facing a bet,
+      or "check" otherwise.
+  - Bet and raise sizes are raise-to amounts, as pokerkit's are.
+  - Each size is held within pokerkit's smallest and largest raise-to. It is
+    also capped at the most the opponent can match: their bet plus their
+    stack.
+  - A size that reaches that cap is shown as "all-in N bb". A "jam" gets its
+    size.
+  - It adds a note when it changes anything, and when a call puts the hero
+    all-in.
+
+**Command:** `showdown replay HAND.phh --hero sb|bb`.
+- At each hero decision it prints:
+  - the street and the history;
+  - the pot, the amount to call, and both stacks;
+  - the legal actions;
+  - the advice, as `showdown advise` prints it;
+  - any notes.
+- `--trace` also prints what reaches the equity calculation: the opponent
+  range's label, its number of combos, its total weight, and a fingerprint
+  of its combos and weights.
+
+**Saved hands:** in `tests/fixtures/live/hands/`, written by hand, with
+blinds of 5 and 10 chips (0.1 bb a chip):
+1. `hu_full_hand.phh`: 50 bb, hero SB with AhKd, a hero decision on every
+   street, and the river facing a third-of-pot bet.
+2. `hu_river_shove.phh`: the same hand to the river, where the BB shoves
+   instead.
+3. `hu_short_stack_river.phh`: the audit's spot. 25 bb, KhKs, 22.5 bb each in
+   by the river, and the BB checks to the hero with 2.5 bb behind.
+
+**Gate R:**
+1. **A full hand.** `hu_full_hand.phh` replays from preflop to the river. Each
+   of the hero's decisions (at least one on every street) has a state and a
+   suggestion.
+2. **Reconciliation.** After every player action in every saved hand, and in
+   every simulated hand of bar 3:
+   - pot plus both stacks equals the starting chips;
+   - the pot and the stacks equal an independent tally from the PHH action
+     list, to 1e-9 bb.
+3. **Legality.** 500 seeded heads-up hands are simulated by pokerkit with
+   random legal actions:
+   - effective stacks from 10 to 100 bb;
+   - cards dealt from a seeded shuffle;
+   - sizes drawn between pokerkit's minimum and maximum.
+
+   They are replayed, and every decision is advised for the player to act.
+   - Every suggestion must be a legal action.
+   - Every bet or raise size must lie within pokerkit's minimum and maximum.
+   - None may exceed the opponent's bet plus their stack.
+
+   The flop's Monte Carlo sample count may be lowered for speed, since it
+   does not affect legality. This bar runs in the slow suite.
+4. **Regression.** In `hu_short_stack_river.phh`, the river suggestion is
+   "all-in 2.5 bb" or "check". No size above 2.5 bb appears.
+5. **Nothing else moves.** Every Gate G, J and P test, with its fixture,
+   passes unchanged.
+
+**Reported, not gated:** `showdown replay --trace` on
+`hu_full_hand.phh` and `hu_river_shove.phh`. It shows what each river
+decision knows, and whether the two lines reach the equity calculation with
+the same range. Until range narrowing (step 3) exists, they will, and the
+record says so.
+
+**Rules out:**
+- Changing any decision rule or threshold.
+- Inferring anything from a hand with three or more players.
+- Moving any bar after results are seen, except by a dated amendment.
