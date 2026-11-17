@@ -392,9 +392,32 @@ Each flop's file is about 9 KB gzipped.
     - the reader itself (S1, waiting for Ian's screenshots);
     - step 3, range narrowing;
     - step 4, the preflop re-solve.
+- **Step 3b, Spike S2b: FAIL, on the turn's tail rule only** (DECISIONS 44,
+  2026-11-17). DECISIONS 43 went to the portfolio site, so the preflop
+  re-solve is now DECISIONS 45 and the opponent model 46.
+  - **The new binary.** `bridges/postflop/src/bin/streets.rs` solves from the
+    turn or the river, with raw 1,326-combo ranges. The flop bridge is
+    unchanged, so Gate X's cache still holds.
+  - **The run.** 40 solves on 3BP100 and SRP50, with ranges narrowed by the
+    flop line from the library's four stored nodes. The spike solved its own
+    20 flops, because the library is empty.
+  - **Live solves are fast:**
+    - rivers 0.02–0.06 s (median 0.03 s, bar 3 s);
+    - turns 0.18–1.12 s (median 0.30 s, bar 15 s);
+    - every solve within 2% of the pot.
+  - **The fail.** The turn's 95th percentile, 0.90 s, is within 30 s but more
+    than double the measured median (0.60 s). DECISIONS 44 required both.
+    The turn times split by line: checked-through flops take 0.65–0.89 s,
+    the others 0.18–0.64 s.
+  - **Live narrowing still needs the flop library.** A live flop solve takes
+    1–4 minutes.
+  - **Next:** Ian chooses between the stopgap DECISIONS 44 names (a
+    labelled range model that narrows by the line and the bet size) and
+    another way forward.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
-  - D5, the self-hosted table.
+  - D5, the self-hosted table;
+  - the first library run, which Ian starts.
 
 ## Open decisions for Ian
 

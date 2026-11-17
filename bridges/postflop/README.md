@@ -34,3 +34,17 @@ result on stdout.
   - each lock's applied strategy;
   - each reported node's per-hand strategy, normalized weights and equity;
   - both players' average EV at the root.
+
+**The turn and river binary,** `src/bin/streets.rs` (`streets.exe`,
+DECISIONS 44). `showdown postflop build` builds it beside the flop bridge,
+which stays unchanged, so the library's binary check and Gate X's cache still
+hold. Its spot differs from the flop bridge's:
+- `oop_range` and `ip_range` are each 1,326 raw weights in the solver's combo
+  order (`Range::from_raw_data`);
+- `board` has 4 cards (a turn start) or 5 (a river start);
+- only the turn and river sizes are read, plus an optional `oop_turn_bet`
+  (`""` gives the OOP no turn lead, as T1 does after the OOP calls a flop
+  bet);
+- there are no locks, and paths start from the turn or river root.
+
+The result has the same fields, without `locks`.

@@ -817,3 +817,78 @@ showdown live --replay tests/fixtures/live/hands/hu_full_hand.phh --hero sb
 showdown live --replay tests/fixtures/live/hands/hu_short_stack_river.phh --hero sb --no-window
 .venv\Scripts\python -m pytest tests/test_gate_t.py tests/test_gate_t_slow.py -m "slow or not slow" -s
 ```
+
+## Gate S2b: live turn and river solves: FAIL, on the turn's tail rule only (2026-11-17)
+
+Evidence: `spikes/2026-11-17-turn-river-speed.py`. The grid, the narrowing,
+the tree, the settings and the bars were fixed in DECISIONS 44 (commit
+703908c) before any bridge code.
+- **The engine:** postflop-solver at 9d1509f. The new turn and river binary,
+  `bridges/postflop/src/bin/streets.rs` (SHA-256 ef5ab1cf…), takes raw
+  1,326-combo ranges. The flop bridge is unchanged (c45af752…), so Gate X's
+  cache still holds.
+- **The grid:** 3BP100 and SRP50, 10 boards each, seed 20261117. Each board
+  has one turn start and one river start: 40 timed solves.
+- **The ranges:** the model's ranges, narrowed by the flop line, using the
+  four stored flop nodes. The library is empty, so the spike solved its 20
+  flops with the library's spec, untimed: 53–254 s each, 1.38–2.00% of the
+  pot. The river starts assume a checked turn, the slow case.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. River, median | 0.03 s (20 solves; all 0.02–0.06 s) | ≤ 3 s | PASS |
+| 1. River, 95th percentile | 0.05 s | ≤ 6 s and ≤ 2 × median (0.07 s) | PASS |
+| 2. Turn, median | 0.30 s (20 solves; all 0.18–1.12 s) | ≤ 15 s | PASS |
+| 2. Turn, 95th percentile | 0.90 s | ≤ 30 s: PASS; ≤ 2 × median (0.60 s): **FAIL** | **FAIL** |
+| 3. Accuracy | every solve 0.55–1.94% of its pot, in 30–60 iterations; no timeouts | ≤ 2% | PASS |
+
+| Spot | Street | Flop line | Solves | Median s | Max s | Narrowed combos, OOP / IP |
+|---|---|---|---|---|---|---|
+| 3BP100 | turn | check-check | 2 | 0.68 | 1.12 | 150–185 / 772–985 |
+| 3BP100 | turn | bet-call | 6 | 0.28 | 0.64 | 151–186 / 436–792 |
+| 3BP100 | turn | check-bet-call | 2 | 0.24 | 0.28 | 131–172 / 838–925 |
+| SRP50 | turn | check-check | 4 | 0.71 | 0.89 | 854–868 / 647–796 |
+| SRP50 | turn | bet-call | 2 | 0.37 | 0.42 | 638–646 / 818–884 |
+| SRP50 | turn | check-bet-call | 4 | 0.25 | 0.30 | 514–658 / 837–894 |
+| both | river | all three | 20 | 0.03 | 0.06 | — |
+
+Reading:
+- **Live turn and river solves are fast.** The slowest turn took 1.12 s,
+  against a 15 s median bar. The slowest river took 0.06 s, against 3 s.
+  Turn trees need at most 0.05 GB of memory, and river trees under 1 MB.
+- **Why bar 2 fails.** DECISIONS 44 required the 95th percentile to be
+  within both 30 s and double the measured median. The second holds only if
+  the times are narrowly spread, and the turn times split by line:
+  - checked-through flops keep wider ranges and a smaller pot, so a deeper
+    stack. SRP50's took 0.65–0.89 s;
+  - bet-call and check-bet-call turns took 0.18–0.64 s.
+
+  The first solve, 1.12 s, also carries 0.58 s of cold process start; the
+  solver itself took 0.54 s. The next two slowest turns, 0.89 and 0.72 s, are
+  above 0.60 s too, so the cold start alone does not decide the verdict.
+- **Not a code bug.** The narrowing looks right:
+  - the SRP50 BB checks almost all of its range on the flop;
+  - the 3-bettor at 3BP100 checks little: 6.8 of its 133.5 combos of weight on
+    Jc7d6d.
+
+  So no fix was due, and none was made.
+- **Five boards took the next line,** because the planned line left under 5
+  combos:
+  - at 3BP100, the 3-bettor almost never checks on KcJd3h, Kc7c6d and
+    AcJd7h;
+  - at SRP50, the BB almost never leads into the raiser on Qc8c2d.
+
+  3BP100 therefore ran 6 bet-call boards, 2 check-check and 2 check-bet-call.
+- **Contention.** During the timed run another session's drive-wide `find`
+  used one core of 16. No solver or test was running.
+- **What this does not cover.** Every turn and river start needs the flop's
+  frequencies to narrow from. Solving the flop live takes 1–4 minutes (these
+  20 flops, and Gate S4). So live narrowing waits on the flop library, which
+  is still empty, and on a rule for opponent bet sizes that are off the tree.
+- **No bar was moved.** DECISIONS 44 rules out changing them after the first
+  timed solve.
+
+```
+.venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py --flops-only
+.venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py
+```
