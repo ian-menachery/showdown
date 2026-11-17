@@ -753,3 +753,67 @@ showdown replay tests/fixtures/live/hands/hu_short_stack_river.phh --hero sb
 showdown replay tests/fixtures/live/hands/hu_river_shove.phh --hero sb --trace
 .venv\Scripts\python -m pytest tests/test_gate_r.py tests/test_gate_r_slow.py -m "slow or not slow" -s
 ```
+
+## Gate T: the live tracker and overlay, from table frames: PASS on the second run (2026-11-17)
+
+Evidence:
+- `tests/test_gate_t.py` (fast suite);
+- `tests/test_gate_t_slow.py` (`py gate.py --full`);
+- the simulator in `tests/live_sim.py`.
+
+The bars and the frame contract were pre-registered in DECISIONS 42 (commit
+9e5e497) before the evidence runs. No screen is read yet: the frames come
+from replayed hands, as the reader's output would.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Hero-turn frames | 200 simulated hands (seed 20261117, Ian alternately SB and BB), only Ian's turns and the end seen: all 595 of Ian's decisions equal step 1's replay field for field (street, board, history, pot, to call, stacks, bets, legal actions, preflop line); 20 hands had no turn for Ian (the SB folded) | every one equal | PASS |
+| 2. Every-change frames | 200 of 200 hands written; betting actions and board equal the hand's own; every PHH reconciles; no unseen sizes | equal, reconciles | PASS |
+| 3. Minimal frames | 180 hands written, all reconcile. 31 had a last bet whose size can't be seen: folded to, or called all-in for less. Those are written at the smallest legal size and marked | all reconcile; unseen counted | PASS |
+| 4. 3-handed | 20 frames from five 3-handed hands: 5 "no suggestion: 3 players dealt in", no PHH | no advice, nothing written | PASS |
+| 5. Latency | 164 suggestions over 60 hands, every-change frames, the full 20,000-sample flop equity, separate process, no coverage, idle machine: **95th percentile 106 ms**, max 135 ms | ≤ 300 ms | PASS |
+| 6. The overlay | the tkinter window opens on top (`-topmost`), shows "ALL-IN 2.5 bb" with its note and state line, then "no suggestion: 3 players dealt in", and closes | shown and read back | PASS |
+
+**How it got here.** The gate rule (`docs/plan-phases-4-7.md`) is:
+reproduce, fix once if it is a clear code bug, record it in DECISIONS, re-run,
+and stop if it still fails. Here one round of six fixes came between two
+evidence runs, and they are recorded in DECISIONS 42's amendment.
+- **The first evidence run failed twice:**
+  - **bar 2:** whole chip counts were written as `68.0`;
+  - **bar 5:** 306 ms, but measured while a full-suite run was going, which
+    DECISIONS 32's idle rule does not allow.
+- **A 200-hand sweep then showed the tracker failing on real table states.**
+  Each failure was reproduced on a named hand before it was fixed:
+  1. Whole chip counts kept whole.
+  2. Bets are swept into the pot only when the frame shows it, since the
+     table can show a closed street's bets for a moment (hand 5, an all-in
+     call).
+  3. The search's prune "stacks only fall" was wrong once an uncalled bet
+     comes back. It became "stack plus bet only falls".
+  4. The prune "bets only rise" was wrong across a sweep into the pot. It now
+     applies only while a street is open.
+  5. After an all-in, the hands are shown before the run-out is dealt:
+     - the opponent's cards are shown when the frame shows them;
+     - Ian's, which are always on his screen, at the run-out or the result.
+  6. A raise called all-in for less than a legal raise (hand 144) is written
+     at the smallest legal size and marked unseen. The returned excess makes
+     its real size unknowable.
+
+  The sweep then had no errors in either frame mode, and the second evidence
+  run is the one recorded above.
+- **No bar was moved.**
+- **Bar 2's wording was tightened before any run.** It compares betting
+  actions and board cards, not show and muck lines, because whether Ian shows
+  a losing hand never changes the result.
+
+What it means for live play:
+- **Reading every change works.** The reader should send a frame on every
+  change it sees. With only Ian's turns, 31 of 180 last bets lose their size.
+  The advice is unaffected, but the hand log, which the opponent model
+  (step 5) will read, loses those sizes.
+
+```
+showdown live --replay tests/fixtures/live/hands/hu_full_hand.phh --hero sb
+showdown live --replay tests/fixtures/live/hands/hu_short_stack_river.phh --hero sb --no-window
+.venv\Scripts\python -m pytest tests/test_gate_t.py tests/test_gate_t_slow.py -m "slow or not slow" -s
+```

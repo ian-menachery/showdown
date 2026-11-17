@@ -494,6 +494,44 @@ def _replay(args: argparse.Namespace) -> int:
     return 0
 
 
+def _live(args: argparse.Namespace) -> int:
+    import warnings
+
+    from pokerkit import HandHistory
+
+    from showdown.live.advisor import Advisor
+    from showdown.live.overlay import Overlay, event_lines
+    from showdown.live.table import TableState, frames_from_history
+    from showdown.live.tracker import HANDS_DIR, Tracker
+
+    path = Path(args.replay)
+    if path.suffix.lower() == ".phh":
+        if args.hero is None:
+            raise SystemExit("a .phh replay needs --hero sb or --hero bb")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            hh = HandHistory.load(path.open("rb"))
+        frames = list(frames_from_history(hh, args.hero, every_change=not args.turns_only))
+    else:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        frames = [TableState.from_json(line) for line in lines if line.strip()]
+    tracker = Tracker(Advisor.load(), HANDS_DIR if args.save else None)
+    overlay = None if args.no_window else Overlay()
+    for frame in frames:
+        for event in tracker.feed(frame):
+            head, details, state = event_lines(event)
+            print(f"[{event.kind}] {head}" + (f"  ({state})" if state else ""))
+            for line in details:
+                print(f"    {line}")
+            if overlay is not None and event.kind in ("advice", "no suggestion", "error"):
+                overlay.show(event)
+                time.sleep(args.delay)
+    if overlay is not None:
+        print("close the overlay window to finish")
+        overlay.wait()
+    return 0
+
+
 def _preflop_build(args: argparse.Namespace) -> int:
     from showdown import preflop_model
 
@@ -699,6 +737,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--trace", action="store_true", help="also show the range passed to the equity calculation"
     )
     replay.set_defaults(handler=_replay)
+
+    live = commands.add_parser(
+        "live", help="the tracker and overlay, fed recorded table frames (no screen reading yet)"
+    )
+    live.add_argument(
+        "--replay", required=True, help="frames as .jsonl, or a heads-up .phh hand to make them"
+    )
+    live.add_argument("--hero", choices=["sb", "bb"], help="your seat, for a .phh hand")
+    live.add_argument(
+        "--turns-only", action="store_true", help=".phh: frames only at your turns and the end"
+    )
+    live.add_argument("--no-window", action="store_true", help="print only; no overlay")
+    live.add_argument("--delay", type=float, default=1.5, help="seconds per suggestion shown")
+    live.add_argument("--save", action="store_true", help="write finished hands to data/live")
+    live.set_defaults(handler=_live)
 
     pre = commands.add_parser("preflop", help="the preflop model above 20 bb (DECISIONS 33, 34)")
     pre_commands = pre.add_subparsers(dest="preflop_command", required=True)

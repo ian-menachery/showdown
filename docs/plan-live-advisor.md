@@ -371,6 +371,27 @@ Each flop's file is about 9 KB gzipped.
     "ALL-IN 2.5 bb".
   - The river trace confirms both betting lines still reach the equity
     calculation with the same range. Narrowing it is step 3.
+- **Step 2 is built: Gate T PASS on the second run** (DECISIONS 42, amended
+  2026-11-17).
+  - **The frame contract.** `live/table.py` defines `TableState`, what the
+    screen reader must deliver. It adds names, who still holds cards, shown
+    cards and an end-of-hand frame to S1's list.
+  - **The tracker.** `live/tracker.py` turns frames into step 1's hand state
+    by a search over legal actions. It advises at Ian's turns, writes each
+    finished hand as PHH, and gives no advice for 3+ handed hands.
+  - **The overlay.** `live/overlay.py` is a tkinter window kept on top.
+  - **The command:** `showdown live --replay FILE`, where FILE is `.jsonl`
+    frames or a `.phh` hand.
+  - **The measurements:**
+    - frame to suggestion is 106 ms at the 95th percentile;
+    - 595 of 595 of Ian's decisions match step 1's replay.
+
+    With frames only at Ian's turns, 31 of 180 last bets lose their size, so
+    the reader should send a frame on every change.
+  - **Next:**
+    - the reader itself (S1, waiting for Ian's screenshots);
+    - step 3, range narrowing;
+    - step 4, the preflop re-solve.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table.

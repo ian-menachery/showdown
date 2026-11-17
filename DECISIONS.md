@@ -2074,3 +2074,33 @@ by hand.
 - Hiding the window from screen share.
 - Changing any decision rule.
 - Moving any bar after results are seen, except by a dated amendment.
+
+**Amendment to DECISIONS 42 (2026-11-17), after Gate T's first evidence run
+failed and before the second.**
+- **The failures:**
+  - **bar 2:** chip counts were written as `68.0`;
+  - **bar 5:** 306 ms, but measured while another full-suite run was going,
+    so the measurement was invalid.
+- **A sweep of the 200 hands then showed tracker bugs.** Each was reproduced
+  on a named hand and fixed. Four of them change how the tracker reads
+  frames, so they are recorded here:
+  - **Bets are swept into the pot only when the frame shows it.** The table
+    can show a closed street's bets for a moment, as after an all-in call
+    before the uncalled part comes back. pokerkit's automatic bet collection
+    is therefore off in the tracker.
+  - **The search's pruning:**
+    - a player's chips outside the pot (stack plus bet) never rise, since an
+      uncalled bet goes back to the stack;
+    - an open street's bets never fall.
+  - **Showing:**
+    - the opponent's cards are shown as soon as a frame shows them;
+    - Ian's, always on his screen, and any muck, wait for the run-out or the
+      result;
+    - pokerkit needs both hands shown before it deals an all-in run-out.
+  - **A second kind of unseen size.** A raise called all-in for less than a
+    legal raise is written at the smallest legal size and counted as unseen.
+    The excess came back, so its real size cannot be read.
+
+  The other two fixes are implementation details: whole chip counts are kept
+  whole, and the search's pruning is the rule above.
+- **No bar changed.**
