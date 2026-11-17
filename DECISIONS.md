@@ -2104,3 +2104,28 @@ failed and before the second.**
   The other two fixes are implementation details: whole chip counts are kept
   whole, and the search's pruning is the rule above.
 - **No bar changed.**
+
+---
+
+### 43. The portfolio site shows exported push/fold results, not a port (2026-11-17)
+
+**Decided:** Ian's portfolio site (`ian-menachery/site`) has a push/fold
+explorer and trainer built from a one-time export. The site's
+`scripts/export_pushfold.py` calls this repo's own code
+(`PushFoldSolution.load`, `sb_action_values`, `bb_action_values`,
+`PushFoldStrategy.grade`, `depth_for`) and writes each depth's push and call
+frequencies and action EVs to JSON. The page only looks those numbers up and
+subtracts. Its tests check 122 cases graded by `PushFoldStrategy.grade`, within
+1e-6.
+
+**Why:** DECISIONS 12 keeps game logic in Python so that what a page shows is
+what the gates test. Publishing the gated solution as data keeps that true
+without hosting this program. Ian chose this over a JavaScript port.
+
+**Rules out:**
+- Porting the solver, the EV formulas or the bot to JavaScript.
+- Hosting `showdown play` anywhere.
+- Putting anything on the site beyond push/fold at 1–20 bb.
+- Any HoldemResources data on the site.
+
+DECISIONS 12 is otherwise unchanged.
