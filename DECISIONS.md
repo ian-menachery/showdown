@@ -2129,3 +2129,135 @@ without hosting this program. Ian chose this over a JavaScript port.
 - Any HoldemResources data on the site.
 
 DECISIONS 12 is otherwise unchanged.
+
+---
+
+### 44. Spike S2b: live turn and river solves, and Gate S2b pre-registered (2026-11-17)
+
+**Decided:** step 3 of the plan to live play (range narrowing), part 3b. Ian
+set the bars on 2026-11-16. The plan doc called this entry DECISIONS 43, but
+43 went to the portfolio site, so the preflop re-solve and the opponent model
+move to 45 and 46.
+
+**Why.** Postflop, `advisor.villain` passes the opponent's whole preflop range
+to `range_vs_range`, whatever the betting. Gate R's river trace showed a
+third-pot bet and a shove reaching it with the same range (c70a1aad9e1e) and
+the same 92.2%. Narrowing the range needs the opponent's strategy along the
+line. The flop library (DECISIONS 40) gives the flop's; S2b measures whether
+the turn and river can be solved live, from ranges narrowed by the flop line.
+
+**The engine** is DECISIONS 40's: postflop-solver at 9d1509f, Rust 1.100.0
+(gnu), only `rayon`, `-A dangerous_implicit_autorefs`.
+
+**A second bridge binary:** `bridges/postflop/src/bin/streets.rs`, AGPL-3.0-or-later
+like the first.
+- `showdown postflop build` builds it beside the first, since cargo builds
+  every binary in the package.
+- `src/main.rs` does not change. After the build, the spike checks that the
+  first binary's SHA-256 is still c45af752…, so Gate X's cache and the
+  library's one-binary rule still hold. If it changed, the spike stops before
+  any solve and says so.
+- **Input:** one JSON spot:
+  - each player's range as 1,326 raw weights in the solver's combo order
+    (`Range::from_raw_data`);
+  - a board of 4 cards (a turn start) or 5 (a river start);
+  - the pot and the stack in chips (0.1 bb);
+  - T1's turn and river sizes;
+  - optionally, the OOP's own turn bet sizes;
+  - the target, the iteration cap, and the paths to report.
+- **Output:** what the first binary gives, without locks: build and solve
+  times, iterations, exploitability, memory, root EVs, and each reported
+  node's per-hand strategy, weights and equity.
+
+**The grid.**
+- **Spots:** 3BP100 and SRP50, with the preflop model's ranges at 100 and
+  50 bb (DECISIONS 40's `rrc` and `rc` lines). Flop pots of 15 and 5 bb;
+  stacks behind of 92.5 and 47.5 bb.
+- **Boards:** 10 per spot. Each is five cards dealt from a deck shuffled with
+  seed 20261117 (one shuffle per board, 3BP100's ten first). The flop is put
+  in the library's canonical suits (`flops.canonical`), and the turn and river
+  are relabelled with the same suit map.
+- **Each board gives two timed solves:** a turn start (flop and turn) and a
+  river start (all five cards). That is 40 solves: 20 turn, 20 river.
+- **Flop lines,** in turn by board (board *i* takes line *i* mod 3):
+  1. check-check;
+  2. bet-call: the OOP bets 33%, the IP calls;
+  3. check-bet-call: the OOP checks, the IP bets 33%, the OOP calls.
+
+  If either player's narrowed range weighs less than 5 combos, the board
+  takes the next line, and the report says so.
+- **The river starts** assume the turn checked through. The river then starts
+  with the flop line's pot, and with ranges narrowed by the flop line only.
+  Any turn action would narrow the ranges further and grow the pot, so this is
+  the widest, deepest river after each flop line: the slow case.
+
+**Narrowing.** Each combo's weight is its preflop weight times its frequency
+of each action on the flop line.
+- **The preflop weight** is its class's weight in the model range the flop
+  solve used: `spot.model_range`, with its rounding.
+- **The frequencies** come from the library's four stored nodes, as whole
+  percentages.
+  - A flop already in the library is read with `library.load`.
+  - Otherwise (the library is empty today) the spike solves the flop itself,
+    with the library's exact spec (`FlopSpot.spec(report=NODES)`) and the
+    first binary, and builds the entry with `library.entry`. These solves are
+    cached in the gitignored `data/external/postflop-solver/cache/s2b`, are
+    not timed, and are not written to `data/library/`.
+- **The bet** on a line is the node's smallest bet (33%), never the all-in.
+  The pot and stack after the line use that bet's chip amount.
+
+**The tree** is T1's turn and river:
+
+| Street | Bets | Raises |
+|---|---|---|
+| turn | "66%, a" | "60%, a" |
+| river | "75%, a" | "60%, a" |
+
+- River donk "75%". The all-in thresholds are DECISIONS 38's (1.5, 0.15,
+  0.1).
+- **After check-bet-call,** the OOP gets no turn bet sizes. In T1's flop tree
+  the OOP has no turn lead after calling a flop bet (the empty turn donk
+  list), but keeps the all-in when the threshold adds it. An empty OOP turn
+  bet list gives the same subtree.
+
+**Settings.**
+- All 16 threads (rayon's default) and 32-bit storage, compressed only if a
+  tree needs more than 10 GB.
+- The target is 2% of the street's starting pot, at most 1,000 iterations.
+  Exploitability is checked every 10 iterations, as the first binary does.
+- **Timing.** Wall time in Python, from process start to the parsed result,
+  so it includes building the tree and allocating memory. The timed solves
+  run one at a time, after every flop solve is done, with no other solver or
+  test run on the laptop. The order is 3BP100's boards, then SRP50's; each
+  board's turn, then its river.
+- **Timeout:** 120 s. A timeout counts as 120 s and fails bar 3.
+
+**Gate S2b:**
+1. **River:** the median wall time is at most 3 s. The 95th percentile is at
+   most 6 s and at most double the measured median.
+2. **Turn:** the median is at most 15 s. The 95th percentile is at most 30 s
+   and at most double the measured median.
+3. **Accuracy:** every one of the 40 solves ends with exploitability at most
+   2% of its starting pot.
+
+The 95th percentile is numpy's linear one, as in S4. Ian's bar is "the 95th
+percentile at most double". S2 and S4 doubled the median bar; read against the
+measured median it is stricter. Both readings must hold. All 40 solves run,
+with no early stop.
+
+**Reported, not gated:**
+- times, iterations and memory by spot, street and flop line;
+- each player's combos and total weight, before and after narrowing.
+
+**What follows from the result.**
+- **If S2b passes,** Ian chooses how the solves feed `advisor.villain` and the
+  postflop actions (step 3c). That gets its own entry and gate.
+- **If it fails,** the failure is recorded, and the stopgap proposed to Ian is
+  a labelled range model that narrows by the line and the bet size.
+
+**Rules out:**
+- Changing the grid, the tree, the narrowing, the settings or the bars after
+  the first timed solve.
+- Changing `bridges/postflop/src/main.rs`.
+- Starting a library run, or writing to `data/library/`.
+- Any download.
