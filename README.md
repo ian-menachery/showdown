@@ -195,5 +195,5 @@ session is over (DECISIONS 13).
 
 ## License
 
-There is no license file yet. The repository is private (SCOPE, Open question
-5).
+MIT ([`LICENSE`](LICENSE)), except [`bridges/postflop/`](bridges/postflop/),
+which links an AGPL solver and is licensed AGPL-3.0-or-later (see its README).

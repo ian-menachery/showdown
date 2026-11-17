@@ -229,6 +229,8 @@ was settled on 2026-11-14 by DECISIONS 20 and 22. Question 5 was answered on
    *Answered 2026-11-14:* stay private for now. Ian decides the visibility and
    adds a license himself. The README is written as if public, and no
    third-party data is committed (DECISIONS 20, 25).
+   *Updated 2026-11-16:* Ian made the repo public under MIT, with
+   `bridges/postflop/` staying AGPL-3.0-or-later.
 6. **ClubWPT Gold.** Does the client let you download your own hand histories,
    and in what format? Is post-session analysis of them allowed? Their
    prohibited-tools page does not address it. Only support can answer the
