@@ -6,7 +6,7 @@ including any bet the hero is facing. `to_call_bb` is 0 when the hero may check.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from showdown.equity.cards import Combo, cards_str, make_combo, parse_cards
 
@@ -30,6 +30,26 @@ class SpotError(ValueError):
 
 
 @dataclass(frozen=True)
+class Legal:
+    """What the hero may do now, by pokerkit's rules, in bb (DECISIONS 41).
+
+    Bet and raise sizes are raise-to amounts: the hero's total bet on the street.
+    """
+
+    to_call_bb: float
+    """0 when the hero may check. Folding is offered only when this is above 0."""
+    raise_min_bb: float | None = None
+    """The smallest bet or raise-to; None when no bet or raise is allowed."""
+    raise_max_bb: float | None = None
+    cap_bb: float | None = None
+    """The most the opponent can match: their bet plus their stack."""
+
+    @property
+    def can_raise(self) -> bool:
+        return self.raise_min_bb is not None
+
+
+@dataclass(frozen=True)
 class Spot:
     hero: Combo
     seat: str
@@ -48,6 +68,12 @@ class Spot:
     villain_top: float | None = None
     """A custom range as the top N% by equity against a random hand (DECISIONS 36)."""
     mode: str = "hint"
+    history: tuple[str, ...] = ()
+    """The hand's actions so far, from a replay (DECISIONS 41). The advice does not use it yet."""
+    stack_behind_bb: float | None = None
+    """The hero's remaining stack, from a replay."""
+    legal: Legal | None = None
+    """The legal actions, from a replay. When set, the advice is kept to them."""
 
     def __post_init__(self) -> None:
         cards = [*self.hero, *self.board]
@@ -93,7 +119,14 @@ class Spot:
         return "bb" if self.seat == "sb" else "sb"
 
     def describe(self) -> dict:
-        return {
+        replayed = {}
+        if self.legal is not None:
+            replayed = {
+                "history": list(self.history),
+                "stack_behind_bb": self.stack_behind_bb,
+                "legal": asdict(self.legal),
+            }
+        return replayed | {
             "hero": cards_str(self.hero),
             "seat": self.seat,
             "effective_bb": self.effective_bb,

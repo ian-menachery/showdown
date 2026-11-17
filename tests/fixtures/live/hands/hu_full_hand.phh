@@ -1,0 +1,13 @@
+# DECISIONS 41, Gate R bar 1. 50 bb, blinds 5/10 chips (0.1 bb a chip). p1 is the BB, p2 the
+# SB and the hero, with AhKd. The SB opens to 2.5 and the BB calls (pot 5). Flop: the BB
+# checks, the SB bets 1.7, the BB calls (8.4). Turn: the BB bets 4, the SB calls (16.4).
+# River: the BB bets 5.5, about a third of the pot, and the SB calls (27.4). AK wins.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [5, 10]
+min_bet = 10
+starting_stacks = [500, 500]
+actions = ['d dh p1 QsJs', 'd dh p2 AhKd', 'p2 cbr 25', 'p1 cc', 'd db Kc7s2d', 'p1 cc', 'p2 cbr 17', 'p1 cc', 'd db 9h', 'p1 cbr 40', 'p2 cc', 'd db 4c', 'p1 cbr 55', 'p2 cc', 'p1 sm QsJs', 'p2 sm AhKd']
+players = ['Villain', 'Hero']
+finishing_stacks = [363, 637]

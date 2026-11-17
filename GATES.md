@@ -692,3 +692,64 @@ Reading:
 showdown postflop exploit --stack 50 --flop Tc5d3c --hero sb --read never-folds
 .venv\Scripts\python -m pytest tests/test_gate_x.py -m slow -s -rxX
 ```
+
+## Gate R: replaying a saved hand with legal advice: PASS (2026-11-16)
+
+Evidence:
+- `tests/test_gate_r.py` (fast suite);
+- `tests/test_gate_r_slow.py` (`py gate.py --full`);
+- the saved hands in `tests/fixtures/live/hands/`.
+
+The bars were pre-registered in DECISIONS 41 (commit b561d9b) before any
+code. `showdown replay` reads the hand state from a PHH hand through pokerkit.
+That state is the pot, the amount to call, both stacks, the legal actions and
+the history. The preflop decision and the pot type are read from the action.
+`Advisor.suggest` then keeps its advice to legal actions and sizes. The
+decision rules are unchanged.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. A full saved hand | `hu_full_hand.phh`, SB at 50 bb: raise 2.5 (model), bet 1.65 (flop), call (turn), call (river); preflop read as `sb_first`, then `bb_vs_raise`; pot type `srp` | advice at a hero decision on every street | PASS |
+| 2. Reconciliation | after every player action, in the 3 saved hands and the 500 simulated ones: pot and both stacks equal an independent count from the PHH text, and pot plus stacks equals the starting chips | to 1e-9 bb | PASS |
+| 3. Legality | 500 seeded hands (seed 20261116), stacks of 10–100 bb each: 3,099 decisions. Counts: 2,654 suggestions, all legal (941 check, 510 call, 388 bet, 351 fold, 286 raise, 105 all-in, 73 jam) and 445 "no suggestion"; every size within pokerkit's limits and the opponent's bet plus stack; 44 s | all legal | PASS |
+| 4. Regression | `hu_short_stack_river.phh`, river with a 45 bb pot and 2.5 bb behind: **ALL-IN 2.5 bb**, with the note "bet 33.75 bb is more than can be matched: all-in" | all-in 2.5 or check | PASS |
+| 5. Nothing else moves | every Gate G, J and P test passes with its fixture unchanged; `showdown advise`, which has no hand state, prints exactly what it did | unchanged | PASS |
+
+**River trace** (reported, not gated). `showdown replay --trace` was run on
+two hands that are identical to the river. On the river the BB either bets
+5.5 into 16.4, or shoves 41.8 all-in.
+
+| | Third of the pot | Shove |
+|---|---|---|
+| History given to the advisor | 8 moves, ending "river BB bets 5.5" | 8 moves, ending "river BB bets 41.8 (all-in)" |
+| To call, and the pot | 5.5 into 21.9 | 41.8 into 58.2 |
+| Range into the equity calculation | 1,326 combos, weight 923.6458, fingerprint c70a1aad9e1e | **the same:** 1,326 combos, 923.6458, c70a1aad9e1e |
+| Equity | 92.2% | 92.2% |
+| Threshold, and the advice | 25.1%: CALL | 46.8%: CALL, "calling puts you all-in" |
+
+- **The same range, explicitly.** The advisor now receives each line's
+  history, but `advisor.villain` (`live/advisor.py:177-193`) does not read it.
+  So both lines reach `range_vs_range` with the BB's whole preflop calling
+  range. Only the price changes.
+- **Where range narrowing goes** (step 3 of the plan). `villain` would weight
+  each combo by how often the opponent's strategy takes this line. On the
+  flop that weight comes from the flop library's per-hand frequencies; on the
+  turn and river, from S2b's solves. Range narrowing has its own entry and
+  gate.
+
+How it got here:
+- **The first draft of `hu_river_shove.phh` had the shove wrong.** It gave
+  36.3 bb, but the BB had 41.8 bb left. The analyzer's own replay rejected
+  it, because the finishing stacks did not reconcile. It was fixed before any
+  test.
+- **pokerkit warns** when the simulation deals its own seeded cards instead
+  of pokerkit's deck. That is deliberate (`docs/design-review-phases-5-6.md`),
+  so the test silences it.
+- **No bar was moved.**
+
+```
+showdown replay tests/fixtures/live/hands/hu_full_hand.phh --hero sb
+showdown replay tests/fixtures/live/hands/hu_short_stack_river.phh --hero sb
+showdown replay tests/fixtures/live/hands/hu_river_shove.phh --hero sb --trace
+.venv\Scripts\python -m pytest tests/test_gate_r.py tests/test_gate_r_slow.py -m "slow or not slow" -s
+```

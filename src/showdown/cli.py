@@ -407,22 +407,90 @@ def _advise(args: argparse.Namespace) -> int:
         s = advisor.suggest(spot)
     except SpotError as error:
         raise SystemExit(f"bad spot: {error}") from None
+    _print_suggestion(s)
+    return 0
+
+
+def _print_suggestion(s, indent: str = "") -> None:
     print(
-        f"{s.street}: {(s.action or 'no action hint').upper()}"
+        f"{indent}{s.street}: {(s.action or 'no action hint').upper()}"
         + (f" {s.size_bb:g} bb" if s.size_bb else "")
     )
     if s.evs:
-        print("  EV (bb): " + ", ".join(f"{k} {v:+.3f}" for k, v in s.evs.items()))
+        print(f"{indent}  EV (bb): " + ", ".join(f"{k} {v:+.3f}" for k, v in s.evs.items()))
     if s.mix:
-        print("  mix: " + ", ".join(f"{k} {v:.0%}" for k, v in s.mix.items()))
+        print(f"{indent}  mix: " + ", ".join(f"{k} {v:.0%}" for k, v in s.mix.items()))
     for note in s.notes:
-        print(f"  ! {note}")
+        print(f"{indent}  ! {note}")
     if s.equity is not None:
         se = f" +/- {s.se:.3f}" if s.se else ""
-        print(f"  equity {s.equity:.1%}{se} vs {s.villain_range}")
+        print(f"{indent}  equity {s.equity:.1%}{se} vs {s.villain_range}")
     if s.threshold is not None:
-        print(f"  threshold {s.threshold:.1%}")
-    print(f"  {s.source}; {s.elapsed_ms:.0f} ms")
+        print(f"{indent}  threshold {s.threshold:.1%}")
+    print(f"{indent}  {s.source}; {s.elapsed_ms:.0f} ms")
+
+
+def _replay(args: argparse.Namespace) -> int:
+    import hashlib
+
+    from showdown.equity.cards import cards_str
+    from showdown.hh.replay import ReplayError
+    from showdown.live import hand
+    from showdown.live.advisor import Advisor
+    from showdown.live.spot import SpotError
+
+    try:
+        replayed = hand.load(args.file)
+    except (ReplayError, OSError) as error:
+        raise SystemExit(f"cannot replay {args.file}: {error}") from None
+    hole = replayed.holes[args.hero]
+    if hole is None:
+        raise SystemExit(f"the {args.hero.upper()}'s cards are not in the hand history")
+    start = replayed.starting_bb
+    print(
+        f"{args.file}: you are the {args.hero.upper()} with {cards_str(hole)}; stacks "
+        f"SB {start['sb']:g} bb, BB {start['bb']:g} bb"
+    )
+    advisor = Advisor.load(log_path=None)
+    mine = [d for d in replayed.decisions if d.seat == args.hero]
+    for k, d in enumerate(mine, 1):
+        legal = d.legal
+        options = ["fold"] if legal.to_call_bb > 0 else []
+        options.append(f"call {legal.to_call_bb:g}" if legal.to_call_bb > 0 else "check")
+        if legal.can_raise:
+            kind = "raise" if max(d.bets_bb.values()) > 0 else "bet"
+            options.append(f"{kind} to {legal.raise_min_bb:g}-{legal.raise_max_bb:g}")
+        villain = "BB" if d.seat == "sb" else "SB"
+        print(f"\n[{k}] {d.street}, board {cards_str(d.board) or '-'}")
+        print(f"    history: {'; '.join(str(m) for m in d.history) or '(none)'}")
+        print(
+            f"    pot {d.pot_bb:g} bb, to call {d.to_call_bb:g} bb; stacks: you "
+            f"{d.stacks_bb[d.seat]:g} bb, {villain} {d.stacks_bb[villain.lower()]:g} bb"
+        )
+        print(f"    legal: {', '.join(options)}")
+        if d.street == "preflop":
+            print(f"    preflop decision (from the action): {d.preflop_decision}")
+        else:
+            kind, note = d.pot_type
+            print(f"    pot type (from the action): {kind}" + (f"; {note}" if note else ""))
+        spot = d.spot()
+        try:
+            s = advisor.suggest(spot)
+        except SpotError as error:
+            print(f"    advice: none ({error})")
+        else:
+            print("    advice:")
+            _print_suggestion(s, "      ")
+        if args.trace and d.street != "preflop":
+            v = advisor.villain(spot)
+            weights = v.weights or (1.0,) * len(v.combos)
+            digest = hashlib.sha256(repr((v.combos, weights)).encode()).hexdigest()[:12]
+            print(f"    trace: history given to the advisor: {len(spot.history)} moves")
+            print(
+                f"    trace: range into the equity calculation: {len(v.combos)} combos, "
+                f"total weight {sum(weights):.4f}, fingerprint {digest}"
+            )
+        print(f"    you did: {d.taken}")
     return 0
 
 
@@ -621,6 +689,16 @@ def build_parser() -> argparse.ArgumentParser:
     advise.add_argument("--log", default="data/live/advice.jsonl")
     advise.add_argument("--no-log", action="store_true")
     advise.set_defaults(handler=_advise)
+
+    replay = commands.add_parser(
+        "replay", help="a saved heads-up PHH hand: the state and advice at each of your decisions"
+    )
+    replay.add_argument("file", help="a .phh file with two players")
+    replay.add_argument("--hero", choices=["sb", "bb"], required=True)
+    replay.add_argument(
+        "--trace", action="store_true", help="also show the range passed to the equity calculation"
+    )
+    replay.set_defaults(handler=_replay)
 
     pre = commands.add_parser("preflop", help="the preflop model above 20 bb (DECISIONS 33, 34)")
     pre_commands = pre.add_subparsers(dest="preflop_command", required=True)

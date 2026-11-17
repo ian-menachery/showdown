@@ -195,6 +195,8 @@ class Advisor:
     def suggest(self, spot: Spot) -> Suggestion:
         start = time.perf_counter()
         result = self._preflop(spot) if spot.street == "preflop" else self._postflop(spot)
+        if spot.legal is not None:
+            result = _legalize(result, spot)
         elapsed = (time.perf_counter() - start) * 1000
         result = Suggestion(**{**result.as_dict(), "elapsed_ms": elapsed})
         if self.log_path is not None:
@@ -372,6 +374,48 @@ class Advisor:
         }
         with self.log_path.open("a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(line) + "\n")
+
+
+RAISES = ("bet", "raise", "jam", "all-in")
+
+
+def _legalize(s: Suggestion, spot: Spot) -> Suggestion:
+    """Keep the advice to legal actions and sizes (DECISIONS 41). The rules behind it are unchanged.
+
+    A size is held within pokerkit's smallest and largest raise-to and capped at the most
+    the opponent can match; one that reaches that cap is shown as all-in. When the cap is
+    below the smallest legal raise, no raise fits both limits, so the advice calls or checks.
+    """
+    legal = spot.legal
+    if s.action is None:
+        return s
+    facing = legal.to_call_bb > 0
+    action, size, notes = s.action, s.size_bb, list(s.notes)
+    passive = "call" if facing else "check"
+    if action in RAISES:
+        cap = min(legal.raise_max_bb, legal.cap_bb) if legal.can_raise else None
+        if cap is None or cap < legal.raise_min_bb:
+            notes.append(f"no {action} fits the legal sizes here: {passive} instead")
+            action, size = passive, None
+        else:
+            wanted = cap if action in ("jam", "all-in") or size is None else size
+            size = max(legal.raise_min_bb, min(wanted, cap))
+            if size >= cap - 1e-9:
+                if action not in ("jam", "all-in"):
+                    notes.append(f"{action} {wanted:g} bb is more than can be matched: all-in")
+                action = "jam" if spot.street == "preflop" else "all-in"
+            elif size != wanted:
+                notes.append(f"{action} {wanted:g} bb is below the minimum: {size:g} bb")
+    elif action == "fold" and not facing:
+        notes.append("nothing to call: check, not fold")
+        action = "check"
+    elif action in ("call", "check") and action != passive:
+        notes.append(f"{action} is not legal here: {passive}")
+        action = passive
+    behind = spot.stack_behind_bb
+    if action == "call" and behind is not None and legal.to_call_bb >= behind - 1e-9:
+        notes.append("calling puts you all-in")
+    return Suggestion(**{**s.as_dict(), "action": action, "size_bb": size, "notes": tuple(notes)})
 
 
 def _reference_label(reference: Suggestion) -> str:

@@ -350,6 +350,27 @@ Each flop's file is about 9 KB gzipped.
   - nothing is in `data/library/` yet.
 
   Step 4, the first overnight 3BP100 run, starts only when Ian runs it.
+- **The audit, and the plan to live play (2026-11-16).** A read-only audit
+  found three things:
+  - postflop advice is equity against the opponent's whole preflop range,
+    unchanged by the bet faced;
+  - there is no hand state;
+  - the preflop model leans on jams.
+
+  The plan's steps:
+  1. replay a saved hand;
+  2. the live tracker and overlay;
+  3. range narrowing (the flop library, then S2b);
+  4. a preflop re-solve;
+  5. the opponent model.
+- **Step 1 is built: Gate R PASS** (DECISIONS 41).
+  - `showdown replay HAND.phh --hero sb|bb` gives the state and advice at
+    each of the hero's decisions.
+  - The hand state comes from pokerkit, and the advice keeps to legal
+    actions and sizes. The audit's "BET 33.75 bb" with 2.5 bb behind is now
+    "ALL-IN 2.5 bb".
+  - The river trace confirms both betting lines still reach the equity
+    calculation with the same range. Narrowing it is step 3.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table.

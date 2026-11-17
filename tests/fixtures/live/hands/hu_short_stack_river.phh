@@ -1,0 +1,13 @@
+# DECISIONS 41, Gate R bar 4: the audit's spot. 25 bb. The SB (hero, KhKs) opens to 2.5 and
+# the BB calls. Flop: the BB checks, the SB bets 10, the BB calls. Turn: the BB bets 10, the
+# SB calls. Each has 22.5 bb in, so the river pot is 45 with 2.5 bb behind, and the BB
+# checks. Before Gate R the advisor said "BET 33.75 bb" here. The SB shoves; the BB calls.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0]
+blinds_or_straddles = [5, 10]
+min_bet = 10
+starting_stacks = [250, 250]
+actions = ['d dh p1 Kd9d', 'd dh p2 KhKs', 'p2 cbr 25', 'p1 cc', 'd db Kc7s2d', 'p1 cc', 'p2 cbr 100', 'p1 cc', 'd db 9h', 'p1 cbr 100', 'p2 cc', 'd db 4c', 'p1 cc', 'p2 cbr 25', 'p1 cc', 'p1 sm Kd9d', 'p2 sm KhKs']
+players = ['Villain', 'Hero']
+finishing_stacks = [0, 500]
