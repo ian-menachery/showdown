@@ -1971,3 +1971,106 @@ record says so.
 - Changing any decision rule or threshold.
 - Inferring anything from a hand with three or more players.
 - Moving any bar after results are seen, except by a dated amendment.
+
+---
+
+### 42. Step 2: the live tracker and the overlay, from table frames; Gate T pre-registered (2026-11-16)
+
+**Decided:** step 2 of the plan to live play, which Ian set on 2026-11-16 and
+told to continue. The screen reader (S1) still waits for Ian's screenshots.
+So this step fixes what the reader must deliver, as a contract, and builds
+everything downstream of it. That is the tracker, the overlay, and a replay
+of recorded frames. It uses DECISIONS 41's hand state and legal-action check
+unchanged.
+
+**The frame contract,** `src/showdown/live/table.py`. A `TableState` is one
+read of the table:
+- **Per seat:**
+  - the player's name;
+  - the stack behind and the bet in front this street, in chips;
+  - whether the player still holds cards;
+  - their hole cards, when visible. Ian's are always visible; others' only
+    at a showdown.
+- **For the table:**
+  - which seat is Ian's;
+  - the button seat;
+  - whose turn it is, or none;
+  - the board;
+  - the big blind in chips (from the game's settings);
+  - `ended`: the hand's result is showing, so the stacks are final.
+- **Optional:** the pot as shown. When present, it is checked against the
+  tracker's own count, and a mismatch is reported as a reading error.
+
+This amends S1 (`docs/plan-live-advisor.md`, Phase 8). S1 must also read
+names, who still holds cards, shown cards, and the end-of-hand frame. Its
+bars are unchanged.
+
+**The tracker,** `src/showdown/live/tracker.py`. It takes frames one by one.
+- **A new hand** starts when Ian's cards change, or when the board empties
+  after it held cards.
+- **With more than two players dealt in,** it gives "no suggestion: N
+  players dealt in" and ignores the hand.
+- **For a heads-up hand** it keeps a pokerkit state:
+  - Ian's cards are dealt; the opponent's are unknown until shown;
+  - the button is the SB.
+- **Between frames** it searches for the shortest sequence of legal actions
+  that turns the last state into one matching the new frame. The new frame's
+  board supplies the cards dealt.
+  - A raise-to amount is taken from the frame: the raiser's bet in front, or,
+    after the street has closed, their total for that street.
+  - A frame that no legal sequence of up to six actions explains is reported
+    as a reading error. The hand is then abandoned, with no suggestion.
+- **At each of Ian's turns** it builds DECISIONS 41's `Decision` from its
+  pokerkit state, and asks `Advisor.suggest`.
+- **At the end frame** it writes the hand as PHH to `data/live/hands/`, which
+  is gitignored.
+  - **If Ian bet and the opponent folded** with no frame between, the bet's
+    size cannot be read. The final stacks do not depend on it. Such a bet is
+    written at the smallest legal size, with a comment saying so.
+
+**The overlay,** `src/showdown/live/overlay.py`:
+- a small tkinter window, kept on top (`-topmost`) and visible to screen
+  share;
+- it shows the advice, the mix or EVs, the notes, the source, and the state
+  line (street, pot, to call, stacks);
+- it shows "no suggestion" with the reason when there is none.
+
+**Command:** `showdown live --replay FRAMES.jsonl`, with one frame per
+line.
+- It feeds the frames to the tracker, prints each suggestion, and shows the
+  overlay.
+- With `--no-window`, it prints only.
+
+This is the demo and test path until the reader exists.
+
+**Gate T.** The test hands are 200 heads-up hands from Gate R's simulator,
+seed 20261117, written as frames from the SB's view or the BB's, alternating
+by hand.
+1. **Hero-turn frames.** Given only a frame at each of Ian's turns, plus the
+   end frame, the tracker's `Decision` at every one of Ian's turns equals
+   step 1's replay of the same hand. That covers the street, board, history,
+   pot, amount to call, stacks, bets, legal actions and preflop line, to
+   1e-9 bb.
+2. **Every-change frames.** Given a frame after every action and every card
+   dealt:
+   - the tracker's betting actions and board cards equal the hand's own.
+     Show and muck lines are excluded: whether Ian shows a losing hand never
+     changes the result;
+   - its PHH replays through `hh/parse` and reconciles.
+3. **Minimal frames.** For the hands in bar 1, every written PHH reconciles.
+   Bets written at an unseen size are counted and reported.
+4. **3+ handed.** 20 frames from three-handed hands give "no suggestion"
+   and write no PHH.
+5. **Latency.** From a frame arriving to a suggestion, the 95th percentile
+   is at most 300 ms, by DECISIONS 32's method: a separate process, no
+   coverage.
+6. **The overlay.** A test opens the window, shows one suggestion and one
+   "no suggestion", reads the labels back, and closes it.
+
+**Rules out:**
+- Reading the screen. That is S1 and Phase 10, which wait for Ian's
+  screenshots.
+- Clicking anything.
+- Hiding the window from screen share.
+- Changing any decision rule.
+- Moving any bar after results are seen, except by a dated amendment.
