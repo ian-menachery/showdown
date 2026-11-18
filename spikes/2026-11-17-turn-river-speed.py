@@ -54,6 +54,22 @@ Kc7c6d, AcJd7h (the 3-bettor almost never checks) and SRP50 Qc8c2d (the BB
 almost never leads). The first solve's 1.12 s includes 0.58 s of cold process
 start. The per-solve rows are in data/external/postflop-solver/runs/
 s2b-20261117-174138.json (gitignored). GATES.md has the reading.
+
+Spike S2c (DECISIONS 45) is `--s2c`: seed 20261118 and absolute tail bars only.
+
+    .venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py --s2c --flops-only
+    .venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py --s2c
+
+Its flops took 27-213 s, at 1.19-1.97% of pot. Output on 2026-11-18 01:13:
+
+    river: 20 solves, median 0.03 s (bar 3), p95 0.09 s (bars 6 and 2 x median = 0.07), max 0.69 s: PASS
+    turn: 20 solves, median 0.38 s (bar 15), p95 1.17 s (bars 30 and 2 x median = 0.75), max 1.18 s: PASS
+    accuracy: worst 1.979% of pot (bar 2%), 0 over: PASS
+
+    Gate S2c: PASS
+
+The "2 x median" figures are reported, not gated, in S2c. Rows:
+data/external/postflop-solver/runs/s2c-20261118-011329.json.
 """
 
 from __future__ import annotations
@@ -78,6 +94,8 @@ from showdown.postflop.flops import canonical, relabel
 from showdown.postflop.spot import SETTINGS, TREE_T1, FlopSpot, model_range
 
 SEED = 20261117
+SEED_S2C = 20261118
+"""Spike S2c (DECISIONS 45): new boards, and the tail bars are absolute only."""
 SPOTS = (("3BP100", "3bp", 100), ("SRP50", "srp", 50))
 BOARDS = 10
 LINES = ("check-check", "bet-call", "check-bet-call")
@@ -97,9 +115,9 @@ COMBOS = [(b, a) for a, b in itertools.combinations(range(52), 2)]
 """Every combo, high card first, in the solver's raw order (index = c1*(101-c1)/2 + c2 - 1)."""
 
 
-def boards() -> list[tuple[str, str, str, int, tuple[int, ...], tuple[int, int]]]:
+def boards(seed: int = SEED) -> list[tuple[str, str, str, int, tuple[int, ...], tuple[int, int]]]:
     """(spot, pot type, line, stack, canonical flop, (turn, river)), 3BP100's ten first."""
-    rng = random.Random(SEED)
+    rng = random.Random(seed)
     out = []
     for name, pot_type, stack in SPOTS:
         for i in range(BOARDS):
@@ -192,6 +210,7 @@ def timed_solve(spec: dict) -> tuple[float, dict | None, str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--flops-only", action="store_true", help="solve the flops, time nothing")
+    parser.add_argument("--s2c", action="store_true", help="Spike S2c (DECISIONS 45)")
     args = parser.parse_args()
 
     if not STREETS.exists():
@@ -204,7 +223,8 @@ def main() -> int:
     print(f"flop bridge {flop_binary[:12]} (unchanged); streets bridge "
           f"{hashlib.sha256(STREETS.read_bytes()).hexdigest()[:12]}")
 
-    grid = boards()
+    gate = "S2c" if args.s2c else "S2b"
+    grid = boards(SEED_S2C if args.s2c else SEED)
     entries = {}
     for spot_name, pot_type, _, stack, flop, _ in grid:
         start = time.perf_counter()
@@ -262,7 +282,7 @@ def main() -> int:
                   f"IP {row['combos_after'][1][0]}  {status}", flush=True)
 
     RUNS.mkdir(parents=True, exist_ok=True)
-    out = RUNS / f"s2b-{dt.datetime.now():%Y%m%d-%H%M%S}.json"
+    out = RUNS / f"{gate.lower()}-{dt.datetime.now():%Y%m%d-%H%M%S}.json"
     out.write_text(json.dumps(rows, indent=1), encoding="utf-8")
     print(f"\nrows written to {out}")
 
@@ -285,7 +305,7 @@ def main() -> int:
     for street, (median_bar, p95_bar) in BARS.items():
         secs = [r["seconds"] for r in rows if r["street"] == street]
         median, p95 = statistics.median(secs), float(np.percentile(secs, 95))
-        ok = median <= median_bar and p95 <= p95_bar and p95 <= 2 * median
+        ok = median <= median_bar and p95 <= p95_bar and (args.s2c or p95 <= 2 * median)
         passed &= ok
         print(f"{street}: {len(secs)} solves, median {median:.2f} s (bar {median_bar:g}), "
               f"p95 {p95:.2f} s (bars {p95_bar:g} and 2 x median = {2 * median:.2f}), "
@@ -295,7 +315,7 @@ def main() -> int:
     passed &= not bad
     print(f"accuracy: worst {worst:.3f}% of pot (bar {TARGET_PCT:g}%), {len(bad)} over: "
           f"{'PASS' if not bad else 'FAIL'}")
-    print(f"\nGate S2b: {'PASS' if passed else 'FAIL'}")
+    print(f"\nGate {gate}: {'PASS' if passed else 'FAIL'}")
     return 0 if passed else 1
 
 

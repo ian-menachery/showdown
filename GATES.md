@@ -892,3 +892,133 @@ Reading:
 .venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py --flops-only
 .venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py
 ```
+
+## Gate S2c: live turn and river solves, on new boards with absolute tail bars: PASS (2026-11-18)
+
+Evidence: `spikes/2026-11-17-turn-river-speed.py --s2c`. Ian chose this re-gate
+after S2b, and its bars were pre-registered in DECISIONS 45 (commit 3ac12af)
+before its first solve. Everything else is S2b's: the same binaries, spots,
+narrowing, tree, settings and timing. The seed is new (20261118), so the 20
+boards are new. Their flops were solved first, untimed: 27–213 s each,
+1.19–1.97% of the pot.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. River, median | 0.03 s (20 solves) | ≤ 3 s | PASS |
+| 1. River, 95th percentile | 0.09 s; max 0.69 s | ≤ 6 s | PASS |
+| 2. Turn, median | 0.38 s (20 solves) | ≤ 15 s | PASS |
+| 2. Turn, 95th percentile | 1.17 s; max 1.18 s | ≤ 30 s | PASS |
+| 3. Accuracy | every solve 0.80–1.98% of its pot, in 30–60 iterations; no timeouts | ≤ 2% | PASS |
+
+| Spot | Street | Flop line | Solves | Median s | Max s |
+|---|---|---|---|---|---|
+| 3BP100 | turn | check-check | 2 | 0.70 | 0.92 |
+| 3BP100 | turn | bet-call | 8 | 0.29 | 0.38 |
+| SRP50 | turn | check-check | 4 | 1.14 | 1.18 |
+| SRP50 | turn | bet-call | 3 | 0.41 | 0.55 |
+| SRP50 | turn | check-bet-call | 3 | 0.36 | 0.40 |
+| both | river | all | 20 | 0.03 | 0.69 |
+
+Reading:
+- **The same picture as S2b, on new boards.** Live turn solves take about a
+  second at worst, and river solves a few hundredths of a second.
+- **Under S2b's ratio rule** it would have failed on both streets (river
+  0.09 s against 0.07 s, turn 1.17 s against 0.75 s). That rule is reported
+  here, not gated (DECISIONS 45), and S2b stays a FAIL.
+- **One river solve took 0.69 s** (SRP50, Jc9d6d6c3h, 40 iterations, under
+  1 MB). The other 19 took 0.03–0.06 s. Nothing in the spot explains it, so
+  it is probably the laptop. It is still far inside the bars.
+- **Five of the ten 3BP100 boards took the next line,** because the 3-bettor
+  almost never checks there: KcQd7h, KcTd4h, AcKcTd, KcJd5h and Tc4d3h. As
+  a result 3BP100 ran 8 bet-call boards and 2 check-check.
+- **Contention:** as in S2b, another session's `find` used under one core.
+- **What it still doesn't cover** is what S2b said: live narrowing needs the
+  flop's frequencies, and the flop library is empty.
+
+```
+.venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py --s2c --flops-only
+.venv\Scripts\python -I spikes\2026-11-17-turn-river-speed.py --s2c
+```
+
+## Gate N: the stopgap range model: PASS after one loader fix (2026-11-18)
+
+Evidence:
+- `tests/test_gate_n.py` (bar 2) and `tests/test_gate_r.py` (bar 1), both in
+  the fast suite;
+- `tests/test_rangefit.py`;
+- the curves in `data/range_model.json`.
+
+The model, the fit set and both bars were pre-registered in DECISIONS 46
+(commit 1591f66) before any code. Ian chose every piece: narrowing by the
+villain's moves, equity against a random hand, soft floors, and curves fitted
+to the solver.
+
+**The fit.** `showdown postflop fit-ranges` ran once, after Gate S2c's timed
+run, in about two minutes.
+- **The solves:** S2b's and S2c's 40 flop entries, plus 344 turn and river
+  solves, all within 2% of the pot. 34 flop lines were skipped for leaving
+  under 5 combos: mostly 3BP100 lines in which the 3-bettor checks, and SRP50
+  lines in which the BB leads.
+- **The turns and rivers** were drawn by a shuffle seeded with
+  "20261119|flop|line", one per (flop, line).
+- **The result:** 32 keys (pot type × street × position × node), each with
+  per-band frequencies and mean sizes.
+- **The curves look like poker:**
+  - river bets are polar. At SRP50 the OOP's 75% bet runs 0.43, 0.13, 0.05
+    … 0.34, 0.58, 0.39 from the weakest band to the strongest;
+  - calls sit in the middle and top bands;
+  - folds sit at the bottom;
+  - raises and all-ins sit in the top band.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Gate R's trace differs | third-pot river bet: weight 208.66, fingerprint 34963a1eef09, equity 74.0%, CALL. Shove: weight 199.61, fingerprint 00cd1995844b, equity 70.9%, CALL. Before: both c70a1aad9e1e at 92.2% | different ranges | PASS |
+| 2. Hand-worked weights | 7 spots on AsKsQd7c2h with five villain combos, one per odd band, and a curve table in the test: a bet at an anchor size, between the anchors and past them; a call interpolated by the size faced; a check at the 0.25 floor; a check then a raise re-ranked within the narrowed range; moves with no curve | to 1e-9 | PASS |
+
+**How it got here.** Bar 1 failed on its first run: every villain move found
+"no curve".
+- **The cause:** the fit writes each key's curves under `"actions"`, and the
+  loader read them one level up. That is a clear code bug, reproduced by
+  bar 1 itself.
+- **The fix,** made once: the loader reads `"actions"`. A round-trip test (the
+  model reads what the fit writes) is now in `test_rangefit.py`.
+- **Nothing else changed:** no rule, floor, band, curve or seed.
+
+**Reported, not gated:**
+- **Advice changes.** Over the 3 saved hands and Gate T's 200 simulated
+  hands, 647 postflop decisions (either player's) were narrowed. The advice
+  changed at 40 of them:
+
+  | Street | Changes |
+  |---|---|
+  | flop | call → fold 5 |
+  | turn | call → fold 9; all-in → check 4; bet → check 4; check → bet 3 |
+  | river | call → fold 5; all-in → check 4; bet → check 3; check → bet 2; check → all-in 1 |
+
+  The hero's equity moved by −3.8% on average, from −53.3% to +24.1%. The
+  saved hands' own advice is unchanged: `hu_full_hand.phh` still bets the
+  flop, calls the turn and calls the river.
+- **The shove barely differs from the third-pot bet** (70.9% against 74.0%).
+  The solver's all-in range is polar too, and with more bluffs at bigger
+  sizes.
+- **Latency,** by Gate T bar 5's method (a separate process, no coverage,
+  every-change frames, 60 hands): 164 suggestions, 95th percentile 170 ms
+  (106 ms before), median 48 ms, max 264 ms. The flop costs most, about 90 ms
+  for the 45-runout strength, cached once per board.
+- **The slow suites still pass.** Gate R bar 3's 500 simulated hands: all
+  3,099 decisions legal (calls 510 → 448, folds 351 → 413). Gate T's own latency
+  test: 95th percentile 191 ms.
+
+What it means for play:
+- **The advice now reacts to the line,** but only through equity. Postflop
+  actions still come from the 60% rule and pot odds, so the stopgap never
+  raises or bluffs. Step 3c would change that.
+- **The curves come from the solver,** with the model's ranges, at 50 and
+  100 bb. A friend's real bets need not follow them, and the label says
+  "assumed, not solved".
+
+```
+showdown postflop fit-ranges
+showdown replay tests/fixtures/live/hands/hu_river_shove.phh --hero sb --trace
+.venv\Scripts\python -m pytest tests/test_gate_n.py tests/test_gate_r.py tests/test_rangefit.py -s
+```

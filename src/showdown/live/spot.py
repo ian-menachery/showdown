@@ -69,7 +69,8 @@ class Spot:
     """A custom range as the top N% by equity against a random hand (DECISIONS 36)."""
     mode: str = "hint"
     history: tuple[str, ...] = ()
-    """The hand's actions so far, from a replay (DECISIONS 41). The advice does not use it yet."""
+    """The hand's actions so far, from a replay (DECISIONS 41). Postflop, the villain's moves
+    narrow its assumed range (DECISIONS 46)."""
     stack_behind_bb: float | None = None
     """The hero's remaining stack, from a replay."""
     legal: Legal | None = None

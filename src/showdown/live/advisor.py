@@ -26,7 +26,7 @@ from showdown.equity.montecarlo import monte_carlo
 from showdown.equity.ranges import parse_range
 from showdown.games.preflop import OPEN_TO, THREEBET_TO
 from showdown.hh.grade import depth_for
-from showdown.live import jam
+from showdown.live import jam, narrow
 from showdown.live.spot import DECISIONS, Spot, SpotError
 
 CALL_MARGIN = 0.05
@@ -117,6 +117,8 @@ class Advisor:
         self._defaults: dict[tuple[str, str], tuple[Combo, ...]] = {}
         self._reach: dict[tuple[float, str], float] = {}
         self._model_ranges: dict[tuple[str, str, float], VillainRange | None] = {}
+        self._range_model: narrow.RangeModel | None | bool = False
+        """The stopgap range model (DECISIONS 46), loaded on first use; None if absent."""
 
     @classmethod
     def load(cls, model_path: str | Path = pm.DEFAULT_MODEL, **kwargs) -> Advisor:
@@ -175,9 +177,37 @@ class Advisor:
         return None
 
     def villain(self, spot: Spot) -> VillainRange:
+        """Ian's range as given; otherwise the assumed one, narrowed by the villain's moves."""
         given = self.given_range(spot)
         if given is not None:
             return given
+        base = self._assumed_villain(spot)
+        if spot.street == "preflop" or not spot.history:
+            return base
+        if self._range_model is False:
+            self._range_model = narrow.RangeModel.load()
+        if self._range_model is None:
+            return base
+        weights, used, missing = narrow.narrow(
+            self._range_model,
+            base.combos,
+            base.weights,
+            spot.board,
+            spot.history,
+            spot.villain_seat,
+            spot.pot_type,
+        )
+        if used + missing == 0:
+            return base
+        label = (
+            f"{base.label}; range model (assumed, not solved): narrowed by {used} villain "
+            f"move{'s' if used != 1 else ''}, fitted to S2b/S2c solves"
+        )
+        if missing:
+            label += f"; {missing} move{'s' if missing != 1 else ''} with no curve"
+        return VillainRange(base.combos, weights, label)
+
+    def _assumed_villain(self, spot: Spot) -> VillainRange:
         top = DEFAULT_TOP[(spot.pot_type, spot.villain_seat)]
         fixed = f"default (assumed): top {top}% for the {spot.villain_seat.upper()}"
         if self.ranges == "fixed":

@@ -279,6 +279,18 @@ def _library_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _fit_ranges(args: argparse.Namespace) -> int:
+    from showdown.postflop import bridge, rangefit
+
+    try:
+        data = rangefit.fit(log=lambda line: print(line, flush=True))
+    except bridge.BridgeError as error:
+        raise SystemExit(str(error)) from None
+    rangefit.write(data)
+    print(f"wrote {len(data['curves'])} curves: {data['source']}")
+    return 0
+
+
 def _library_status(args: argparse.Namespace) -> int:
     from showdown.postflop import library
 
@@ -665,6 +677,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="the villain's leak, locked at its first flop decision",
     )
     post_exploit.set_defaults(handler=_postflop_exploit)
+    post_fit = post_commands.add_parser(
+        "fit-ranges", help="fit the stopgap range model to solves (DECISIONS 46; needs the bridge)"
+    )
+    post_fit.set_defaults(handler=_fit_ranges)
     post_library = post_commands.add_parser("library", help="the overnight flop library")
     library_commands = post_library.add_subparsers(dest="library_command", required=True)
     spots = ["3BP100", "SRP25", "SRP50", "SRP100"]

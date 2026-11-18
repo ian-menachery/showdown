@@ -109,8 +109,22 @@ def test_the_river_lines_differ_only_in_the_bet(advisor) -> None:
     assert (third.to_call_bb, shove.to_call_bb) == (5.5, 41.8)
     a, b = third.spot(), shove.spot()
     assert a.history != b.history
-    # Step 3 (range narrowing) is not built: both lines reach the equity with one range.
-    assert advisor.villain(a) == advisor.villain(b)
+    # Gate N bar 1 (DECISIONS 46): the villain's moves narrow its range, so the two lines
+    # reach the equity calculation with different ranges.
+    va, vb = advisor.villain(a), advisor.villain(b)
+    assert va.combos == vb.combos and va.weights != vb.weights
+    assert "range model (assumed, not solved)" in va.label
+    for name, spot, v in (("third of the pot", a, va), ("shove", b, vb)):
+        s = advisor.suggest(spot)
+        print(f"{name}: weight {sum(v.weights):.4f}, equity {s.equity:.1%}, {s.action}")
+
+
+def test_the_river_trace_shows_two_fingerprints(capsys) -> None:
+    prints = []
+    for name in ("hu_full_hand.phh", "hu_river_shove.phh"):
+        main(["replay", str(HANDS / name), "--hero", "sb", "--trace"])
+        prints.append(re.findall(r"fingerprint (\w+)", capsys.readouterr().out)[-1])
+    assert prints[0] != prints[1], prints
 
 
 def test_legalize_branches() -> None:

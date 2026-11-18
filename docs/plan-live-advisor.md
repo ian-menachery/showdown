@@ -278,6 +278,41 @@ Measured with the model's ranges, which are wider than S4's top-% ones:
 
 Each flop's file is about 9 KB gzipped.
 
+### Step 3c draft (2026-11-18): live solves in the advice. Not built; each piece waits for Ian's tick
+
+Gate S2c showed live solves take about 1 s on the turn and 0.05 s on the
+river. The stopgap range model (DECISIONS 46, Gate N) is what the advice
+uses until this is built.
+
+**At each of Ian's postflop decisions in a heads-up hand:**
+1. **The flop line.** The opponent's flop frequencies come from the library
+   when the flop is solved there. Until then, the stopgap's flop curves
+   narrow both ranges, labelled.
+2. **Turn and river.** A live solve starts as soon as the frame shows the new
+   card:
+   - the ranges are narrowed by every earlier street;
+   - the pot and stacks are the hand's real ones, not the model's 5 or 15 bb;
+   - the ranges come from the nearest model depth.
+3. **The opponent's moves** on the street narrow its range by the solved
+   per-hand frequencies of each move. These replace the stopgap's curves.
+4. **Ian's action** is the solved strategy for his hand at the current node:
+   - the most likely action, with the mix;
+   - raises and bluffs included, unlike the 60% rule.
+5. **Off-tree sizes.** A bet size T1 lacks either gets added to the street's
+   tree and re-solved (about 1–2 s on the turn, 0.1 s on the river), or is
+   mapped to the nearest tree size with a note.
+6. **Where nothing is solved** (an error, a timeout, a spot outside the model),
+   the equity helper answers against the stopgap's range, labelled.
+7. **Latency.** The overlay shows "solving…" and then the answer. DECISIONS
+   32's 300 ms bar keeps covering equity-helper answers. Solver answers get a
+   bar of their own.
+
+**A gate to pre-register,** once Ian picks the pieces:
+- Gate R's two river hands, with solver-narrowed ranges;
+- Gate R bar 3's 500 simulated hands, with every solver suggestion legal;
+- the advice equal to the bridge's own strategy on seeded spots;
+- latency from the frame to the answer.
+
 ### Later, each needing its own amendment first
 - **A self-hosted table for friends (Ian ticked this).** It means serving
   beyond 127.0.0.1, which DECISIONS 12 forbids. It would replace screen
@@ -411,9 +446,32 @@ Each flop's file is about 9 KB gzipped.
     the others 0.18–0.64 s.
   - **Live narrowing still needs the flop library.** A live flop solve takes
     1–4 minutes.
-  - **Next:** Ian chooses between the stopgap DECISIONS 44 names (a
-    labelled range model that narrows by the line and the bet size) and
-    another way forward.
+  - **Next:** Ian chose all three of the stopgap, a re-gate and a 3c draft
+    (2026-11-18).
+- **Spike S2c: PASS** (DECISIONS 45, 2026-11-18). S2b ran again on new boards
+  (seed 20261118), with the tail bars absolute only:
+  - rivers: median 0.03 s, 95th percentile 0.09 s;
+  - turns: median 0.38 s, 95th percentile 1.17 s;
+  - every solve within 2% of the pot.
+
+  S2b stays a FAIL.
+- **The stopgap range model: Gate N PASS after one loader fix** (DECISIONS
+  46, 2026-11-18).
+  - **What it does.** `advisor.villain` narrows the assumed range by each of
+    the villain's postflop moves. Each move multiplies every combo's weight by
+    a curve over its strength band, where strength is equity against a random
+    hand. Floors of 0.10, and 0.25 after a check, keep every hand in.
+  - **The curves** were fitted by `showdown postflop fit-ranges` to 344 turn
+    and river solves and 40 flop entries, and are stored in
+    `data/range_model.json`.
+  - **Gate R's river trace now differs:** the third-pot bet gives 74.0%, the
+    shove 70.9%. Both were 92.2% before.
+  - **Across 203 hands,** 40 of 647 postflop decisions changed. Latency is
+    170 ms at the 95th percentile.
+  - **Still from the 60% rule:** postflop actions, so it never raises or
+    bluffs.
+- **Step 3c is drafted** (Phase 13, "Step 3c draft"), waiting on Ian's
+  ticks.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table;
