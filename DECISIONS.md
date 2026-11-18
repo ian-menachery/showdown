@@ -2261,3 +2261,39 @@ with no early stop.
 - Changing `bridges/postflop/src/main.rs`.
 - Starting a library run, or writing to `data/library/`.
 - Any download.
+
+---
+
+### 45. Spike S2c: S2b again on new boards, with absolute tail bars; Gate S2c pre-registered (2026-11-18)
+
+**Decided:** Ian chose this on 2026-11-18, after Gate S2b failed on one
+reading of one bar. DECISIONS 44 required each street's 95th percentile to be
+within double the median bar and within double the measured median. The turn
+passed the first (0.90 s against 30 s) and failed the second (0.90 s against
+0.60 s). S2b stays a FAIL in GATES.md. S2c is a new run with new boards, not
+a rerun of S2b's.
+
+**Everything is DECISIONS 44's** except:
+- **The seed is 20261118.** It draws 10 new boards per spot, the same way.
+- **The tail bars are absolute only:** the 95th percentile is at most 6 s on
+  the river and at most 30 s on the turn. The ratio to the measured median is
+  reported, not gated.
+- **The flop solves** are cached beside S2b's, under the same spec and the
+  same flop binary.
+
+**Gate S2c:**
+1. **River:** the median is at most 3 s; the 95th percentile at most 6 s.
+2. **Turn:** the median is at most 15 s; the 95th percentile at most 30 s.
+3. **Accuracy:** every one of the 40 solves ends with exploitability at most
+   2% of its starting pot.
+
+**What follows.** If S2c passes, step 3c (wiring live solves into
+`advisor.villain` and the postflop actions) can be planned on it. That gets
+its own entry and gate. Either way, the stopgap range model (DECISIONS 46)
+goes ahead. Ian chose that too.
+
+The preflop re-solve and the opponent model move to DECISIONS 47 and 48, or
+the next free numbers.
+
+**Rules out:** what DECISIONS 44 rules out, and changing any of S2c's bars
+after its first timed solve.
