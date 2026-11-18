@@ -2297,3 +2297,117 @@ the next free numbers.
 
 **Rules out:** what DECISIONS 44 rules out, and changing any of S2c's bars
 after its first timed solve.
+
+---
+
+### 46. The stopgap range model: the villain's range narrowed by its moves, with curves fitted to the solver; Gate N pre-registered (2026-11-18)
+
+**Decided:** Ian chose this on 2026-11-18, after Gate S2b, as the stopgap
+DECISIONS 44 names. He ticked each piece:
+- narrowing by the villain's moves;
+- equity against a random hand as the strength measure;
+- soft weights;
+- the bet and call rules fitted to the solver, not set by formula;
+- two bars.
+
+It works without the flop library. Step 3c (DECISIONS 45) can replace it with
+live solves where those exist.
+
+**Where it applies.** `advisor.villain` narrows the range when the spot has a
+history with at least one postflop move by the villain, and the range is not
+Ian's own (`--villain` or `--villain-top`).
+- Typed `showdown advise` spots have no history, so they do not change.
+- The label says "range model (assumed, not solved)", the number of villain
+  moves used, and "fitted to S2b/S2c solves".
+
+**Strength.** Each combo's equity against a random hand on that street's
+board. Card removal between the two hands is ignored.
+- **On a full five-card runout,** a combo's score is the share of the other
+  live combos it beats, counting ties as half. Live combos are those that
+  don't touch the runout.
+- **The score is averaged over runouts:**
+  - on the river, the board itself;
+  - on the turn, every river card that touches neither the board nor the
+    combo;
+  - on the flop, 45 (turn, river) pairs, drawn once per board with
+    `random.Random(<board string>)`. Each combo averages over the pairs it
+    doesn't touch.
+
+  Each board's scores are computed once and cached.
+- **A combo's percentile** within the villain's current weighted range is
+  (weight scoring below it + half the weight scoring equal) / total weight.
+- **Its band** is the percentile's decile, 0 to 9.
+
+**Narrowing.** The villain's postflop moves are read from the history in
+order, and each one multiplies every combo's weight by a multiplier for its
+band. The hero's moves narrow nothing.
+- **Each move gets a node:**
+  - `first`: the villain acts first on the street;
+  - `after_check`: the villain acts after a check;
+  - `facing_bet`: the villain faces a bet or a raise;
+  - `facing_allin`: the villain faces an all-in.
+- **Its position** is OOP for the BB and IP for the SB.
+- **The size** of a bet is f = bet / pot. For a raise,
+  f = (raise − to call) / (pot + to call). The pot is rebuilt from the
+  history, starting from the blinds.
+- **The curve** comes from `data/range_model.json`, keyed by pot type, street,
+  position, node and action:
+  - a check uses the Check curve;
+  - a bet interpolates between the Bet and AllIn curves, linearly in f between
+    their mean sizes and clamped outside them;
+  - a raise does the same between Raise and AllIn;
+  - a call interpolates between the `facing_bet` and `facing_allin` Call
+    curves, by the size faced.
+- **Each curve's shape** is its per-band frequency divided by its largest
+  band's.
+- **The multiplier** is max(shape, floor):
+  - the floor is 0.25 for a check, so traps keep a quarter;
+  - otherwise it is 0.10, since friends mix and misplay.
+- **With no curve,** the move narrows nothing, and the label says so.
+- **The pot type** (srp or 3bp) picks the curves. They are fitted at 50 bb
+  and 100 bb, and used at every depth.
+
+**The fit:** `showdown postflop fit-ranges` writes `data/range_model.json`,
+run once.
+- **The flops** are S2b's and S2c's 40, 20 per pot type. Their curves come
+  from the cached flop entries' four nodes. Reach weights come from the
+  preflop weights and the strategy before the node.
+- **The turns and rivers:**
+  - for each flop and each flop line that leaves at least 5 combos to both
+    players, 2 turn cards, and one river after each;
+  - drawn with seed 20261119, one shuffle per (flop, line);
+  - started as S2b's spots were: narrowed by the flop line, with the turn
+    checked through for the river starts;
+  - at most 480 solves with the streets binary, tree T1 and the 2% target.
+
+  Each reports six nodes: `[]`, `[Check]`, `[Bet]`, `[Check, Bet]`,
+  `[AllIn]` and `[Check, AllIn]`. On the flop there is no facing-all-in
+  node, so those moves use the turn's curves.
+- **Each band's frequency** for each action is the reach-weighted mean over
+  that key's nodes. Each action's mean f is recorded beside it.
+- **The file holds frequencies,** which are solver output, not solver code.
+  It is small and committed. The fit is our code, and runs the AGPL bridge as
+  a separate process.
+
+**Gate N:**
+1. **Gate R's trace differs.** In `hu_full_hand.phh` (a third-pot river bet)
+   and `hu_river_shove.phh` (a shove), the river decision reaches the equity
+   calculation with different ranges: different fingerprints. The report
+   shows both ranges and both equities.
+2. **Hand-worked weights.** On at least 5 hand-built spots with small ranges
+   and a small curve table written in the test, the model's weights equal a
+   hand calculation of the rules above, to 1e-9.
+
+**Reported, not gated:**
+- a summary of the fitted curves;
+- latency, by DECISIONS 32's method;
+- every change to the replay and live advice in Gate R's and Gate T's hands.
+
+`test_the_river_lines_differ_only_in_the_bet` asserted the same range for
+both lines ("step 3 is not built"). That assertion is replaced by bar 1.
+
+**Rules out:**
+- Changing the rules, floors, bands, fit set or seeds after the fit's first
+  solve, or after Gate R's trace is seen.
+- Narrowing a range Ian gave.
+- Any download, a library run, or writing to `data/library/`.
