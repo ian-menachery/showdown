@@ -278,7 +278,7 @@ Measured with the model's ranges, which are wider than S4's top-% ones:
 
 Each flop's file is about 9 KB gzipped.
 
-### Step 3c draft (2026-11-18): live solves in the advice. Not built; each piece waits for Ian's tick
+### Step 3c (2026-11-18): live solves in the advice. Ian's picks are in; not built yet
 
 Gate S2c showed live solves take about 1 s on the turn and 0.05 s on the
 river. The stopgap range model (DECISIONS 46, Gate N) is what the advice
@@ -298,20 +298,35 @@ uses until this is built.
 4. **Ian's action** is the solved strategy for his hand at the current node:
    - the most likely action, with the mix;
    - raises and bluffs included, unlike the 60% rule.
-5. **Off-tree sizes.** A bet size T1 lacks either gets added to the street's
-   tree and re-solved (about 1–2 s on the turn, 0.1 s on the river), or is
-   mapped to the nearest tree size with a note.
+5. **Off-tree sizes.** A bet size T1 lacks is mapped to the nearest tree size,
+   with a note. Ian chose this over adding the size and re-solving.
 6. **Where nothing is solved** (an error, a timeout, a spot outside the model),
    the equity helper answers against the stopgap's range, labelled.
 7. **Latency.** The overlay shows "solving…" and then the answer. DECISIONS
    32's 300 ms bar keeps covering equity-helper answers. Solver answers get a
    bar of their own.
 
-**A gate to pre-register,** once Ian picks the pieces:
-- Gate R's two river hands, with solver-narrowed ranges;
-- Gate R bar 3's 500 simulated hands, with every solver suggestion legal;
-- the advice equal to the bridge's own strategy on seeded spots;
-- latency from the frame to the answer.
+**Ian's picks (2026-11-18):**
+- **The pieces:** all of 1–7, with the stopgap on the flop (item 1) and the
+  nearest tree size for off-tree bets (item 5).
+- **The gate,** to pre-register in its own DECISIONS entry before any code:
+  1. Gate R's two river hands, with solver-narrowed ranges: the third-pot bet
+     and the shove reach the advice with different ranges, and both are shown;
+  2. Gate R bar 3's 500 simulated hands, with every solver suggestion a legal
+     action and size;
+  3. on seeded spots, the advice's action and mix equal the bridge's own
+     strategy for Ian's hand at that node, to 1e-6;
+  4. latency from the frame that shows the card to the answer: turn p95
+     ≤ 3 s, river p95 ≤ 1 s, by DECISIONS 32's method.
+- **Added by Ian: marking villains by playstyle** (TAG, LAG, and so on).
+  Its design is still open:
+  - which labels there are;
+  - how a label changes the villain's preflop range and its postflop play,
+    for example by node locks, as Gate X does;
+  - how it relates to step 5's tracked tendencies.
+
+  It is a manual version of "player typing from the hand log", which Ian had
+  parked. That needs its own decision.
 
 ### Later, each needing its own amendment first
 - **A self-hosted table for friends (Ian ticked this).** It means serving
@@ -470,8 +485,9 @@ uses until this is built.
     170 ms at the 95th percentile.
   - **Still from the 60% rule:** postflop actions, so it never raises or
     bluffs.
-- **Step 3c is drafted** (Phase 13, "Step 3c draft"), waiting on Ian's
-  ticks.
+- **Step 3c is planned** (Phase 13, "Step 3c"). Ian picked its pieces and
+  its four bars on 2026-11-18, and added marking villains by playstyle. Next
+  come its DECISIONS entry, then the build.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table;
