@@ -25,7 +25,7 @@ import numpy as np
 from showdown.cfr import Policy, Tree, cfr_plus, compile_game, exploitability, policy_value
 from showdown.equity.cards import CLASS_COMBOS, CLASS_NAMES, RANKS
 from showdown.equity.matrix import PreflopMatrix
-from showdown.games.pushfold import ALL_IN, BB_FOLD, SB_FOLD, PushFoldGame
+from showdown.games.pushfold import ALL_IN, PushFoldGame, fold_payoffs
 
 DEPTHS: tuple[int, ...] = tuple(range(1, 21))
 ITERATIONS = 1000
@@ -79,9 +79,12 @@ def policy_from_vectors(tree: Tree, push: np.ndarray, call: np.ndarray) -> Polic
 
 
 def solve_depth(
-    stack: float, iterations: int = ITERATIONS, matrix_path: str | Path = DEFAULT_MATRIX
+    stack: float,
+    iterations: int = ITERATIONS,
+    matrix_path: str | Path = DEFAULT_MATRIX,
+    ante: float = 0.0,
 ) -> DepthResult:
-    tree = compile_game(PushFoldGame(stack, PreflopMatrix.load(matrix_path)))
+    tree = compile_game(PushFoldGame(stack, PreflopMatrix.load(matrix_path), ante))
     solver = cfr_plus(tree)
     solver.iterate(iterations)
     average = solver.average_policy()
@@ -95,7 +98,7 @@ def solve_depth(
     )
 
 
-def _solve_job(args: tuple[float, int, str]) -> DepthResult:
+def _solve_job(args: tuple[float, int, str, float]) -> DepthResult:
     return solve_depth(*args)
 
 
@@ -109,6 +112,8 @@ class PushFoldSolution:
     matrix_path: str
     matrix_sha256: str
     depths: list[DepthResult] = field(default_factory=list)
+    ante: float = 0.0
+    """Per player, in bb (DECISIONS 48)."""
 
     def at(self, stack: float) -> DepthResult:
         for result in self.depths:
@@ -122,6 +127,7 @@ class PushFoldSolution:
             "iterations": self.iterations,
             "matrix": self.matrix_path,
             "matrix_sha256": self.matrix_sha256,
+            **({"ante": self.ante} if self.ante else {}),
             "depths": [
                 {
                     "stack": d.stack,
@@ -150,7 +156,8 @@ class PushFoldSolution:
             )
             for d in data["depths"]
         ]
-        return cls(data["iterations"], data["matrix"], data["matrix_sha256"], depths)
+        ante = float(data.get("ante", 0.0))
+        return cls(data["iterations"], data["matrix"], data["matrix_sha256"], depths, ante)
 
 
 def solve_all(
@@ -158,15 +165,16 @@ def solve_all(
     iterations: int = ITERATIONS,
     matrix_path: str | Path = DEFAULT_MATRIX,
     workers: int | None = None,
+    ante: float = 0.0,
 ) -> PushFoldSolution:
-    jobs = [(float(s), iterations, str(matrix_path)) for s in depths]
+    jobs = [(float(s), iterations, str(matrix_path), float(ante)) for s in depths]
     workers = workers or min(len(jobs), os.cpu_count() or 1)
     if workers == 1:
         results = [_solve_job(job) for job in jobs]
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             results = list(pool.map(_solve_job, jobs))
-    return PushFoldSolution(iterations, str(matrix_path), _sha256(matrix_path), results)
+    return PushFoldSolution(iterations, str(matrix_path), _sha256(matrix_path), results, ante)
 
 
 # --- closed forms, independent of the tree ---------------------------------------
@@ -177,26 +185,30 @@ def _terms(stack: float, matrix: PreflopMatrix) -> tuple[np.ndarray, np.ndarray]
     return weights / weights.sum(), stack * (2 * matrix.equity - 1)
 
 
-def sb_value(push: np.ndarray, call: np.ndarray, stack: float, matrix: PreflopMatrix) -> float:
+def sb_value(
+    push: np.ndarray, call: np.ndarray, stack: float, matrix: PreflopMatrix, ante: float = 0.0
+) -> float:
     """The SB's expected bb per hand, summed directly over class pairs."""
     w, showdown = _terms(stack, matrix)
-    jam = (1 - call)[None, :] * BB_FOLD + call[None, :] * showdown
-    per_pair = (1 - push)[:, None] * SB_FOLD + push[:, None] * jam
+    sb_fold, bb_fold = fold_payoffs(stack, ante)
+    jam = (1 - call)[None, :] * bb_fold + call[None, :] * showdown
+    per_pair = (1 - push)[:, None] * sb_fold + push[:, None] * jam
     return float((w * per_pair).sum())
 
 
 def closed_form_exploitability(
-    push: np.ndarray, call: np.ndarray, stack: float, matrix: PreflopMatrix
+    push: np.ndarray, call: np.ndarray, stack: float, matrix: PreflopMatrix, ante: float = 0.0
 ) -> float:
     """NashConv / 2 (DECISIONS 7), from best responses computed class by class."""
     w, showdown = _terms(stack, matrix)
+    sb_fold, bb_fold = fold_payoffs(stack, ante)
     # SB best response to `call`: per class, the better of folding and jamming.
-    jam = ((1 - call)[None, :] * BB_FOLD + call[None, :] * showdown) * w
-    fold = SB_FOLD * w
+    jam = ((1 - call)[None, :] * bb_fold + call[None, :] * showdown) * w
+    fold = sb_fold * w
     sb_best = np.maximum(fold.sum(axis=1), jam.sum(axis=1)).sum()
     # BB best response to `push`: per class, the better of folding and calling (BB's payoff).
-    folded = (1 - push)[:, None] * (-SB_FOLD) * w
-    vs_jam_fold = push[:, None] * (-BB_FOLD) * w
+    folded = (1 - push)[:, None] * (-sb_fold) * w
+    vs_jam_fold = push[:, None] * (-bb_fold) * w
     vs_jam_call = push[:, None] * (-showdown) * w
     bb_best = (
         folded.sum(axis=0) + np.maximum(vs_jam_fold.sum(axis=0), vs_jam_call.sum(axis=0))
@@ -206,16 +218,17 @@ def closed_form_exploitability(
 
 
 def sb_action_values(
-    call: np.ndarray, stack: float, matrix: PreflopMatrix
+    call: np.ndarray, stack: float, matrix: PreflopMatrix, ante: float = 0.0
 ) -> tuple[np.ndarray, np.ndarray]:
     """Per SB class, the SB's EV in bb of folding and of jamming against `call` (DECISIONS 24)."""
     w, showdown = _terms(stack, matrix)
-    jam = (w * ((1 - call)[None, :] * BB_FOLD + call[None, :] * showdown)).sum(axis=1)
-    return np.full(169, SB_FOLD), jam / w.sum(axis=1)
+    sb_fold, bb_fold = fold_payoffs(stack, ante)
+    jam = (w * ((1 - call)[None, :] * bb_fold + call[None, :] * showdown)).sum(axis=1)
+    return np.full(169, sb_fold), jam / w.sum(axis=1)
 
 
 def bb_action_values(
-    push: np.ndarray, stack: float, matrix: PreflopMatrix
+    push: np.ndarray, stack: float, matrix: PreflopMatrix, ante: float = 0.0
 ) -> tuple[np.ndarray, np.ndarray]:
     """Per BB class facing a jam, the BB's EV in bb of folding and of calling against `push`.
 
@@ -227,7 +240,7 @@ def bb_action_values(
     total = weight.sum(axis=0)
     with np.errstate(invalid="ignore", divide="ignore"):
         call = (weight * -showdown).sum(axis=0) / total
-    return np.full(169, -BB_FOLD), call
+    return np.full(169, -fold_payoffs(stack, ante)[1]), call
 
 
 # --- Gate D comparison ----------------------------------------------------------------

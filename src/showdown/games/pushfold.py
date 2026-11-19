@@ -28,6 +28,15 @@ BB_FOLD = 1.0
 """SB's payoff when the BB folds to the jam."""
 
 
+def fold_payoffs(stack: float, ante: float = 0.0) -> tuple[float, float]:
+    """(the SB's payoff when it folds, the SB's payoff when the BB folds to the jam), in bb.
+
+    Each player posts `ante` as well as its blind (DECISIONS 48), and no one loses more
+    than its stack. With no ante these are SB_FOLD and BB_FOLD.
+    """
+    return -min(-SB_FOLD + ante, stack), min(BB_FOLD + ante, stack)
+
+
 @dataclass(frozen=True, eq=False)
 class _Table:
     """Per-game constants shared by every state."""
@@ -36,6 +45,8 @@ class _Table:
     showdown: np.ndarray
     """[i, j]: SB's net payoff on a call, S·(2E − 1)."""
     outcomes: tuple[tuple[int, float], ...]
+    sb_fold: float = SB_FOLD
+    bb_fold: float = BB_FOLD
 
 
 @dataclass(frozen=True)
@@ -65,9 +76,9 @@ class PushFoldState:
 
     def returns(self) -> tuple[float, float]:
         if self.history == (FOLD,):
-            u = SB_FOLD
+            u = self.table.sb_fold
         elif self.history == (ALL_IN, FOLD):
-            u = BB_FOLD
+            u = self.table.bb_fold
         else:
             u = float(self.table.showdown[divmod(self.deal, 169)])
         return (u, -u)
@@ -78,11 +89,12 @@ class PushFoldState:
 
 
 class PushFoldGame:
-    """Push/fold at effective stack `stack` bb, with payoffs from `matrix`."""
+    """Push/fold at effective stack `stack` bb, with payoffs from `matrix` and an optional
+    ante per player (DECISIONS 48)."""
 
     name = "pushfold"
 
-    def __init__(self, stack: float, matrix: PreflopMatrix) -> None:
+    def __init__(self, stack: float, matrix: PreflopMatrix, ante: float = 0.0) -> None:
         if stack < 1:
             raise ValueError("the effective stack must be at least the 1 bb big blind")
         weights = matrix.pair_counts.astype(np.int64)
@@ -92,7 +104,10 @@ class PushFoldGame:
         )
         self.stack = float(stack)
         self.matrix = matrix
-        self._table = _Table(self.stack, self.stack * (2 * matrix.equity - 1), outcomes)
+        self.ante = float(ante)
+        sb_fold, bb_fold = fold_payoffs(self.stack, self.ante)
+        showdown = self.stack * (2 * matrix.equity - 1)
+        self._table = _Table(self.stack, showdown, outcomes, sb_fold, bb_fold)
 
     def initial_state(self) -> PushFoldState:
         return PushFoldState(self._table)

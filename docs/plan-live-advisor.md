@@ -511,6 +511,15 @@ uses until this is built.
     - The same lead now leaves 42.2 combos on the turn.
     - Gate R's third-pot river line now goes all-in.
   - **Playstyle marking** goes to step 5 (Ian's picks above).
+- **Push/fold with a 10% ante, for the site's chart (DECISIONS 48, Gate PA
+  PASS, 2026-11-19).**
+  - `data/pushfold_ante10.json` is solved at 1–20 bb, with the worst
+    exploitability 3.77e-6 bb.
+  - It agrees with HoldemResources' "Ante 10%" chart on every compared class.
+  - Ante 0 reproduces `data/pushfold.json` byte for byte.
+  - DECISIONS 48 took the number that DECISIONS 47 had pointed at the preflop
+    re-solve. The re-solve (step 4) and the opponent model (step 5) now take
+    the next free numbers.
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table;

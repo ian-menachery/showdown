@@ -24,6 +24,11 @@ SHA256 = {
     "hrc/raw/holdemresources_hu_call.csv": (
         "fa99898839ca9da23bb6193bdfcb873632fecc95b34079b79ff27670426682d3"
     ),
+    # HoldemResources' heads-up Nash page, saved 2026-11-19 for its "Ante 10%" chart
+    # (DECISIONS 48): curl -s -A "Mozilla/5.0" -o <this path> https://www.holdemresources.net/hune
+    "holdemresources/hune.html": (
+        "432658557afbb34c97db823daeb627cfa5d7e316ba29ccbdece6ff7607196d87"
+    ),
     "b-inary/heads_up_pre_flop_equity.bin": (
         "006404b36d257fc9455da0d0f0ab89aef3e80ece56c8f3e770bad926cfe5ec8a"
     ),

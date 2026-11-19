@@ -1156,3 +1156,51 @@ after its turn lead weighs 42.2 combos at Ian's turn node, where it was 1.9.
 ```
 .venv\Scripts\python -m pytest tests/test_gate_v.py -k "bar5 or off_tree" -s
 ```
+
+## Gate PA: heads-up push/fold with a 10% ante: PASS (2026-11-19)
+
+Evidence:
+- `tests/test_gate_pa.py` (fast suite): bars 1, 4 and 5;
+- `tests/test_gate_pa_slow.py` (`py gate.py --full`): bar 3, and 10 bb
+  re-solved from scratch with and without the ante.
+
+The bars were pre-registered in DECISIONS 48 (commit 2d95739) before any code.
+The amendment capping both fold payoffs at the stack was added while coding,
+before any solve. Every bar passed on the first run.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Exploitability, ante 0.1 | worst 3.77e-6 bb (14 bb); 7.99e-7 at 1 bb | ≤ 1e-5 at every depth, 1–20 bb | PASS |
+| 2. Ante 0 reproduces today | all 20 depths re-solved with `--ante 0`: the file is byte-identical to `data/pushfold.json` (`cmp`) | exact | PASS |
+| 3. HoldemResources "Ante 10%" | 100% of compared classes agree at every depth, pusher and caller; no disagreements; at most 9 exclusions at a depth (the caller at 4 bb) | ≥ 95% per depth; > 17 exclusions is a finding | PASS |
+| 4. Closed forms with the ante | tree value and exploitability equal the closed forms at 1 and 6 bb, on random and pure strategies; fold EVs −0.6 (SB) and −1.1 (BB) at 10 bb | to 1e-12 | PASS |
+| 5. The export | `data/pushfold_ante10.json`: `data/pushfold.json`'s format plus `"ante": 0.1`; `load` reads 0 for files without it; stored exploitability and value equal a fresh tree's at 1, 10 and 20 bb | exact, 1e-12 | PASS |
+
+**The solve.** `cfr_plus`, 1,000 iterations per depth, as Gate D:
+
+| Stack | Exploitability | SB value | SB jams | BB calls | (no ante: jams, calls) |
+|---|---|---|---|---|---|
+| 1 | 7.99e-7 | +0.00000 | 100.0% | 100.0% | 100.0%, 100.0% |
+| 5 | 1.90e-6 | +0.05513 | 73.8% | 67.7% | 71.5%, 62.1% |
+| 10 | 2.39e-6 | −0.04935 | 61.7% | 41.2% | 58.3%, 37.4% |
+| 15 | 3.75e-6 | −0.14475 | 50.2% | 30.7% | 45.7%, 28.5% |
+| 20 | 3.25e-6 | −0.20931 | 42.9% | 24.1% | 40.1%, 21.7% |
+
+The ante solve took 3,451 s and the ante-0 re-solve 1,119 s, one after the other.
+
+**Calibration of bar 3's parser** (not a bar). The same parser and rule, run on
+the page's "No Ante" tab against Gate D's `data/pushfold.json`, agree at 99.4%
+or more at every depth. The three disagreements are 53s at 4 bb, 43s at 8 bb
+and 84s at 9 bb, all pusher cells near a chart boundary. So the parser reads the
+page correctly, and a perfect match on the ante tab is not the parser hiding
+misses.
+
+**Conventions.** The page does not say how it counts the ante. Its chart agrees
+with ours on every compared class, which suggests the same convention: each
+player posts 0.1 bb, and S is the stack before the blinds and antes.
+
+**Rerun:**
+```
+showdown pushfold build --ante 0.1 --out data/pushfold_ante10.json
+.venv\Scripts\python -m pytest tests/test_gate_pa.py tests/test_gate_pa_slow.py -m "slow or not slow" -s
+```

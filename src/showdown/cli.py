@@ -185,10 +185,12 @@ def _pushfold_build(args: argparse.Namespace) -> int:
         raise SystemExit("--iterations must be at least 1")
     start = time.perf_counter()
     solution = pushfold.solve_all(
-        pushfold.DEPTHS, args.iterations, args.matrix, workers=args.workers
+        pushfold.DEPTHS, args.iterations, args.matrix, workers=args.workers, ante=args.ante
     )
     solution.save(args.out)
-    print(f"cfr+, {args.iterations} iterations per depth, payoffs {args.matrix}")
+    print(
+        f"cfr+, {args.iterations} iterations per depth, payoffs {args.matrix}, ante {args.ante:g}"
+    )
     print(f"{'stack':>6}  {'exploitability':>14}  {'SB value':>9}  {'SB jams':>8}  {'BB calls':>8}")
     for d in solution.depths:
         print(
@@ -645,6 +647,9 @@ def build_parser() -> argparse.ArgumentParser:
     pf_build.add_argument("--workers", type=int, help="processes (default: one per depth)")
     pf_build.add_argument("--matrix", default=pushfold.DEFAULT_MATRIX)
     pf_build.add_argument("--out", default=pushfold.DEFAULT_SOLUTION)
+    pf_build.add_argument(
+        "--ante", type=float, default=0.0, help="per player, in bb (DECISIONS 48)"
+    )
     pf_build.set_defaults(handler=_pushfold_build)
     pf_chart = pf_commands.add_parser("chart", help="13x13 SB and BB charts at one depth")
     pf_chart.add_argument("stack", type=float, help="effective stack in bb, before blinds")

@@ -2670,3 +2670,13 @@ iterations at each of 1 to 20 bb, average policy, the exact matrix.
 - 3+ player push/fold and ICM, which need their own decision.
 - Calling it "GTO" on the site.
 - Moving any bar after results are seen, except by a dated amendment.
+
+**Amendment to DECISIONS 48 (2026-11-19, while coding, before any solve).**
+No one loses more than their stack.
+- At 1 bb with the 0.1 ante, the BB cannot post a 1 bb blind on top of its
+  ante. Folding to the jam costs it its whole 1 bb, not 1.1.
+- So both fold payoffs are capped at S: the SB's loss is min(0.6, S), and the
+  BB's is min(1.1, S).
+- This changes only the 1 bb game.
+- With no ante the cap never binds, since S is at least 1. So bar 2 still
+  compares like with like.
