@@ -520,6 +520,47 @@ uses until this is built.
   - DECISIONS 48 took the number that DECISIONS 47 had pointed at the preflop
     re-solve. The re-solve (step 4) and the opponent model (step 5) now take
     the next free numbers.
+- **Step 4 is planned: the preflop re-solve, Gate Q pre-registered**
+  (DECISIONS 49, SCOPE A10, 2026-11-19). Nothing is built or solved yet.
+  - **The tree:** the BB gets a second 3-bet size, 4× the open (to 10), next
+    to 3× (to 7.5). The 2.5 open and the SB's jam-only 4-bet stay.
+  - **R is fitted** per pot (the open, either 3-bet) at 25, 50 and 100 bb:
+    the BB's flop EV ÷ (pot × equity), from 20 flop solves per cell. There
+    are two measure-and-re-solve rounds, and depths in between are
+    interpolated. "Depends on R" compares R ± 0.05.
+  - **The switch:** preflop advice, postflop ranges, live solves and the
+    library all move to the new model. The old one stays as
+    `data/preflop_model_v1.json` for the old gates' tests.
+  - **Gate Q's seven bars:** exploitability, closed-form payoffs, the BB's
+    jam over the open at most 10% and its 3-bets at least 5% at 50 bb, R
+    within 0.02 between rounds, a new hand-written advisor fixture, live
+    solves legal, and live latency (turn p95 ≤ 3 s, river ≤ 1 s).
+  - **Compute,** only when Ian says go: roughly 6 h of flop solves and 3 h
+    of preflop solves.
+- **Step 5 is planned: the opponent model, Gate O pre-registered**
+  (DECISIONS 50, SCOPE A11, 2026-11-19). It builds after Gate Q passes.
+  - **Reads** are ratios to the model, over each friend's logged chances,
+    for seven tendencies:
+    - SB open, BB defend and BB 3-bet;
+    - push/fold jam and call;
+    - fold to a bet, and bet when checked to.
+
+    Each is shrunk toward the model, or toward Ian's label, with k fitted
+    from the PHH players.
+  - **Labels** (Nit, TAG, LAG, Station; overlay buttons) take their ratios
+    from four PHH player groups split by VPIP and aggression.
+  - **Applied as:**
+    - preflop and push/fold cutoffs in the model's order;
+    - tilted stopgap curves on the flop;
+    - villain locks that scale the solver's own mix in the live turn and
+      river solves, which needs a `read` option in `streets.rs`.
+  - **The overlay:** the exploit is the headline, with the base answer under
+    it, the gain, the risk if the read is wrong, and who and how sure.
+  - **Gate O's six bars:** counts from a hand-counted fixture, shrinkage and
+    k by hand, locks hold, push/fold simulations (gain and risk within 3 SE
+    of the exact prediction, either way), preflop latency ≤ 300 ms, and live
+    latency (base: turn ≤ 3 s, river ≤ 1 s; exploit from the card: turn
+    ≤ 6 s, river ≤ 2 s).
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table;
