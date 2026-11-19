@@ -109,14 +109,16 @@ for k in range(int(sys.argv[2])):
         hh = HandHistory.loads(full_history(state).dumps())
         frames = list(frames_from_history(hh, "sb" if k % 2 == 0 else "bb"))
     for frame in frames:
-        times += [e.elapsed_ms for e in tracker.feed(frame) if e.kind == "advice"]
+        events = tracker.feed(frame)
+        times += [e.elapsed_ms for e in events if e.kind == "advice" and not e.live_solve]
 print(json.dumps(times))
 """
 
 
 def test_bar5_latency_without_coverage_tracing() -> None:
     """Frame to suggestion, every-change frames, the advisor's full sample count, timed in a
-    separate process without pytest-cov's tracer (DECISIONS 32's method)."""
+    separate process without pytest-cov's tracer (DECISIONS 32's method). Equity-helper
+    answers only: live solves have Gate V bar 4 (DECISIONS 47)."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("COV_CORE")}
     out = subprocess.run(
         [sys.executable, "-c", _LATENCY_SCRIPT, str(SEED), "60"],

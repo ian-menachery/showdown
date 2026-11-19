@@ -107,8 +107,9 @@ def test_frames_round_trip_as_json() -> None:
         assert TableState.from_json(frame.to_json()) == frame
 
 
-def test_bar6_overlay_shows_advice_and_no_suggestion(advisor) -> None:
-    tracker = Tracker(advisor, None)
+def test_bar6_overlay_shows_advice_and_no_suggestion() -> None:
+    # Live solves off (DECISIONS 47): this bar tests the window, so its recorded text stays.
+    tracker = Tracker(Advisor.load(samples=500, live_solves=False), None)
     events = [
         e for f in frames(HANDS / "hu_short_stack_river.phh", "sb", False) for e in tracker.feed(f)
     ]

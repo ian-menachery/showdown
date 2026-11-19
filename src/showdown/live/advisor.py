@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -26,7 +26,7 @@ from showdown.equity.montecarlo import monte_carlo
 from showdown.equity.ranges import parse_range
 from showdown.games.preflop import OPEN_TO, THREEBET_TO
 from showdown.hh.grade import depth_for
-from showdown.live import jam, narrow
+from showdown.live import jam, narrow, solve
 from showdown.live.spot import DECISIONS, Spot, SpotError
 
 CALL_MARGIN = 0.05
@@ -103,6 +103,7 @@ class Advisor:
         samples: int = 20_000,
         seed: int = 0,
         log_path: str | Path | None = None,
+        live_solves: bool = True,
     ) -> None:
         if ranges not in RANGES:
             raise ValueError("ranges must be model or fixed")
@@ -119,6 +120,8 @@ class Advisor:
         self._model_ranges: dict[tuple[str, str, float], VillainRange | None] = {}
         self._range_model: narrow.RangeModel | None | bool = False
         """The stopgap range model (DECISIONS 46), loaded on first use; None if absent."""
+        self.solves = solve.LiveSolves(self) if live_solves else None
+        """Live turn and river solves (DECISIONS 47); None when switched off."""
 
     @classmethod
     def load(cls, model_path: str | Path = pm.DEFAULT_MODEL, **kwargs) -> Advisor:
@@ -184,9 +187,7 @@ class Advisor:
         base = self._assumed_villain(spot)
         if spot.street == "preflop" or not spot.history:
             return base
-        if self._range_model is False:
-            self._range_model = narrow.RangeModel.load()
-        if self._range_model is None:
+        if self.range_model() is None:
             return base
         weights, used, missing = narrow.narrow(
             self._range_model,
@@ -206,6 +207,41 @@ class Advisor:
         if missing:
             label += f"; {missing} move{'s' if missing != 1 else ''} with no curve"
         return VillainRange(base.combos, weights, label)
+
+    def range_model(self) -> narrow.RangeModel | None:
+        if self._range_model is False:
+            self._range_model = narrow.RangeModel.load()
+        return self._range_model
+
+    def advice_range(self, spot: Spot) -> VillainRange:
+        """The villain's range the advice uses: the solved one where a live solve answers."""
+        if self.solves is not None:
+            try:
+                return self._solved_range(spot, self.solves.answer(spot))
+            except solve.NoSolve:
+                pass
+        return self.villain(spot)
+
+    def prefetch(self, spot: Spot) -> None:
+        """Start the live solve for this street, if one will answer it (DECISIONS 47)."""
+        if self.solves is not None:
+            self.solves.prefetch(spot)
+
+    def solving(self, spot: Spot) -> bool:
+        """True while a live solve that answers this spot is still running or not started."""
+        return self.solves is not None and self.solves.pending(spot)
+
+    def solve_started(self, spot: Spot) -> bool:
+        return self.solves is not None and self.solves.started(spot)
+
+    def _solved_range(self, spot: Spot, answer: solve.Answer) -> VillainRange:
+        keep = [i for i, w in enumerate(answer.villain) if w > 0]
+        base = self._assumed_villain(spot).label
+        return VillainRange(
+            tuple(ALL_COMBOS[i] for i in keep),
+            tuple(float(answer.villain[i]) for i in keep),
+            f"{base}; narrowed by {answer.narrowed}",
+        )
 
     def _assumed_villain(self, spot: Spot) -> VillainRange:
         top = DEFAULT_TOP[(spot.pot_type, spot.villain_seat)]
@@ -357,6 +393,30 @@ class Advisor:
     # --- postflop ------------------------------------------------------------------
 
     def _postflop(self, spot: Spot) -> Suggestion:
+        """A live solve on the turn and river where one answers (DECISIONS 47); otherwise, and
+        on the flop, the equity helper against the stopgap's range."""
+        if self.solves is None or spot.street not in ("turn", "river") or not spot.history:
+            return self._equity(spot)
+        try:
+            answer = self.solves.answer(spot)
+        except solve.NoSolve as why:
+            helper = self._equity(spot)
+            return replace(helper, source=f"{helper.source}; no live solve: {why}")
+        villain = self._solved_range(spot, answer)
+        equity = range_vs_range([spot.hero], villain.combos, spot.board, villain.weights).equity
+        return Suggestion(
+            street=spot.street,
+            action=answer.action,
+            size_bb=answer.size_bb,
+            equity=equity,
+            se=0.0,
+            mix=answer.mix,
+            notes=answer.notes,
+            source=answer.source,
+            villain_range=villain.label,
+        )
+
+    def _equity(self, spot: Spot) -> Suggestion:
         villain = self.villain(spot)
         if spot.street == "flop":
             estimate = monte_carlo(

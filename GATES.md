@@ -1022,3 +1022,99 @@ showdown postflop fit-ranges
 showdown replay tests/fixtures/live/hands/hu_river_shove.phh --hero sb --trace
 .venv\Scripts\python -m pytest tests/test_gate_n.py tests/test_gate_r.py tests/test_rangefit.py -s
 ```
+
+## Gate V: live turn and river solves in the advice: PASS (2026-11-18)
+
+Evidence:
+- `tests/test_gate_v.py` (bar 1 and the rules behind it, fast suite);
+- `tests/test_gate_v_slow.py` (bars 2 to 4, `py gate.py --full`).
+
+The pieces, the four bars and the changes to older tests were pre-registered in
+DECISIONS 47 (commit 6c5123e) before any code. Ian picked them on 2026-11-18.
+- **The code:** `live/solve.py`. At a turn or river decision in a replayed or
+  tracked hand, the streets binary solves the street from the hand's real pot
+  and stacks. The tracker starts the solve on the frame that shows the card.
+- **The ranges:** the model's at the nearest depth. The stopgap's curves narrow
+  the flop; the turn solve's per-hand frequencies narrow the turn. The villain's
+  range at the node is narrowed by the solve's own frequencies for its moves.
+- **The advice:** Ian's action is his hand's most likely action at the node,
+  with the mix. Off-tree sizes map to the nearest T1 size, with a note.
+- **The binaries are unchanged:** streets ef5ab1cf…, flop c45af752….
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Gate R's two river hands | Third-pot bet: solved. The BB's range is 929 combos, weight 0.38, fingerprint 5690c46d7f83; CALL (call 55%, all-in 45%), equity 73.6%. Shove: solved. 658 combos, weight 0.98, fingerprint 7fbe701f944f; CALL (100%), equity 45.2%. `--trace` prints both | different ranges, both shown | PASS |
+| 2. Legal over 500 hands | 216 solved suggestions (128 turn, 88 river), all legal: check 72, all-in 69, call 29, fold 25, bet 21 | all legal, at least 100 | PASS |
+| 3. The bridge's own strategy | the first 40 solved answers (hands 14 to 51): every mix equals a second bridge run's row to 1e-6; every action is that row's most likely; the legality rule changed none | to 1e-6 | PASS |
+| 4. Latency from the card | turn: 70 decisions, median 0.27 s, 95th percentile 1.18 s, max 1.74 s. River: 51, median 0.05 s, 95th percentile 0.15 s, max 0.18 s | turn ≤ 3 s, river ≤ 1 s, at least 30 each | PASS |
+
+**Reported, not gated:**
+- **Most random hands are not solved.** Over bar 2's 500 hands, 216 of 1,211
+  turn and river decisions were solved. The fallbacks:
+  - 956: the preflop line is not an open and a call, or a 3-bet and a call
+    (the simulator limps, min-raises and 4-bets at random);
+  - 16: the model almost never reaches the pot;
+  - 15: the line left the solved tree (8 turn, 7 river);
+  - 8: a range weighs under 1 combo at the river.
+
+  In bar 4, 14 of the 121 timed decisions were fallbacks after a solve
+  started. They count at their full time.
+- **Off-tree sizes:** 55 of the 216 solved answers carry a mapping note. The
+  legality rule changed one action.
+- **Solve times** in bar 2's replays: turn median 0.11 s, max 2.20 s; river
+  median 0.04 s, max 0.12 s.
+- **No raise among the 216 solved actions.** The random stacks of 10 to 100 bb
+  leave little behind, so T1's all-in threshold turns most raises into all-ins.
+- **How the advice changed from the stopgap.** These are Ian's turn and river
+  decisions in Gate T's 200 hands and the 3 saved hands: 226 decisions, 57
+  solved, 17 changed.
+
+  | Street | Changes |
+  |---|---|
+  | turn | check → all-in 4; bet → check 2; call → raise 2; all-in → check 1; bet → all-in 1; call → fold 1; fold → call 1 |
+  | river | check → all-in 4; bet → check 1 |
+
+  The saved hands:
+  - `hu_full_hand.phh` now raises the turn to 13.81 bb (call 36%, raise 64%),
+    where the 60% rule called;
+  - its river call is unchanged;
+  - `hu_short_stack_river.phh` still goes all-in for 2.5 bb.
+- **The older gates still pass:**
+  - Gate R bar 3: all 3,099 decisions legal;
+  - Gate T bars 1 to 3;
+  - Gate T bar 5, equity-helper answers only: 151 suggestions, 95th
+    percentile 259 ms (170 ms in Gate N), max 349 ms, bar 300 ms.
+
+**A finding for Ian: solver narrowing has no floor.** In `hu_full_hand.phh` the
+solved BB checks the turn 98.9% of the time after check-calling the flop.
+- Its real turn lead leaves 1.9 combos of weight, and 0.38 by the river.
+- The advice still comes out, but it plays against the few hands the solver
+  would lead with.
+- The stopgap keeps a floor of 0.10 because friends mix and misplay. DECISIONS
+  47 has none for solved streets. Adding one needs an amendment.
+
+**How it got here.** The evidence run is the first and only one; no code was
+changed after it.
+- During the build, two test expectations were wrong and were fixed before
+  that run:
+  - a slice one move short;
+  - a raise facing a node with an all-in, which maps to the all-in by
+    DECISIONS 47's rule.
+- The trace keeps its label "range into the equity calculation". The advice
+  shows equity against that range.
+- No bar was moved.
+
+What it means for play:
+- **On the turn and river of an open-call or 3-bet-call pot, the advice now
+  comes from a solve.** That includes raises, all-ins and bluffs, and it
+  arrives about a second after the turn card and a tenth of a second after the
+  river.
+- **The flop is still the equity helper** against the stopgap's range, until
+  the flop library (Gate L).
+- **Off-strategy lines from friends narrow hard.** See the finding above.
+
+```
+showdown replay tests/fixtures/live/hands/hu_full_hand.phh --hero sb --trace
+showdown live --replay tests/fixtures/live/hands/hu_river_shove.phh --hero sb
+.venv\Scripts\python -m pytest tests/test_gate_v.py tests/test_gate_v_slow.py -m "slow or not slow" -s
+```

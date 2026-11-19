@@ -12,6 +12,7 @@ import copy
 import time
 import warnings
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
@@ -22,7 +23,7 @@ from showdown.equity.cards import cards_str, make_combo, parse_cards
 from showdown.hh.replay import card_id
 from showdown.live.advisor import Advisor, Suggestion
 from showdown.live.hand import SEATS, Decision, HandReplay, _apply, _code, _decision
-from showdown.live.spot import SpotError
+from showdown.live.spot import Spot, SpotError
 from showdown.live.table import TableState
 
 AUTOMATIONS = (
@@ -42,11 +43,15 @@ HANDS_DIR = Path("data/live/hands")
 @dataclass(frozen=True)
 class Event:
     kind: str
-    """advice, no suggestion, written, not written, or error."""
+    """advice, solving, no suggestion, written, not written, or error."""
     text: str
     decision: Decision | None = None
     suggestion: Suggestion | None = None
     elapsed_ms: float = 0.0
+    since_card_ms: float | None = None
+    """Turn and river advice: from feeding the frame that first showed the card (DECISIONS 47)."""
+    live_solve: bool = False
+    """A live solve was started for this decision's street."""
 
 
 class TrackError(ValueError):
@@ -92,6 +97,8 @@ class _Hand:
         self.replay.holes[SEATS[self.hero]] = make_combo(*parse_cards(hero_cards))
         self.line, self.history, self.unseen = "", [], 0
         self.hero_cards = hero_cards
+        self.card_at: dict[str, float] = {}
+        """perf_counter when the frame that first showed each street's card was fed."""
 
     # --- matching a frame ---------------------------------------------------------------
 
@@ -151,6 +158,16 @@ class _Hand:
             if act[0] == "unseen":
                 self.unseen += 1
         _advance(self.state, t)
+
+    def hero_spot(self) -> Spot:
+        """Ian's side of the hand now, enough to start a live solve (DECISIONS 47)."""
+        return Spot(
+            hero=self.replay.holes[SEATS[self.hero]],
+            seat=SEATS[self.hero],
+            effective_bb=min(self.replay.starting_bb.values()),
+            board=_board(self.state),
+            history=tuple(str(m) for m in self.history),
+        )
 
     def decision(self) -> Decision:
         return _decision(
@@ -289,9 +306,17 @@ def _do(state, act: tuple) -> None:
 class Tracker:
     """Feed it frames; it returns what happened on each."""
 
-    def __init__(self, advisor: Advisor, hands_dir: Path | None = HANDS_DIR) -> None:
+    def __init__(
+        self,
+        advisor: Advisor,
+        hands_dir: Path | None = HANDS_DIR,
+        on_solving: Callable[[Event], None] | None = None,
+    ) -> None:
         self.advisor = advisor
         self.hands_dir = hands_dir
+        self.on_solving = on_solving
+        """Called with the "solving…" event before waiting on a live solve, so the overlay
+        can show it at once (DECISIONS 47)."""
         self.hand: _Hand | None = None
         self.last: TableState | None = None
         self.written = 0
@@ -322,6 +347,7 @@ class Tracker:
             if frame.to_act == frame.hero and not frame.ended:
                 events.append(Event("no suggestion", f"no suggestion: {hand.ignored}"))
             return events
+        cards = len(_board(hand.state))
         try:
             hand.apply(hand.explain(frame), frame)
         except TrackError as error:
@@ -330,15 +356,38 @@ class Tracker:
             return events
         if frame.ended:
             events.append(self._write(hand))
-        elif frame.to_act == frame.hero and hand.state.actor_index == hand.hero:
+            return events
+        street = {4: "turn", 5: "river"}.get(len(_board(hand.state)))
+        if street and len(_board(hand.state)) > cards:
+            hand.card_at[street] = start
+            if hand.state.actor_index is not None:
+                self.advisor.prefetch(hand.hero_spot())  # solve while the table plays on
+        if frame.to_act == frame.hero and hand.state.actor_index == hand.hero:
             decision = hand.decision()
             try:
-                suggestion = self.advisor.suggest(decision.spot())
+                spot = decision.spot()
+                if self.advisor.solving(spot):
+                    waiting = Event("solving", "solving…", decision)
+                    events.append(waiting)
+                    if self.on_solving is not None:
+                        self.on_solving(waiting)
+                suggestion = self.advisor.suggest(spot)
             except SpotError as error:
                 events.append(Event("no suggestion", f"no suggestion: {error}", decision))
             else:
-                elapsed = (time.perf_counter() - start) * 1000
-                events.append(Event("advice", "", decision, suggestion, elapsed))
+                now = time.perf_counter()
+                since = (now - hand.card_at[street]) * 1000 if street in hand.card_at else None
+                events.append(
+                    Event(
+                        "advice",
+                        "",
+                        decision,
+                        suggestion,
+                        (now - start) * 1000,
+                        since,
+                        self.advisor.solve_started(spot),
+                    )
+                )
         return events
 
     def _write(self, hand: _Hand) -> Event:

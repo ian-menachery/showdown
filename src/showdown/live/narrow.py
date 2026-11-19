@@ -207,14 +207,20 @@ def narrow(
     history: tuple[str, ...],
     villain_seat: str,
     pot_type: str,
+    streets: tuple[str, ...] | None = None,
 ) -> tuple[tuple[float, ...], int, int]:
-    """(new weights, villain moves used, villain moves with no curve)."""
+    """(new weights, villain moves used, villain moves with no curve).
+
+    With `streets`, only moves on those streets narrow (DECISIONS 47 narrows street by street).
+    """
     w = np.zeros(len(ALL_COMBOS))
     idx = [INDEX[c] for c in combos]
     w[idx] = 1.0 if weights is None else np.array(weights, dtype=float)
     used = missing = 0
     position = POSITION[villain_seat]
     for move in villain_moves(history, villain_seat):
+        if streets is not None and move.street not in streets:
+            continue
         shape = model.shape(pot_type, position, move)
         if shape is None:
             missing += 1

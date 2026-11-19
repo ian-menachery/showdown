@@ -278,7 +278,7 @@ Measured with the model's ranges, which are wider than S4's top-% ones:
 
 Each flop's file is about 9 KB gzipped.
 
-### Step 3c (2026-11-18): live solves in the advice. Ian's picks are in; not built yet
+### Step 3c (2026-11-18): live solves in the advice. Built; Gate V PASS (DECISIONS 47)
 
 Gate S2c showed live solves take about 1 s on the turn and 0.05 s on the
 river. The stopgap range model (DECISIONS 46, Gate N) is what the advice
@@ -318,15 +318,18 @@ uses until this is built.
      strategy for Ian's hand at that node, to 1e-6;
   4. latency from the frame that shows the card to the answer: turn p95
      ≤ 3 s, river p95 ≤ 1 s, by DECISIONS 32's method.
-- **Added by Ian: marking villains by playstyle** (TAG, LAG, and so on).
-  Its design is still open:
-  - which labels there are;
-  - how a label changes the villain's preflop range and its postflop play,
-    for example by node locks, as Gate X does;
-  - how it relates to step 5's tracked tendencies.
+- **Added by Ian: marking villains by playstyle.** His picks (2026-11-18,
+  DECISIONS 47) put it in **step 5, not 3c**:
+  - **labels:** Nit, TAG, LAG and Station; an unmarked villain keeps the
+    model's ranges;
+  - **effects:** all four offered: the label shown and logged with each hand,
+    a preflop range width per label, node locks in the live solves, and tilted
+    stopgap curves;
+  - **input:** buttons on the overlay.
 
   It is a manual version of "player typing from the hand log", which Ian had
-  parked. That needs its own decision.
+  parked. Step 5's entry designs and gates it. Locks in live solves need lock
+  support in `streets.rs`.
 
 ### Later, each needing its own amendment first
 - **A self-hosted table for friends (Ian ticked this).** It means serving
@@ -485,9 +488,25 @@ uses until this is built.
     170 ms at the 95th percentile.
   - **Still from the 60% rule:** postflop actions, so it never raises or
     bluffs.
-- **Step 3c is planned** (Phase 13, "Step 3c"). Ian picked its pieces and
-  its four bars on 2026-11-18, and added marking villains by playstyle. Next
-  come its DECISIONS entry, then the build.
+- **Step 3c is built: Gate V PASS** (DECISIONS 47, 2026-11-18).
+  - **What it does.** `live/solve.py` solves the turn and river live, from the
+    hand's real pot and stacks. The tracker starts the solve on the frame that
+    shows the card, and the overlay shows "solving…" until it answers.
+  - **The ranges:** the model's, narrowed on the flop by the stopgap's curves
+    and on the turn by the turn solve's own frequencies.
+  - **The advice:** Ian's action is his hand's most likely solved action, with
+    the mix. Off-tree sizes map to the nearest T1 size, with a note.
+  - **Where it answers:** open-call and 3-bet-call pots the model reaches.
+    Elsewhere the equity helper answers, labelled.
+  - **The bars:**
+    - Gate R's two river lines reach the advice with different solved ranges;
+    - all 216 solved suggestions over 500 simulated hands are legal;
+    - the mix equals the bridge's own row to 1e-6 on 40 spots;
+    - latency from the card: turn p95 1.18 s, river 0.15 s.
+  - **A finding for Ian:** solver narrowing has no floor. A BB lead the solver
+    almost never makes leaves 1.9 combos of weight on the turn and 0.38 on the
+    river. A floor like the stopgap's 0.10 needs an amendment.
+  - **Playstyle marking** goes to step 5 (Ian's picks above).
 - **Still open:**
   - S1, which waits for Ian's screenshots;
   - D5, the self-hosted table;

@@ -494,7 +494,7 @@ def _replay(args: argparse.Namespace) -> int:
             print("    advice:")
             _print_suggestion(s, "      ")
         if args.trace and d.street != "preflop":
-            v = advisor.villain(spot)
+            v = advisor.advice_range(spot)  # the solved range where a live solve answers
             weights = v.weights or (1.0,) * len(v.combos)
             digest = hashlib.sha256(repr((v.combos, weights)).encode()).hexdigest()[:12]
             print(f"    trace: history given to the advisor: {len(spot.history)} moves")
@@ -527,17 +527,24 @@ def _live(args: argparse.Namespace) -> int:
     else:
         lines = path.read_text(encoding="utf-8").splitlines()
         frames = [TableState.from_json(line) for line in lines if line.strip()]
-    tracker = Tracker(Advisor.load(), HANDS_DIR if args.save else None)
     overlay = None if args.no_window else Overlay()
+
+    def show(event) -> None:
+        head, details, state = event_lines(event)
+        print(f"[{event.kind}] {head}" + (f"  ({state})" if state else ""))
+        for line in details:
+            print(f"    {line}")
+        if overlay is not None and event.kind == "solving":
+            overlay.show(event)  # until the live solve answers (DECISIONS 47)
+        elif overlay is not None and event.kind in ("advice", "no suggestion", "error"):
+            overlay.show(event)
+            time.sleep(args.delay)
+
+    tracker = Tracker(Advisor.load(), HANDS_DIR if args.save else None, on_solving=show)
     for frame in frames:
         for event in tracker.feed(frame):
-            head, details, state = event_lines(event)
-            print(f"[{event.kind}] {head}" + (f"  ({state})" if state else ""))
-            for line in details:
-                print(f"    {line}")
-            if overlay is not None and event.kind in ("advice", "no suggestion", "error"):
-                overlay.show(event)
-                time.sleep(args.delay)
+            if event.kind != "solving":  # shown as it happened
+                show(event)
     if overlay is not None:
         print("close the overlay window to finish")
         overlay.wait()
