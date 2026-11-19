@@ -2570,3 +2570,36 @@ answers get bar 4.
 - changing either bridge binary;
 - reading or writing `data/library/`, a library run, or any download;
 - playstyle code (step 5).
+
+**Amendment (2026-11-19): a floor on solver narrowing; Gate V bar 5
+pre-registered.** Ian chose this after Gate V passed. Its reading showed the
+problem. In `hu_full_hand.phh` the solved BB checks the turn 98.9% of the time,
+so its real turn lead left 1.9 combos of weight, and 0.38 by the river.
+- **The rule.** On a solved street, each move multiplies the mover's hands by
+  max(the solver's frequency for that move, the floor), where it was the
+  frequency alone.
+- **The floor** is DECISIONS 46's: 0.25 for a check, so traps keep a quarter,
+  and 0.10 for any other move.
+- **Both players get it:**
+  - the villain, in its range at Ian's node and in the next street's solve;
+  - Ian, in his own range in the next street's solve.
+- **Only hands in the node's range get the floor.** Hands the solver does not
+  report (no weight, or touching the board) stay at 0.
+- **Ian's action on the current street does not change:** it still comes from
+  the solve as it is. An off-strategy lead can't be re-weighted inside a solve
+  without solving again.
+
+**Gate V bar 5: hand-worked floors.** At least 5 hand-built walks over small
+hand-made nodes. The multipliers and the narrowed weights equal a hand
+calculation of the rule above, to 1e-9. The walks cover:
+- a check below the 0.25 floor, and one above it;
+- a bet below the 0.10 floor;
+- a call;
+- an off-tree raise mapped to the tree;
+- both players' multipliers on one line;
+- a hand outside the node's range, which stays at 0.
+
+**What stays.** Gate V's first run stays the record for bars 1 to 4; Ian chose
+not to re-measure them. Gate R's river trace is reported again, not gated.
+
+**Rules out** changing the floors or bar 5 after its first run.
