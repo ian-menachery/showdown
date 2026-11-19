@@ -201,10 +201,11 @@ class Node:
         strategy = np.asarray(report["strategy"], dtype=float).reshape(len(actions), len(index))
         return cls(SEATS[report["player"]], tuple(actions), index, strategy)
 
-    def freq(self, a: int) -> np.ndarray:
-        """Per combo in `ALL_COMBOS` order, how often it takes action `a` here; 0 off the range."""
+    def freq(self, a: int, floor: float = 0.0) -> np.ndarray:
+        """Per combo in `ALL_COMBOS` order, how often it takes action `a` here, at least `floor`;
+        0 off the range."""
         out = np.zeros(len(ALL_COMBOS))
-        out[self.index] = self.strategy[a]
+        out[self.index] = np.maximum(self.strategy[a], floor)
         return out
 
 
@@ -225,7 +226,7 @@ class Solved:
 class Walk:
     path: tuple[str, ...]
     mult: dict[str, np.ndarray]
-    """Per seat, the product of its frequencies of its moves along the line."""
+    """Per seat, the product of its floored frequencies of its moves along the line."""
     bets: dict[str, int]
     """Each player's chips bet on the street in the tree."""
     notes: tuple[str, ...]
@@ -265,7 +266,11 @@ def _match(act: Act, node: Node, pot: int, bets: dict[str, int], street: str) ->
 
 
 def walk(solved: Solved, line: StreetLine) -> Walk:
-    """Map the street's real moves onto the solved tree, narrowing each mover's range."""
+    """Map the street's real moves onto the solved tree, narrowing each mover's range.
+
+    Each move's multiplier is max(the solver's frequency, the floor): DECISIONS 46's 0.25 for
+    a check and 0.10 otherwise (DECISIONS 47's amendment), since friends mix and misplay.
+    """
     path, bets, notes = (), {"sb": 0, "bb": 0}, []
     mult = {s: np.ones(len(ALL_COMBOS)) for s in SEATS}
     pot = solved.spec["starting_pot"]
@@ -276,8 +281,9 @@ def walk(solved: Solved, line: StreetLine) -> Walk:
         a, note = _match(act, node, pot, bets, solved.street)
         if note:
             notes.append(note)
-        mult[act.seat] = mult[act.seat] * node.freq(a)
         name, chips = node.actions[a]
+        floor = narrow.FLOORS.get(name, narrow.FLOOR)
+        mult[act.seat] = mult[act.seat] * node.freq(a, floor)
         other = "bb" if act.seat == "sb" else "sb"
         if name == "Call":
             bets[act.seat] = bets[other]

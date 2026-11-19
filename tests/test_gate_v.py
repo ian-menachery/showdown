@@ -111,8 +111,8 @@ def test_off_tree_sizes_map_to_the_nearest_tree_size() -> None:
     assert walked.path == ("Bet", "Call") and walked.bets == {"sb": 66, "bb": 66}
     (note,) = walked.notes
     assert note == "BB's turn bet to 2.5 bb (25% of the pot) solved as the tree's 66% bet"
-    assert walked.mult["bb"][[INDEX[a], INDEX[b]]].tolist() == [0, 1]
-    assert walked.mult["sb"][[INDEX[a], INDEX[b]]].tolist() == [1, 0]
+    assert walked.mult["bb"][[INDEX[a], INDEX[b]]].tolist() == [0.10, 1]  # the floor (bar 5)
+    assert walked.mult["sb"][[INDEX[a], INDEX[b]]].tolist() == [1, 0.10]
     assert walked.mult["sb"][INDEX[ALL_COMBOS[2]]] == 0  # off the range
     shove = replace(line, acts=(solve.Act("bb", "bet", 9, True, 10, 0, 0),))
     assert solve.walk(solved, shove).path == ("AllIn",)
@@ -123,6 +123,73 @@ def test_off_tree_sizes_map_to_the_nearest_tree_size() -> None:
     reraised = replace(big, acts=(*big.acts, solve.Act("sb", "raise", 200, False, 80, 0, 70)))
     with pytest.raises(solve.NoSolve, match="left the solved tree"):
         solve.walk(solved, reraised)  # facing the tree's all-in, nothing is sized
+
+
+def test_bar5_solved_streets_narrow_with_the_stopgaps_floors() -> None:
+    """DECISIONS 47's amendment: each move multiplies by max(frequency, floor), 0.25 for a
+    check and 0.10 otherwise, for both players; hands outside the node's range stay at 0."""
+    a, b, c, d = ALL_COMBOS[:4]  # d is in no node's range
+    hands = [a, b, c]
+    sized = [("Check", None), ("Bet", 50), ("AllIn", 900)]
+    facing = [("Fold", None), ("Call", None), ("Raise", 200), ("AllIn", 900)]
+    nodes = {
+        (): node("bb", sized, hands, [[0.1, 0.6, 1.0], [0.02, 0.4, 0.0], [0.88, 0.0, 0.0]]),
+        ("Check",): node("sb", sized, hands, [[0.5, 0.95, 0.0], [0.5, 0.05, 1.0], [0, 0, 0]]),
+        ("Bet",): node(
+            "sb", facing, hands, [[0.65, 0.3, 0], [0.05, 0.3, 0.9], [0, 0.4, 0.07], [0.3, 0, 0.03]]
+        ),
+        ("Check", "Bet"): node(
+            "bb", facing, hands, [[0.2, 0.5, 0.9], [0.8, 0.5, 0.0], [0, 0, 0.1], [0, 0, 0]]
+        ),
+    }
+    solved = solve.Solved("turn", {"starting_pot": 100}, nodes, {}, (), 0, 0)
+    start = np.zeros(len(ALL_COMBOS))
+    start[[INDEX[x] for x in (a, b, c, d)]] = [1.0, 0.5, 0.8, 1.0]
+    check, call5 = solve.Act("bb", "check", 0, False, 10, 0, 0), ("call", 5, False, 15, 0, 5)
+    walks = {
+        "check-check": [check, solve.Act("sb", "check", 0, False, 10, 0, 0)],
+        "check-bet-call": [
+            check,
+            solve.Act("sb", "bet", 5, False, 10, 0, 0),
+            solve.Act("bb", *call5),
+        ],
+        "bet-call": [solve.Act("bb", "bet", 5, False, 10, 0, 0), solve.Act("sb", *call5)],
+        "off-tree bet, raise": [
+            solve.Act("bb", "bet", 2.5, False, 10, 0, 0),
+            solve.Act("sb", "raise", 6, False, 12.5, 0, 2.5),
+        ],
+        "check-bet-raise": [
+            check,
+            solve.Act("sb", "bet", 5, False, 10, 0, 0),
+            solve.Act("bb", "raise", 20, False, 15, 0, 5),
+        ],
+    }
+    # By hand: max(row, floor) per move, multiplied along the line; d stays 0.
+    expected = {
+        "check-check": {"bb": [0.25, 0.6, 1.0], "sb": [0.5, 0.95, 0.25]},
+        "check-bet-call": {"bb": [0.25 * 0.8, 0.6 * 0.5, 1.0 * 0.1], "sb": [0.5, 0.1, 1.0]},
+        "bet-call": {"bb": [0.1, 0.4, 0.1], "sb": [0.1, 0.3, 0.9]},
+        "off-tree bet, raise": {"bb": [0.1, 0.4, 0.1], "sb": [0.1, 0.4, 0.1]},
+        "check-bet-raise": {"bb": [0.25 * 0.1, 0.6 * 0.1, 1.0 * 0.1], "sb": [0.5, 0.1, 1.0]},
+    }
+    paths = {"off-tree bet, raise": ("Bet", "Raise"), "check-bet-raise": ("Check", "Bet", "Raise")}
+    for name, acts in walks.items():
+        walked = solve.walk(solved, solve.StreetLine(10, 5, tuple(acts), {}))
+        assert walked.path == paths.get(name, walked.path), name
+        for seat, mult in expected[name].items():
+            got = walked.mult[seat][[INDEX[x] for x in (a, b, c, d)]]
+            assert got == pytest.approx([*mult, 0.0], abs=1e-9), (name, seat)
+            narrowed = (start * walked.mult[seat])[[INDEX[x] for x in (a, b, c, d)]]
+            by_hand = [w * m for w, m in zip((1.0, 0.5, 0.8), mult, strict=True)] + [0.0]
+            assert narrowed == pytest.approx(by_hand, abs=1e-9), (name, seat)
+    assert (
+        len(
+            solve.walk(
+                solved, solve.StreetLine(10, 5, tuple(walks["off-tree bet, raise"]), {})
+            ).notes
+        )
+        == 2
+    )
 
 
 def test_where_no_live_solve_answers_the_equity_helper_does(advisor, monkeypatch) -> None:

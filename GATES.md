@@ -1118,3 +1118,41 @@ showdown replay tests/fixtures/live/hands/hu_full_hand.phh --hero sb --trace
 showdown live --replay tests/fixtures/live/hands/hu_river_shove.phh --hero sb
 .venv\Scripts\python -m pytest tests/test_gate_v.py tests/test_gate_v_slow.py -m "slow or not slow" -s
 ```
+
+### Amendment: a floor on solver narrowing: bar 5 PASS (2026-11-19)
+
+Ian chose this after the finding above. The rule and bar 5 were pre-registered in
+DECISIONS 47's amendment (commit f20eb03) before any code.
+- **The rule.** On a solved street each move multiplies the mover's hands by
+  max(the solver's frequency, the floor). The floor is DECISIONS 46's: 0.25 for
+  a check, 0.10 otherwise.
+- **Who gets it:** both players.
+- **What it does not change:** Ian's action on the current street, which still
+  comes from the solve.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 5. Hand-worked floors | 5 walks on hand-made nodes, each with three hands in the range and one outside it: check-check (a check below and above 0.25), check-bet-call (both players on one line), bet-call (a bet below 0.10, and a call), an off-tree bet then a raise mapped to the tree, and check-bet-raise. Every multiplier and narrowed weight equals the hand calculation, and the hand outside the range stays at 0. The older walk test's 0/1 multipliers are now 0.10/1 | to 1e-9 | PASS |
+
+**How it got here.** The first run of bar 5's test passed, but it had only 4
+walks, one short of the pre-registered "at least 5".
+- **The fix:** a fifth walk (check-bet-raise) was added, and the rerun passed.
+- **Nothing else changed:** no rule, floor or expected number.
+
+**Gate R's river trace with the floor** (reported, not gated). The BB's range
+after its turn lead weighs 42.2 combos at Ian's turn node, where it was 1.9.
+
+| | Third of the pot | Shove |
+|---|---|---|
+| The BB's range at the river node | 1,081 combos, weight 5.54 (was 0.38), fingerprint 2486afb6d1ca | 1,081 combos, weight 4.42 (was 0.98), fingerprint c7fd172f9315 |
+| The advice | ALL-IN 41.8 bb (call 7%, all-in 93%); was CALL | CALL (100%), unchanged |
+| Equity against it | 91.6% (was 73.6%) | 87.1% (was 45.2%) |
+
+- **The turn advice is unchanged:** raise to 13.81 bb (call 36%, raise 64%).
+  The floor changes the river solve's starting ranges, not the turn solve.
+- **Bars 1 to 4 were not re-measured,** as Ian chose. Bar 1's fast test still
+  passes with the floor: the two lines keep different ranges.
+
+```
+.venv\Scripts\python -m pytest tests/test_gate_v.py -k "bar5 or off_tree" -s
+```

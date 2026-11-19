@@ -503,9 +503,13 @@ uses until this is built.
     - all 216 solved suggestions over 500 simulated hands are legal;
     - the mix equals the bridge's own row to 1e-6 on 40 spots;
     - latency from the card: turn p95 1.18 s, river 0.15 s.
-  - **A finding for Ian:** solver narrowing has no floor. A BB lead the solver
-    almost never makes leaves 1.9 combos of weight on the turn and 0.38 on the
-    river. A floor like the stopgap's 0.10 needs an amendment.
+  - **The floor (amendment, 2026-11-19; bar 5 PASS).** Solver narrowing first
+    had no floor: a BB lead the solver almost never makes left 1.9 combos of
+    weight on the turn and 0.38 on the river.
+    - Ian chose the stopgap's floors (0.10, and 0.25 for a check) for both
+      players.
+    - The same lead now leaves 42.2 combos on the turn.
+    - Gate R's third-pot river line now goes all-in.
   - **Playstyle marking** goes to step 5 (Ian's picks above).
 - **Still open:**
   - S1, which waits for Ian's screenshots;
