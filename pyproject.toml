@@ -57,3 +57,4 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]  # long lines: 37 existing; keeps the edit-time lint hook on real problems
