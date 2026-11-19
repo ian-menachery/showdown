@@ -2411,3 +2411,162 @@ both lines ("step 3 is not built"). That assertion is replaced by bar 1.
   solve, or after Gate R's trace is seen.
 - Narrowing a range Ian gave.
 - Any download, a library run, or writing to `data/library/`.
+
+---
+
+### 47. Step 3c: live turn and river solves in the advice; playstyle marking goes to step 5; Gate V pre-registered (2026-11-18)
+
+**Decided:** Ian picked the pieces and the four bars on 2026-11-18 (plan doc,
+Phase 13, "Step 3c"), after Gate S2c showed turn solves take about 1 s and
+river solves about 0.05 s. The preflop re-solve and the opponent model move to
+DECISIONS 48 and 49.
+
+**Playstyle marking goes to step 5, not 3c.** Ian's picks, 2026-11-18:
+- **Labels:** Nit, TAG, LAG and Station. An unmarked villain keeps the model's
+  ranges.
+- **Effects:** all four he was offered. The label is shown and logged with
+  each hand, it sets the width of the villain's preflop range, it locks nodes
+  in the live solves (as Gate X does on the flop), and it tilts the stopgap's
+  curves.
+- **Input:** buttons on the overlay.
+
+Step 5's entry designs and gates it. 3c builds none of it. Locks in live solves
+would need lock support in `streets.rs`.
+
+**Where a live solve answers.** At a turn or river decision, when all of these
+hold:
+- the spot comes from a replay or the tracker, so it has a history;
+- the preflop line is an open and a call (`rc`) or a 3-bet and a call
+  (`rrc`), the model's two pot lines;
+- the model reaches that pot at the nearest depth for both seats (DECISIONS
+  35's 0.1% rule);
+- `--ranges model`, and Ian gave no range;
+- the streets binary is built.
+
+Otherwise the equity helper answers against the stopgap's range, as now. On the
+turn and river of a spot with a history, its source then adds "no live solve:"
+and the reason. Typed `showdown advise` spots and flop spots do not change.
+
+**The solve's inputs:**
+- **Board:** the street's cards.
+- **Pot and stack:** the hand's real ones, rebuilt from the history. The pot is
+  everything in the middle when the street starts. The stack is the effective
+  stack (the smaller starting stack) less what each player has put in. Both
+  are in chips of 0.1 bb, rounded.
+- **Ranges:** each seat's model weights along the pot's line at the nearest
+  depth (the advisor's `model_range`), narrowed by every earlier street:
+  - **the flop:** the stopgap's curves (DECISIONS 46) narrow both players, each
+    by its own flop moves, labelled "range model (assumed)". The flop library
+    is empty and its lookup is Gate L's, so 3c reads no library entry;
+  - **the turn,** for a river solve: the turn solve's per-hand frequency of
+    each move along the line. If the turn has no solve, or its line left the
+    tree, the stopgap's turn curves narrow instead, labelled.
+- **Ian's hand** gets at least 0.001 of weight in his own range, so the solver
+  always gives it a strategy.
+- **The tree** is T1's turn and river sizes for both players. The OOP keeps its
+  turn bets after every flop line, because a real BB can lead; S2b took them
+  away after check-bet-call. River donk 75%; DECISIONS 38's all-in thresholds.
+- **Settings:** S2b's: all 16 threads, a target of 2% of the street's starting
+  pot, at most 1,000 iterations.
+- **Timeouts:** 6 s on the turn and 3 s on the river, twice bar 4's limits. A
+  river solve that must first run its turn solve gets both.
+- **No range under 1 combo:** if either range weighs less than one combo at
+  the start of a street, nothing is solved there.
+
+**When it starts.** The tracker starts a solve in a background thread on the
+frame that first shows the turn or river card. In a replay, or with frames only
+at Ian's turns, it starts at Ian's first decision on that street. Solves are
+cached by their inputs.
+
+**The node.** The street's moves so far are mapped onto the tree, in order.
+- **Checks and calls** map to themselves.
+- **A bet or raise** maps to the node's Bet, Raise or AllIn whose size is
+  nearest. Size is DECISIONS 46's f: bet / pot, or for a raise
+  (raise − to call) / (pot + to call). An all-in maps to AllIn.
+- **Off-tree sizes** get a note: "BB's turn bet of 4 bb (25% of the pot) solved
+  as the tree's 66% bet". Ian chose this over adding the size and re-solving.
+- **A move with nothing to map to** means the line has left the tree. Nothing
+  is solved for the rest of that street; the fallback answers.
+- **The binary is unchanged** (`streets.exe`, SHA-256 ef5ab1cf…). Each solve
+  asks it for every decision node on its street: Check, Bet or AllIn first;
+  after a check, Bet or AllIn; after a bet or raise, Raise or AllIn; at most
+  8 moves. Paths the tree lacks come back unreached.
+
+**The villain's range** at the node is its street-start range times its
+per-hand frequency of each of its own moves along the line. Ian's moves narrow
+his range the same way, for the next street. These replace the stopgap's
+curves on solved streets. The advice shows exact equity against that range, for
+reference only.
+
+**Ian's action** is his hand's row at the node: the most likely action (ties go
+to the earlier one), with the mix.
+- **A bet or raise keeps the tree's f,** applied to the real pot by the same
+  formulas. Where nothing was mapped, that is the tree's own size.
+- **An all-in stays all-in.**
+- **Then DECISIONS 41's legality rule,** unchanged. It notes anything it
+  changes.
+
+**Labels.**
+- The source says "live solve", the street, the solve time and the
+  exploitability.
+- The range label names how each street was narrowed: "range model (assumed)"
+  or "solved".
+
+**Latency and the overlay.** While a solve Ian needs is still running, the
+tracker sends a "solving…" event first; the overlay shows it and then the
+answer. DECISIONS 32's 300 ms bar keeps covering equity-helper answers. Solver
+answers get bar 4.
+
+**Gate V:**
+1. **Gate R's two river hands, with solver-narrowed ranges.** In
+   `hu_full_hand.phh` (a third-pot river bet) and `hu_river_shove.phh` (a
+   shove), the SB's river decision is answered by a live solve. The villain's
+   ranges at the node differ (different fingerprints). `showdown replay
+   --trace` shows both ranges and both answers.
+2. **Legal over 500 hands.** Gate R bar 3's 500 simulated hands (seed
+   20261116), advised for both players as there. Every suggestion from a live
+   solve is a legal action. Its size is within pokerkit's limits and within
+   the opponent's bet plus stack. Fewer than 100 solver answers means the bar
+   is not measured, which is a FAIL.
+3. **The bridge's own strategy.** The first 40 decisions answered by a live
+   solve in bar 2's hands, in hand order. For each, the test runs the streets
+   binary itself on the spec the advisor sent, reports the node the advisor
+   read, and takes the row of the deciding player's hand. The advice's mix
+   equals that row for every action, to 1e-6. Its action is the row's most
+   likely action, unless DECISIONS 41's legality rule changed it, which its
+   note then says. Three runs of one turn spec gave bit-identical strategies,
+   so a second run is a fair reference.
+4. **Latency.** Bar 2's 500 hands as every-change frames through the tracker.
+   Ian is the SB in even hands and the BB in odd ones. The run is a separate
+   process, without coverage, on an idle laptop (DECISIONS 32), with the flop's
+   full 20,000 samples.
+   - **The time** is from feeding the frame that first shows the street's card
+     to the answer, for each of Ian's turn and river decisions where a live
+     solve was started. Timeouts and failures count at their full time.
+   - **The bars:** turn 95th percentile ≤ 3 s, river ≤ 1 s, numpy's linear
+     percentile.
+   - **The sample:** at least 30 per street, or the bar is not measured, which
+     is a FAIL.
+
+**Existing tests that change, decided here:**
+- **Gate T bar 5** (300 ms) covers equity-helper answers only (plan item 7).
+- **Gate T bar 6's overlay test** uses an advisor with live solves off. It
+  tests the window, and its recorded text stays.
+- **`showdown replay --trace`** prints the range the advice used: the solved
+  one where a solve answered. Gate N's bar 1 test, which calls
+  `advisor.villain`, still reads the stopgap's range.
+
+**Reported, not gated:**
+- solver answers against fallbacks, by reason; legality fixes; off-tree
+  mappings;
+- how the advice changed from the stopgap in Gate R's and Gate T's hands, such
+  as raises and bluffs;
+- solve times by street;
+- Gate T's 300 ms bar, over equity-helper answers.
+
+**Rules out:**
+- changing the bars, the tree, the settings, the timeouts, the floor or the
+  samples after the first evidence run;
+- changing either bridge binary;
+- reading or writing `data/library/`, a library run, or any download;
+- playstyle code (step 5).
