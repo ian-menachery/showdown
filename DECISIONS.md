@@ -2603,3 +2603,70 @@ calculation of the rule above, to 1e-9. The walks cover:
 not to re-measure them. Gate R's river trace is reported again, not gated.
 
 **Rules out** changing the floors or bar 5 after its first run.
+
+---
+
+### 48. Heads-up push/fold with a 10% ante, for the site's chart; Gate PA pre-registered (2026-11-19)
+
+**Decided.** Ian chose this on 2026-11-19, after the portfolio site session
+handed over his request for more push/fold settings.
+- **What he picked:** heads-up with an ante, at 10% of the big blind, with
+  three checks (below).
+- **What he did not pick:** 3+ players (a new 3-way equity table and a
+  3-player game), and ICM. Heads-up, tournament equity is linear in chips, so
+  a heads-up tournament plays as chip EV. A tournament differs only by its
+  ante, which this covers.
+
+**The game.** It is the push/fold game of DECISIONS 8 and 22 with one change:
+each player posts an ante of 0.1 bb.
+- **S** is the effective stack before the blinds and antes are posted.
+- **The SB folds:** it loses 0.6.
+- **The BB folds to the jam:** the SB wins 1.1.
+- **The BB calls:** both are all-in for S, and the SB nets S·(2E − 1), as
+  before.
+- **Chip EV.**
+
+The ante is a parameter, 0 by default, of the push/fold game, the solve and
+the closed forms in `pushfold.py`. The solver is the same: `cfr_plus`, 1,000
+iterations at each of 1 to 20 bb, average policy, the exact matrix.
+
+**Gate PA,** recorded before the solve:
+1. **Exploitability:** at most 1e-5 bb at every depth from 1 to 20 bb, ante
+   0.1, by our best response on the compiled tree.
+2. **Ante 0 reproduces today:**
+   - all 20 depths re-solved with the ante set to 0;
+   - push, call, exploitability and SB value equal `data/pushfold.json`
+     exactly.
+3. **HoldemResources, "Ante 10%."** The reference is the "Ante 10%" pusher
+   and caller charts on HoldemResources' heads-up Nash page.
+   - **The file:** `data/external/holdemresources/hune.html`, 35,053 bytes,
+     SHA-256 `432658557afbb34c97db823daeb627cfa5d7e316ba29ccbdece6ff7607196d87`.
+     It was saved on 2026-11-19 with Ian's approval, is gitignored, and is
+     never committed.
+   - **The chart:** per class, the largest effective stack at which it pushes
+     or calls. The resolution is 0.1 bb, capped at "20+".
+   - **The comparison:**
+     - at depth d, the chart pushes (or calls) a class when its value is at
+       least d;
+     - a class is excluded when we mix it (0.01 < p < 0.99), or when its
+       chart value is within 0.1 bb of d;
+     - at least 95% of compared classes must agree at every depth, for the
+       pusher and the caller, as in Gate D;
+     - more than 17 exclusions at a depth is reported as a finding;
+     - every disagreement is listed.
+   - **Not stated by the page:** whether 10% means 0.1 bb per player, or how
+     its stacks count the ante. Our convention is above. A failure here may
+     mean the conventions differ; it is recorded as a FAIL all the same.
+4. **Closed forms.** With the ante:
+   - the tree's value and exploitability equal the closed-form sums to 1e-12,
+     on random and pure strategies;
+   - the action values give fold EVs of −0.6 (SB) and −1.1 (BB).
+5. **The export.** `data/pushfold_ante10.json` has `data/pushfold.json`'s
+   format plus `"ante": 0.1`. `PushFoldSolution.load` reads the ante, with 0
+   for files that lack it. The site's export reads it through
+   `sb_action_values` and `bb_action_values` with `ante=`.
+
+**Rules out:**
+- 3+ player push/fold and ICM, which need their own decision.
+- Calling it "GTO" on the site.
+- Moving any bar after results are seen, except by a dated amendment.
