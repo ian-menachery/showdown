@@ -2875,6 +2875,14 @@ gated check of the R measurement.
 - limps, min-raises, other opens, and 4-bets below all-in (SCOPE A7, A10);
 - calling the model's answers Nash or GTO.
 
+**Built, 2026-11-19, before any solve.** Two gaps in the spec, filled by Ian's picks:
+- **A typed 3-bet pot** (`showdown advise --pot-type 3bp`, no history) takes the line of
+  the 3-bet the BB makes more often at that depth, as the library does. `--threebet` (and
+  `--open`, default 2.5) picks the line by the ratio rule instead. Replayed and tracked
+  hands read both sizes from their moves.
+- **Gate Q's evidence tests** sit in the slow suite and skip, saying why, until the fit or
+  the product model exists. A skip is not a pass (DECISIONS 6).
+
 ---
 
 ### 50. Step 5: the opponent model, playstyle labels and an exploit line on the overlay; Gate O pre-registered (2026-11-19)

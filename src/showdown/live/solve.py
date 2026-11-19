@@ -24,6 +24,7 @@ import numpy as np
 from showdown import preflop_model as pm
 from showdown.equity.cards import ALL_COMBOS, Combo, card_str, cards_str
 from showdown.live import narrow
+from showdown.live.spot import threebet_size
 from showdown.postflop import bridge
 from showdown.postflop.spot import CHIPS_PER_BB, SETTINGS, TREE_T1
 
@@ -170,12 +171,23 @@ class Context:
     board: tuple[int, ...]
     history: tuple[str, ...]
     pot_type: str
+    size: str | None = None
+    """The re-solved model's 3-bet pot, "3x" or "4x" (DECISIONS 49); None otherwise."""
 
     def key(self, street: str) -> tuple:
         k = STREETS.index(street)
         before = tuple(h for h in self.history if STREETS.index(h.split(" ", 1)[0]) < k)
         cards = self.board[: narrow.STREET_CARDS[street]]
-        return (street, self.hero, self.seat, self.effective_bb, cards, before, self.pot_type)
+        return (
+            street,
+            self.hero,
+            self.seat,
+            self.effective_bb,
+            cards,
+            before,
+            self.pot_type,
+            self.size,
+        )
 
 
 # --- the solve -----------------------------------------------------------------------------
@@ -351,18 +363,23 @@ class LiveSolves:
             raise NoSolve("fixed ranges")
         if spot.has_villain_range:
             raise NoSolve("your range for the villain is used as given")
-        kinds = tuple(x.kind for x in street_line(spot.history, "preflop").acts)
-        pot_type = LINES.get(kinds)
+        acts = street_line(spot.history, "preflop").acts
+        pot_type = LINES.get(tuple(x.kind for x in acts))
         if pot_type is None:
             raise NoSolve("the preflop line is not an open and a call, or a 3-bet and a call")
-        if any(a.model_range(pot_type, s, spot.effective_bb) is None for s in SEATS):
+        size = None
+        if a.resolved and pot_type == "3bp":  # the 3x or 4x line, by the ratio rule
+            size = threebet_size(acts[1].to_bb, acts[0].to_bb)
+        if any(a.model_range(pot_type, s, spot.effective_bb, size) is None for s in SEATS):
             depth = pm.PreflopModel.depth_for(spot.effective_bb) or pm.GRID[0]
             raise NoSolve(f"the model almost never reaches this pot at {depth:g} bb")
         if a.range_model() is None:
             raise NoSolve(f"{narrow.MODEL_PATH.name} is missing")
         if not STREETS_EXE.exists():
             raise NoSolve("the streets bridge is not built: run `showdown postflop build`")
-        return Context(spot.hero, spot.seat, spot.effective_bb, spot.board, spot.history, pot_type)
+        return Context(
+            spot.hero, spot.seat, spot.effective_bb, spot.board, spot.history, pot_type, size
+        )
 
     def _context(self, spot: Spot) -> Context | None:
         try:
@@ -428,7 +445,7 @@ class LiveSolves:
         """Both ranges at the street's start, and how each earlier street narrowed them."""
         w = {}
         for seat in SEATS:
-            found = self.advisor.model_range(ctx.pot_type, seat, ctx.effective_bb)
+            found = self.advisor.model_range(ctx.pot_type, seat, ctx.effective_bb, ctx.size)
             w[seat] = np.zeros(len(ALL_COMBOS))
             w[seat][[narrow.INDEX[c] for c in found.combos]] = found.weights
             w[seat] = self._stopgap(w[seat], ctx, seat, "flop")

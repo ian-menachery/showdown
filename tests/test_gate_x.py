@@ -6,7 +6,8 @@ the spec and the binary's SHA-256, so a rerun with the same binary replays it; d
 the cache, or rebuilding the bridge, solves again.
 
 X3 failed (GATES.md, 2026-11-15) and is marked as a strict expected failure, with its bar
-unchanged.
+unchanged. The spots' ranges are pinned to DECISIONS 34's model, so the cache still replays
+(DECISIONS 49).
 """
 
 import importlib.util
@@ -15,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from showdown import preflop_model as pm
 from showdown.cli import main
 from showdown.equity.cards import cards_str
 from showdown.equity.matrix import PreflopMatrix
@@ -49,7 +51,7 @@ def test_the_flops_are_the_seeded_draw() -> None:
 def results() -> dict[tuple[str, str], exploit.ExploitResult]:
     out = {}
     for flop in FLOPS:
-        spot = FlopSpot.make("srp", 50, flop)
+        spot = FlopSpot.make("srp", 50, flop, pm.v1_model_path())
         for read in ("never-folds", "over-folds"):
             out[(flop, read)] = exploit.run(spot, "sb", read, cache=CACHE)
     return out
@@ -119,7 +121,7 @@ def test_the_bridge_reproduces_s4s_node_lock() -> None:
     module_spec.loader.exec_module(s2)
     matrix = PreflopMatrix.load("data/preflop_169_exact.npz")
     _, _, ip_top, oop_top = s2.SPOTS["SRP50"][:4]
-    spot = FlopSpot.make("srp", 50, "Kc7d6c")
+    spot = FlopSpot.make("srp", 50, "Kc7d6c", pm.v1_model_path())
     lock = exploit.lock_for("never-folds", "sb")
     p = exploit.paths("sb")
     out = {}

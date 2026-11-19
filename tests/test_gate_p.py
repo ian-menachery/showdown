@@ -1,7 +1,8 @@
-"""Gate P, the preflop model (DECISIONS 34): the bars on the committed data/preflop_model.json.
+"""Gate P, the preflop model (DECISIONS 34): the bars on the committed DECISIONS 34 model.
 
-Bar 4, the independent payoff check, and recomputed exploitability are in
-test_gate_p_slow.py.
+Pinned to that model (DECISIONS 49): `data/preflop_model_v1.json` once the re-solve moves it
+there, `data/preflop_model.json` until then. Bar 4, the independent payoff check, and
+recomputed exploitability are in test_gate_p_slow.py.
 """
 
 import hashlib
@@ -14,7 +15,7 @@ from showdown import pushfold as pf
 from showdown.equity.cards import CLASS_NAMES
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL = ROOT / "data" / "preflop_model.json"
+MODEL = pm.v1_model_path()
 
 
 @pytest.fixture(scope="module")
@@ -23,6 +24,7 @@ def model() -> pm.PreflopModel:
 
 
 def test_the_pre_registered_solve(model) -> None:
+    assert model.version == 1
     assert model.iterations == 1000
     assert model.matrix_path == "data/preflop_169_exact.npz"
     digest = hashlib.sha256((ROOT / model.matrix_path).read_bytes()).hexdigest()

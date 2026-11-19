@@ -72,7 +72,8 @@ def test_bar4_every_terminal_matches_the_closed_form(stack, r_oop) -> None:
 
 @pytest.mark.parametrize("stack", [25.0, 100.0])
 def test_stored_exploitability_matches_a_fresh_best_response(stack) -> None:
-    model = pm.PreflopModel.load(ROOT / "data" / "preflop_model.json")
+    model = pm.PreflopModel.load(pm.v1_model_path())  # pinned to DECISIONS 34's (DECISIONS 49)
+    assert model.version == 1
     s = model.at(stack, pm.R_PRODUCT)
     tree = compile_game(PreflopGame(stack, PreflopMatrix.load(MATRIX), r_oop=s.r_oop))
     policy = []

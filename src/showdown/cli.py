@@ -16,6 +16,8 @@ showdown analyze data/external/phh/repo/data/pluribus
 showdown advise --hero AsKd --seat sb --stack 50 --board Ts9s2d --pot 5
 showdown advise --hero AhJs --seat bb --stack 60 --facing bb_vs_raise --pot 3.5 --to-call 1.5
 showdown preflop chart 50
+showdown preflop fit-r --round 1
+showdown preflop build
 """
 
 from __future__ import annotations
@@ -413,6 +415,8 @@ def _advise(args: argparse.Namespace) -> int:
             villain_range=args.villain,
             villain_top=args.villain_top,
             mode=args.mode,
+            open_bb=args.open,
+            threebet_bb=args.threebet,
         )
     except (SpotError, ValueError) as error:
         raise SystemExit(f"bad spot: {error}") from None
@@ -554,17 +558,71 @@ def _live(args: argparse.Namespace) -> int:
 
 
 def _preflop_build(args: argparse.Namespace) -> int:
-    from showdown import preflop_model
+    import os
+
+    from showdown import preflop_fit, preflop_model
+    from showdown.postflop import library
 
     start = time.perf_counter()
-    model = preflop_model.build(iterations=args.iterations, workers=args.workers)
-    model.save(args.out)
+    if args.tree == "v1":
+        out = args.out or preflop_model.V1_MODEL
+        model = preflop_model.build(iterations=args.iterations, workers=args.workers)
+    else:
+        out = args.out or preflop_model.DEFAULT_MODEL
+        try:
+            r_by_depth, r_fit = preflop_fit.product_r(preflop_fit.load())
+        except (OSError, preflop_fit.FitError) as error:
+            raise SystemExit(f"the product solve needs the R fit's round 2: {error}") from None
+        if not library.on_ac_power():
+            raise SystemExit("not on AC power: plug in before the product solve")
+        library._keep_awake(True)
+        try:
+            model = preflop_model.build_fitted(
+                r_by_depth, r_fit, iterations=args.iterations, workers=args.workers
+            )
+        finally:
+            library._keep_awake(False)
+        old = Path(out)
+        if old.exists() and preflop_model.PreflopModel.load(old).version == 1:
+            moved = old.with_name(Path(preflop_model.V1_MODEL).name)
+            if moved.exists():
+                raise SystemExit(f"{moved} exists already; {old} was not replaced")
+            os.replace(old, moved)  # DECISIONS 49: the old model, renamed byte for byte
+            print(f"moved the old model to {moved}")
+    model.save(out)
     print(f"cfr+, {args.iterations} iterations; grid {list(preflop_model.GRID)}")
-    print(f"{'stack':>6} {'R':>5} {'exploitability':>15} {'SB value':>9}")
+    print(f"{'stack':>6} {'R':>24} {'exploitability':>15} {'SB value':>9}")
     for s in model.checks + model.solutions:
         kind = "" if s.raises else "  (jam-only)"
-        print(f"{s.stack:>6g} {s.r_oop:>5.2f} {s.exploitability:>15.2e} {s.value_sb:>+9.4f}{kind}")
-    print(f"wrote {args.out} in {time.perf_counter() - start:.0f} s")
+        if s.r is None:
+            r = f"{s.r_oop:.2f}"
+        else:
+            r = f"{s.shift:+.2f}: " + " ".join(f"{p} {v:.3f}" for p, v in s.r.items())
+        print(f"{s.stack:>6g} {r:>24} {s.exploitability:>15.2e} {s.value_sb:>+9.4f}{kind}")
+    print(f"wrote {out} in {time.perf_counter() - start:.0f} s")
+    return 0
+
+
+def _preflop_fit(args: argparse.Namespace) -> int:
+    from showdown import preflop_fit
+    from showdown.postflop import bridge
+
+    start = time.perf_counter()
+    try:
+        data = preflop_fit.run_round(
+            args.round, workers=args.workers, log=lambda line: print(line, flush=True)
+        )
+    except (preflop_fit.FitError, bridge.BridgeError) as error:
+        raise SystemExit(str(error)) from None
+    cells = preflop_fit.round_cells(data, args.round)
+    print(f"round {args.round}: R per pot and fit depth")
+    for pot, by in cells.items():
+        row = []
+        for d, c in by.items():
+            se = f" (SE {c['se']:.3f})" if c["measured"] else f" ({c['source']})"
+            row.append(f"{d} bb {c['r']:.3f}{se}")
+        print(f"  {pot}: " + "; ".join(row))
+    print(f"wrote {preflop_fit.FIT_PATH} in {time.perf_counter() - start:.0f} s")
     return 0
 
 
@@ -576,11 +634,17 @@ def _preflop_chart(args: argparse.Namespace) -> int:
     depth = model.depth_for(args.stack)
     if depth is None:
         raise SystemExit("20 bb or less uses push/fold: showdown pushfold chart")
-    s = model.at(depth, args.r)
+    s = model.at(depth, args.r) if model.version == 1 else model.at(depth)
     if args.node not in s.actions:
         raise SystemExit(f"node must be one of {sorted(s.actions)}")
-    letters = {"fold": "F", "call": "C", "raise": "R", "all-in": "J"}
-    print(f"model chart, R {args.r:.2f}, {depth:g} bb, node {args.node!r}: most likely action")
+    letters = {"fold": "F", "call": "C", "raise": "R", "all-in": "J", "raise 4x": "Q"}
+    r = f"R {args.r:.2f}" if model.version == 1 else model.r_label
+    print(f"model chart, {r}, {depth:g} bb, node {args.node!r}: most likely action")
+    if model.version == 2:
+        pairs = preflop_matrix.PreflopMatrix.load(model.matrix_path).pair_counts
+        reach = s.reach(args.node, pairs)
+        print("R " + ", ".join(f"{p} {v:.3f}" for p, v in s.r.items()) + f"; reached {reach:.3%}")
+        print("(R = raise: the open, or the 3-bet to 3x; Q = the 3-bet to 4x)")
     print("(suited above the diagonal; lower case = mixed below 90%; * = depends on R)")
     labels = RANKS[::-1]
     print("     " + "".join(f"{r:>4}" for r in labels))
@@ -747,6 +811,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="model",
         help="default postflop villain range: the preflop model's, or fixed top-%%",
     )
+    advise.add_argument("--open", type=float, help="the SB's open, raise-to in bb (default 2.5)")
+    advise.add_argument(
+        "--threebet",
+        type=float,
+        help="the BB's 3-bet, raise-to in bb: picks a 3-bet pot's 3x or 4x line",
+    )
     advise.add_argument("--villain", help="custom villain range, e.g. 'TT+,AQs+'")
     advise.add_argument(
         "--villain-top", type=float, help="custom villain range: the top N%% of hands"
@@ -781,17 +851,39 @@ def build_parser() -> argparse.ArgumentParser:
     live.add_argument("--save", action="store_true", help="write finished hands to data/live")
     live.set_defaults(handler=_live)
 
-    pre = commands.add_parser("preflop", help="the preflop model above 20 bb (DECISIONS 33, 34)")
+    pre = commands.add_parser(
+        "preflop", help="the preflop model above 20 bb (DECISIONS 33, 34, 49)"
+    )
     pre_commands = pre.add_subparsers(dest="preflop_command", required=True)
-    pre_build = pre_commands.add_parser("build", help="solve the grid at R 0.85/0.90/0.95 (hours)")
+    pre_build = pre_commands.add_parser(
+        "build",
+        help="solve the grid (hours; needs AC power): the 4x tree at the fitted R and -/+0.05, "
+        "moving the old model to data/preflop_model_v1.json",
+    )
     pre_build.add_argument("--iterations", type=int, default=1000)
     pre_build.add_argument("--workers", type=int, help="processes (about 200 MB each)")
-    pre_build.add_argument("--out", default="data/preflop_model.json")
+    pre_build.add_argument(
+        "--tree",
+        choices=["v1", "4x"],
+        default="4x",
+        help="v1: DECISIONS 34's tree at R 0.85/0.90/0.95, written to data/preflop_model_v1.json",
+    )
+    pre_build.add_argument("--out", help="default: data/preflop_model.json (4x)")
     pre_build.set_defaults(handler=_preflop_build)
+    pre_fit = pre_commands.add_parser(
+        "fit-r",
+        help="one round of the R fit (DECISIONS 49): preflop solves, then flop solves (hours; "
+        "needs AC power and the flop bridge)",
+    )
+    pre_fit.add_argument("--round", type=int, choices=[1, 2], required=True)
+    pre_fit.add_argument("--workers", type=int, help="preflop solve processes (about 200 MB each)")
+    pre_fit.set_defaults(handler=_preflop_fit)
     pre_chart = pre_commands.add_parser("chart", help="13x13 most-likely-action chart")
     pre_chart.add_argument("stack", type=float, help="effective stack in bb")
-    pre_chart.add_argument("--node", default="", help="'' first in, r, rr, rrj, rj, j")
-    pre_chart.add_argument("--r", type=float, default=0.9)
+    pre_chart.add_argument(
+        "--node", default="", help="'' first in, r, rr, rrj, rj, j; the 4x tree adds r4, r4j"
+    )
+    pre_chart.add_argument("--r", type=float, default=0.9, help="DECISIONS 34's model only")
     pre_chart.add_argument("--file", default="data/preflop_model.json")
     pre_chart.set_defaults(handler=_preflop_chart)
     return parser

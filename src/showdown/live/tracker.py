@@ -22,7 +22,15 @@ from pokerkit import Automation, HandHistory, NoLimitTexasHoldem
 from showdown.equity.cards import cards_str, make_combo, parse_cards
 from showdown.hh.replay import card_id
 from showdown.live.advisor import Advisor, Suggestion
-from showdown.live.hand import SEATS, Decision, HandReplay, _apply, _code, _decision
+from showdown.live.hand import (
+    SEATS,
+    Decision,
+    HandReplay,
+    _apply,
+    _code,
+    _decision,
+    preflop_raises,
+)
 from showdown.live.spot import Spot, SpotError
 from showdown.live.table import TableState
 
@@ -161,12 +169,15 @@ class _Hand:
 
     def hero_spot(self) -> Spot:
         """Ian's side of the hand now, enough to start a live solve (DECISIONS 47)."""
+        open_bb, threebet_bb = preflop_raises(tuple(self.history))
         return Spot(
             hero=self.replay.holes[SEATS[self.hero]],
             seat=SEATS[self.hero],
             effective_bb=min(self.replay.starting_bb.values()),
             board=_board(self.state),
             history=tuple(str(m) for m in self.history),
+            open_bb=open_bb,
+            threebet_bb=threebet_bb,
         )
 
     def decision(self) -> Decision:

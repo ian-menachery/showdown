@@ -4,6 +4,7 @@ For S2b's and S2c's 40 flops (DECISIONS 44, 45), every reached node of the flop 
 of turn and river solves gives, per strength band, how often the acting player takes each
 action. `showdown postflop fit-ranges` runs this once and writes `data/range_model.json`.
 The solver runs as a separate process (DECISIONS 29); the file holds frequencies only.
+Its preflop ranges are DECISIONS 34's model, which the fit was run on (DECISIONS 49).
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from collections.abc import Callable
 
 import numpy as np
 
+from showdown import preflop_model as pm
 from showdown.equity.cards import (
     CLASS_NAMES,
     cards_str,
@@ -72,7 +74,7 @@ def flop_entry(spot_name: str, pot_type: str, stack: int, flop: tuple[int, ...])
     name = cards_str(flop)
     if name in library.manifest(spot_name):
         return library.load(spot_name, name)
-    spot = FlopSpot.make(pot_type, stack, name)
+    spot = FlopSpot.make(pot_type, stack, name, pm.v1_model_path())
     result = bridge.solve(spot.spec(report=list(library.NODES)), cache=CACHE)
     return library.entry(spot_name, flop, result, bridge.binary_sha256())
 
@@ -80,7 +82,7 @@ def flop_entry(spot_name: str, pot_type: str, stack: int, flop: tuple[int, ...])
 def preflop_weights(depth: float, pot_type: str, seat: str) -> np.ndarray:
     """Per combo in the solver's order, its class's weight in the flop solve's range string."""
     by_class = [0.0] * len(CLASS_NAMES)
-    for part in model_range(depth, pot_type, seat).split(","):
+    for part in model_range(depth, pot_type, seat, pm.v1_model_path()).split(","):
         name, _, w = part.partition(":")
         by_class[class_index(name)] = float(w) if w else 1.0
     return np.array([by_class[class_of(c)] for c in SOLVER_COMBOS])

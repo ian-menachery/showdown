@@ -24,10 +24,10 @@ from showdown.equity.exact import range_vs_range
 from showdown.equity.matrix import PreflopMatrix
 from showdown.equity.montecarlo import monte_carlo
 from showdown.equity.ranges import parse_range
-from showdown.games.preflop import OPEN_TO, THREEBET_TO
+from showdown.games.preflop import OPEN_TO, POTS, THREEBET_TO
 from showdown.hh.grade import depth_for
 from showdown.live import jam, narrow, solve
-from showdown.live.spot import DECISIONS, Spot, SpotError
+from showdown.live.spot import DECISIONS, Spot, SpotError, threebet_size
 
 CALL_MARGIN = 0.05
 BET_EQUITY = 0.60
@@ -43,6 +43,13 @@ POT_LINES = {"srp": "rc", "3bp": "rrc"}
 RANGES = ("model", "fixed")
 SHOWN = {"fold": "fold", "call": "call", "raise": "raise", "all-in": "jam"}
 """The model's action names as the advisor shows them."""
+SHOWN_4X = {**SHOWN, "raise": "raise 3x", "raise 4x": "raise 4x"}
+"""The re-solved model's BB facing the open, in DECISIONS 49's order: both 3-bets are raises."""
+SIZE_LINES = {"3x": "rrc", "4x": "r4c"}
+NODES_BY_SIZE = {
+    "sb_vs_3bet": {"3x": "rr", "4x": "r4"},
+    "bb_vs_4bet_jam": {"3x": "rrj", "4x": "r4j"},
+}
 
 
 @dataclass(frozen=True)
@@ -115,9 +122,11 @@ class Advisor:
         self.samples = samples
         self.seed = seed
         self.log_path = Path(log_path) if log_path else None
+        self.resolved = model is not None and model.version == 2
+        """The re-solved model (DECISIONS 49): a 3x and a 4x 3-bet, and fitted R."""
         self._defaults: dict[tuple[str, str], tuple[Combo, ...]] = {}
         self._reach: dict[tuple[float, str], float] = {}
-        self._model_ranges: dict[tuple[str, str, float], VillainRange | None] = {}
+        self._model_ranges: dict[tuple[str, str, float, str], VillainRange | None] = {}
         self._range_model: narrow.RangeModel | None | bool = False
         """The stopgap range model (DECISIONS 46), loaded on first use; None if absent."""
         self.solves = solve.LiveSolves(self) if live_solves else None
@@ -135,21 +144,36 @@ class Advisor:
         return self._defaults[key]
 
     def reach(self, depth: float, line: str) -> float:
-        """The share of deals in which the model, at R 0.90 and `depth`, follows `line`."""
+        """The share of deals in which the model's product solve at `depth` follows `line`."""
         key = (depth, line)
         if key not in self._reach:
             solution = self.model.at(depth)
             self._reach[key] = solution.reach(line, self.strategy.matrix.pair_counts)
         return self._reach[key]
 
+    def threebet_line(self, spot: Spot) -> str | None:
+        """The re-solved model's 3-bet pot for a spot, "3x" or "4x", from its open and 3-bet;
+        None when the spot does not say (or with the old model)."""
+        if not self.resolved or spot.threebet_bb is None:
+            return None
+        return threebet_size(spot.threebet_bb, spot.open_bb)
+
     def model_range(
-        self, pot_type: str, villain_seat: str, effective_bb: float
+        self, pot_type: str, villain_seat: str, effective_bb: float, size: str | None = None
     ) -> VillainRange | None:
-        """The villain's weighted range from the model, or None below the reach bar."""
+        """The villain's weighted range from the model, or None below the reach bar.
+
+        With the re-solved model a 3-bet pot is the 3x or 4x line: `size`, or when it is None
+        the size the BB 3-bets more often at that depth (Ian's pick, 2026-11-19).
+        """
         depth = pm.PreflopModel.depth_for(effective_bb) or pm.GRID[0]
-        key = (pot_type, villain_seat, depth)
+        line, name = POT_LINES[pot_type], pot_type
+        if self.resolved and pot_type == "3bp":  # DECISIONS 49: the 3x or the 4x line
+            pairs = self.strategy.matrix.pair_counts
+            size = size or self.model.at(depth).more_often_3bet(pairs)
+            line, name = SIZE_LINES[size], f"3bp ({size})"
+        key = (pot_type, villain_seat, depth, line)
         if key not in self._model_ranges:
-            line = POT_LINES[pot_type]
             result = None
             if self.reach(depth, line) >= REACH_MIN:
                 sb, bb = self.model.at(depth).line_factors(line)
@@ -160,8 +184,8 @@ class Advisor:
                 result = VillainRange(
                     tuple(c for c, _ in kept),
                     tuple(w for _, w in kept),
-                    f"model range (assumed): the {villain_seat.upper()}'s {pot_type} line at "
-                    f"{depth:g} bb, R {pm.R_PRODUCT:.2f}, {share:.0%} of combos",
+                    f"model range (assumed): the {villain_seat.upper()}'s {name} line at "
+                    f"{depth:g} bb, {self.model.r_label}, {share:.0%} of combos",
                 )
             self._model_ranges[key] = result
         return self._model_ranges[key]
@@ -248,7 +272,9 @@ class Advisor:
         fixed = f"default (assumed): top {top}% for the {spot.villain_seat.upper()}"
         if self.ranges == "fixed":
             return VillainRange(self.default_range(spot.pot_type, spot.villain_seat), None, fixed)
-        found = self.model_range(spot.pot_type, spot.villain_seat, spot.effective_bb)
+        found = self.model_range(
+            spot.pot_type, spot.villain_seat, spot.effective_bb, self.threebet_line(spot)
+        )
         if found is not None:
             return found
         depth = pm.PreflopModel.depth_for(spot.effective_bb) or pm.GRID[0]
@@ -356,6 +382,15 @@ class Advisor:
 
     def _model_chart(self, spot: Spot, node: str) -> Suggestion:
         depth = pm.PreflopModel.depth_for(spot.effective_bb)
+        faced = None
+        if spot.preflop in ("bb_vs_raise", "sb_vs_3bet"):
+            if spot.to_call_bb <= 0:
+                raise SpotError(f"{spot.preflop} needs the amount to call")
+            faced = spot.raise_to_bb
+        if self.resolved and spot.preflop in NODES_BY_SIZE:
+            # A faced 3-bet, or the BB's own (the effective stack less the call to the jam).
+            made = faced if faced is not None else spot.effective_bb - spot.to_call_bb
+            node = NODES_BY_SIZE[spot.preflop][threebet_size(made, spot.open_bb)]
         reach = self.reach(depth, node)
         if reach < REACH_MIN:
             return _none(
@@ -363,14 +398,12 @@ class Advisor:
                 f"({reach:.3%} of deals)"
             )
         notes = []
-        faced = None
-        if spot.preflop in ("bb_vs_raise", "sb_vs_3bet"):
-            if spot.to_call_bb <= 0:
-                raise SpotError(f"{spot.preflop} needs the amount to call")
-            faced = spot.raise_to_bb
+        if faced is not None:
             model_size, kind = (
                 (OPEN_TO, "open") if spot.preflop == "bb_vs_raise" else (THREEBET_TO, "3-bet")
             )
+            if node == "r4":
+                model_size = POTS["4x"]
             if abs(faced - model_size) > SIZE_TOLERANCE_BB:
                 notes.append(f"model assumes a {model_size:g} bb {kind}; you face {faced:g} bb")
         cls = class_of(spot.hero)
@@ -381,13 +414,16 @@ class Advisor:
         size = None
         if top == "raise":
             size = OPEN_TO if spot.preflop == "sb_first" else round(3 * faced, 2)
+        elif top == "raise 4x":
+            size = round(4 * faced, 2)
+        shown = SHOWN_4X if self.resolved and node == "r" else SHOWN
         return Suggestion(
             street="preflop",
-            action=SHOWN[top],
+            action="raise" if size is not None else SHOWN[top],
             size_bb=size,
-            mix={SHOWN[a]: p for a, p in probs.items()},
+            mix={shown[a]: p for a, p in probs.items()},
             notes=tuple(notes),
-            source=f"model chart, R {pm.R_PRODUCT:.2f}, {depth:g} bb ({CLASS_NAMES[cls]})",
+            source=f"model chart, {self.model.r_label}, {depth:g} bb ({CLASS_NAMES[cls]})",
         )
 
     # --- postflop ------------------------------------------------------------------

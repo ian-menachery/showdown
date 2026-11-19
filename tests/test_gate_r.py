@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from showdown import preflop_model as pm
 from showdown.cli import main
 from showdown.hh.replay import ReplayError
 from showdown.live import hand
@@ -102,7 +103,9 @@ def test_bar4_no_bet_beyond_the_stack(advisor) -> None:
         assert size is None or size <= d.legal.cap_bb + 1e-9
 
 
-def test_the_river_lines_differ_only_in_the_bet(advisor) -> None:
+def test_the_river_lines_differ_only_in_the_bet() -> None:
+    # Gate N's bar 1 reads model ranges, so it is pinned to DECISIONS 34's model (DECISIONS 49).
+    advisor = Advisor.load(pm.v1_model_path())
     third = hand.load(HANDS / "hu_full_hand.phh").decisions[-1]
     shove = hand.load(HANDS / "hu_river_shove.phh").decisions[-1]
     assert third.history[:-1] == shove.history[:-1] and third.board == shove.board

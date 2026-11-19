@@ -138,12 +138,14 @@ def test_flop_monte_carlo_within_3_se_of_exact(advisor, row) -> None:
 
 _LATENCY_SCRIPT = r"""
 import json, sys, time, tomllib
+from showdown import preflop_model as pm
 from showdown.live.advisor import Advisor
 from showdown.live.spot import Spot
 fixture = tomllib.loads(open(sys.argv[1], encoding="utf-8").read())
 model_fixture = tomllib.loads(open(sys.argv[2], encoding="utf-8").read())
 jam_fixture = tomllib.loads(open(sys.argv[3], encoding="utf-8").read())
-fixed, model = Advisor.load(ranges="fixed"), Advisor.load()
+# Gate G extended's and Gate J's spots are pinned to DECISIONS 34's model (DECISIONS 49).
+fixed, model = Advisor.load(ranges="fixed"), Advisor.load(pm.v1_model_path())
 spots = []
 for row in fixture["river"] + fixture["turn"] + fixture["flop"]:
     spots.append(Spot.parse(row["hero"], row["board"], seat=row["seat"], effective_bb=50,

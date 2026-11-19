@@ -520,8 +520,10 @@ uses until this is built.
   - DECISIONS 48 took the number that DECISIONS 47 had pointed at the preflop
     re-solve. The re-solve (step 4) and the opponent model (step 5) now take
     the next free numbers.
-- **Step 4 is planned: the preflop re-solve, Gate Q pre-registered**
-  (DECISIONS 49, SCOPE A10, 2026-11-19). Nothing is built or solved yet.
+- **Step 4 is built, not solved: the preflop re-solve, Gate Q pre-registered**
+  (DECISIONS 49, SCOPE A10, 2026-11-19). The code and tests are in; no fit or product
+  solve has run. The switch takes effect when `showdown preflop build` writes the new
+  `data/preflop_model.json`.
   - **The tree:** the BB gets a second 3-bet size, 4× the open (to 10), next
     to 3× (to 7.5). The 2.5 open and the SB's jam-only 4-bet stay.
   - **R is fitted** per pot (the open, either 3-bet) at 25, 50 and 100 bb:

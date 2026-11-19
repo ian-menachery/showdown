@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 from showdown.equity.cards import Combo, cards_str, make_combo, parse_cards
+from showdown.games.preflop import OPEN_TO
 
 SEATS = ("sb", "bb")
 POT_TYPES = ("srp", "3bp")
@@ -27,6 +28,12 @@ MODES = ("hint", "equity")
 
 class SpotError(ValueError):
     """A spot that cannot be advised on as given."""
+
+
+def threebet_size(threebet_bb: float, open_bb: float | None) -> str:
+    """The re-solved model's 3-bet nearer the one made, "3x" or "4x", by its ratio to the open
+    (2.5 bb when not known); 3.5x goes to 3x (DECISIONS 49)."""
+    return "3x" if threebet_bb / (open_bb or OPEN_TO) <= 3.5 + 1e-9 else "4x"
 
 
 @dataclass(frozen=True)
@@ -75,6 +82,11 @@ class Spot:
     """The hero's remaining stack, from a replay."""
     legal: Legal | None = None
     """The legal actions, from a replay. When set, the advice is kept to them."""
+    open_bb: float | None = None
+    """The SB's open, raise-to in bb: from a replay's moves, or typed (`--open`)."""
+    threebet_bb: float | None = None
+    """The BB's 3-bet, raise-to in bb: from a replay's moves, or typed (`--threebet`). In the
+    re-solved model its ratio to the open picks a 3-bet pot's line (DECISIONS 49)."""
 
     def __post_init__(self) -> None:
         cards = [*self.hero, *self.board]
@@ -96,6 +108,8 @@ class Spot:
             raise SpotError("villain top % must be above 0 and at most 100")
         if self.effective_bb < 1 or self.pot_bb <= 0 or self.to_call_bb < 0:
             raise SpotError("need a stack of at least 1 bb, a positive pot and to-call >= 0")
+        if any(x is not None and x <= 0 for x in (self.open_bb, self.threebet_bb)):
+            raise SpotError("an open or 3-bet size must be above 0")
 
     @classmethod
     def parse(cls, hero: str, board: str = "", **fields) -> Spot:
@@ -139,4 +153,6 @@ class Spot:
             "villain_range": self.villain_range,
             "villain_top": self.villain_top,
             "mode": self.mode,
+            "open_bb": self.open_bb,
+            "threebet_bb": self.threebet_bb,
         }

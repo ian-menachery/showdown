@@ -94,6 +94,7 @@ class Decision:
         if self.hole is None:
             raise ReplayError(f"the {self.seat.upper()}'s cards are not in the hand history")
         preflop = self.street == "preflop"
+        open_bb, threebet_bb = preflop_raises(self.history)
         return Spot(
             hero=self.hole,
             seat=self.seat,
@@ -106,7 +107,18 @@ class Decision:
             history=tuple(str(m) for m in self.history),
             stack_behind_bb=self.stacks_bb[self.seat],
             legal=self.legal,
+            open_bb=open_bb,
+            threebet_bb=threebet_bb,
         )
+
+
+def preflop_raises(history: tuple[Move, ...]) -> tuple[float | None, float | None]:
+    """The open and the 3-bet so far, raise-to in bb: the first two preflop raises.
+
+    In the re-solved model a 3-bet pot's line comes from their ratio (DECISIONS 49).
+    """
+    raises = [m.to_bb for m in history if m.street == "preflop" and m.kind == "raise"]
+    return (raises[0] if raises else None), (raises[1] if len(raises) > 1 else None)
 
 
 @dataclass(frozen=True)

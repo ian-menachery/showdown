@@ -2,7 +2,8 @@
 
 The fixture is tests/fixtures/live/model_spots.toml. Preflop expectations were
 written by hand from `showdown preflop chart`. Each mix is checked against
-data/preflop_model.json read directly. Model ranges are checked against
+the stored model read directly. Everything here is pinned to DECISIONS 34's model, which
+the fixture was written from (DECISIONS 49). Model ranges are checked against
 frequencies multiplied by hand, and against a separate weighted brute-force
 count with phevaluator. The latency bar over old and new spots is in
 test_gate_g.py.
@@ -43,14 +44,15 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = tomllib.loads(
     (ROOT / "tests" / "fixtures" / "live" / "model_spots.toml").read_text(encoding="utf-8")
 )
-MODEL_JSON = json.loads((ROOT / "data" / "preflop_model.json").read_text(encoding="utf-8"))
+MODEL_JSON = json.loads(pm.v1_model_path().read_text(encoding="utf-8"))
+assert "version" not in MODEL_JSON  # DECISIONS 34's model
 SUGGESTED: list[float] = []
 
 
 @pytest.fixture(scope="module")
 def advisor(tmp_path_factory):
     log = tmp_path_factory.mktemp("live") / "advice.jsonl"
-    return Advisor.load(log_path=log)
+    return Advisor.load(pm.v1_model_path(), log_path=log)
 
 
 def _stored(depth: float, r: float = pm.R_PRODUCT) -> dict:

@@ -37,7 +37,7 @@ def matrix() -> PreflopMatrix:
 
 @pytest.fixture(scope="module")
 def advisor() -> Advisor:
-    return Advisor.load()
+    return Advisor.load(pm.v1_model_path())  # pinned to DECISIONS 34's model (DECISIONS 49)
 
 
 def _spot(row: dict) -> Spot:
@@ -99,7 +99,7 @@ PUT_IN = {"j": 1.0, "rj": 2.5, "rrj": 7.5}
 
 @pytest.mark.parametrize(("node", "stack"), MODEL_CASES, ids=lambda x: str(x))
 def test_bar1_reproduces_the_model_where_it_is_reached(matrix, node, stack) -> None:
-    solution = pm.PreflopModel.load(ROOT / "data" / "preflop_model.json").at(stack)
+    solution = pm.PreflopModel.load(pm.v1_model_path()).at(stack)
     sb, bb = solution.line_factors(node)
     villain = sb if node in ("j", "rrj") else bb  # the jammer's own line
     calls = np.array([solution.probs(node, k)["call"] for k in range(169)])
