@@ -2874,3 +2874,254 @@ gated check of the R measurement.
 - a library run;
 - limps, min-raises, other opens, and 4-bets below all-in (SCOPE A7, A10);
 - calling the model's answers Nash or GTO.
+
+---
+
+### 50. Step 5: the opponent model, playstyle labels and an exploit line on the overlay; Gate O pre-registered (2026-11-19)
+
+**Decided:** Ian picked these on 2026-11-19, after DECISIONS 49. This is Phase
+12's opponent model (plan doc, Phase 12, items 1 to 4), joined to his playstyle
+picks of DECISIONS 47: Nit, TAG, LAG and Station, set by buttons on the
+overlay, shown and logged, and setting preflop widths, live-solve locks and
+tilted stopgap curves. SCOPE amendment A11 brings it into scope. It is built
+after Gate Q passes, so "the model" here is DECISIONS 49's.
+
+**Reads, relative to the model** (Ian's pick). Every read is a ratio ρ: how
+often a friend takes an action, against how often the model would in the same
+spots. ρ = 1 plays the model, and 0.55 folds 0.55 times as often.
+- **A chance** is one decision of the friend's that a tendency counts. Its
+  model rate e is the model's own rate for that action at that spot, over the
+  friend's range (not the friend's unknown hand).
+- **Counting.** In n chances the friend took the action X times. E = Σe is
+  what the model would have done, and ē = E / n.
+- **Shrinking** (Phase 12's beta prior worth k chances):
+  - the shrunk rate is p̂ = (X + k·ρ0·ē) / (n + k), and the read is ρ̂ = p̂ / ē;
+  - with no chances, ρ̂ = ρ0;
+  - ρ0 is 1 for an unmarked friend, or the label's ratio for a marked one
+    (Ian's pick: "label if marked, else model"). A label changes the prior,
+    not the counts.
+- **A chance whose model rate is 0** does not count.
+
+**The seven tendencies** (Ian ticked all four groups).
+
+| Tendency | A chance | The action | Its model rate e |
+|---|---|---|---|
+| SB open | the friend is the SB, first in, above 20 bb | a raise or an all-in | the model's chart at the nearest depth |
+| BB defend | the friend is the BB facing a raise below all-in, above 20 bb | a call, raise or all-in | the chart, against the model's SB open range |
+| BB 3-bet | the same chances | a raise or an all-in | the same |
+| Push/fold jam | the friend is the SB, first in, at 20 bb or less | an all-in | push/fold Nash at that depth |
+| Push/fold call | the friend is the BB facing a first-in all-in, at 20 bb or less | a call | push/fold Nash, against Nash's jam range |
+| Fold to a bet | postflop, the friend faces a bet, raise or all-in | a fold | see below |
+| Bet when checked to | postflop, the friend acts after the other player checked on that street | a bet or all-in | see below |
+
+- **Postflop model rates.**
+  - On a turn or river where the base track ran a live solve (DECISIONS 47):
+    the solved range-level rate at the mapped node.
+  - Otherwise: the stopgap's curve for that pot, street, position and node
+    (DECISIONS 46), averaged over its 10 bands. The bands are deciles of the
+    range, so the mean is the range's rate.
+  - A single-raised pot uses the `srp` curves and a 3-bet pot the `3bp` ones.
+    Limped and 4-bet pots do not count.
+- **Which hands count** (Ian's pick):
+  - preflop chances only from hands dealt heads-up;
+  - postflop chances from any pot that is heads-up by the flop.
+- **The depth** is the hand's effective starting stack, looked up as the
+  advisor does (DECISIONS 32, 34).
+- **The source** is the tracker's PHH hands in `data/live/hands/`, which
+  carry the players' names. They are read at start and after each hand.
+  Poker Now game logs join when Phase 11 exists.
+
+**k, fitted from the PHH players** (Ian's pick).
+- **Data:** one pass over the PHH zip (DECISIONS 39, SHA-256 `65d566e7…`),
+  heads-up hands only, counting each tendency's chances and actions per player
+  by the same definitions, as plain rates. The pass starts only when Ian says
+  so; it took 790 s last time.
+- **The fit,** per tendency, over players with at least 100 chances of it:
+  - p̄ is the pooled rate;
+  - the spread between players is the variance of their rates, less the mean
+    of p̄(1 − p̄) / nᵢ, their sampling noise;
+  - k = p̄(1 − p̄) / that spread − 1;
+  - a spread of 0 or below means the fit fails, and k = 20, noted.
+- **Push/fold has no PHH data** (no stacks), so its two tendencies take k = 20.
+
+**The labels, from PHH player groups** (Ian's pick).
+- **The players:** PHH heads-up players with at least 500 heads-up hands.
+- **The split:** at the median VPIP (looseness) and the median PFR / VPIP
+  (aggression):
+
+  | | Aggression at or below the median | Above it |
+  |---|---|---|
+  | VPIP at or below the median | Nit | TAG |
+  | VPIP above the median | Station | LAG |
+
+- **A label's ratio** for a tendency is its group's median rate over the
+  median rate of all these players.
+- **Push/fold proxies,** labelled as assumptions: the jam ratio is the label's
+  SB open ratio, and the call ratio its BB defend ratio.
+- **Stored:** `data/opponent_priors.json`, committed. It holds the per-player
+  counts with no names, the fitted k and the label ratios, with the dataset's
+  CC BY 4.0 attribution.
+
+**How a read changes the villain.**
+- **Preflop and push/fold: a cutoff in the model's own order** (Phase 12's
+  design, item 2, and DECISIONS 37's open "Nash's own order").
+  - The node's share for the read's actions becomes ρ̂ times the model's.
+  - Classes are filled in the model's order: by its probability of those
+    actions, then by equity against a random hand. Each class takes them
+    fully until the share is filled; the boundary class is partly filled.
+  - The rest take the model's other actions in proportion, or fold.
+  - BB defend is applied first, then BB 3-bet inside the defending share.
+  - Per-class scaling was not used here: push/fold Nash and most model
+    classes are pure (0 or 1), and scaling a pure strategy changes nothing.
+- **Postflop: the solver's or curve's mix, scaled** (Ian's pick: "keep the
+  solver's choice of which hands").
+  - The read's actions (a fold; or every bet and all-in together) get
+    min(1, λ·q) per hand, where q is the base solve's probability.
+  - λ is chosen so the node's rate is ρ̂ times the solved rate. For ρ̂ ≤ 1,
+    λ = ρ̂.
+  - When even λ → ∞ can't reach it (every hand with q > 0 is at 1), the node
+    stays short and that is noted.
+  - The rest of each hand's weight keeps the solve's split among the other
+    actions. If they had none, it goes to Call facing a bet, or Check after a
+    check.
+- **On the flop** the same rule tilts the stopgap curves, band by band, and
+  the tilted curves narrow the villain's range.
+- **On the turn and river** the rule locks the villain's nodes of each read
+  kind on that street, and on the river inside a turn solve.
+
+**What Ian is shown** (Ian's picks). A villain has a read when Ian marked it,
+or when it has at least one counted chance of a tendency this decision uses.
+- **With a read,** the overlay's headline is the exploit, e.g. "RAISE 12 bb
+  (exploit)". Under it:
+  - the base answer with its usual source ("live solve: call 64%, raise
+    36%"). The word GTO is never used for a model chart or the equity helper;
+  - **gain:** what the exploit wins over the base answer against the read, in
+    bb;
+  - **risk:** what it loses against a villain who plays the model, in bb
+    (zero or below, up to solver error);
+  - **who and how sure:** "Bob: Station, folds to bets 0.55× the model (22%
+    vs 41%), 34 chances".
+- **Without a read** the overlay is exactly today's.
+- **The buttons:** Nit, TAG, LAG, Station and clear, for the heads-up villain.
+  Labels are kept by name in `data/live/opponents.json`, which is gitignored
+  like the rest of `data/live/`.
+- **The hand log** records the label, the reads used, their chances and both
+  answers with each suggestion.
+
+**The exploit, by decision.**
+- **Preflop above 20 bb.** The best response, at every Ian node below this one,
+  to the model with the friend's read nodes replaced. It is computed on the
+  compiled model tree. Gain and risk compare that plan with the model's mix
+  for Ian's class: against the read, and against the model.
+- **Push/fold.** DECISIONS 37's best response, gain and risk, with the read's
+  cutoff in Nash's order in place of the top N% by equity.
+- **The flop.** The equity helper against the tilted range; the base is the
+  helper against the untilted one. Gain and risk are shown only where the
+  helper has an EV, a call or a fold (E·(pot + to call) − to call). Otherwise
+  the line says "no EV on the flop".
+- **The turn and river.** A chain of passes in `streets.rs`:
+  1. the unlocked solve, as Gate V's; this is the base line, shown first;
+  2. the locked solve, with the villain's nodes scaled from pass 1; Ian's row
+     at his node is the exploit;
+  3. two evaluations with both players fixed: Ian's base strategy against the
+     locked villain (for the gain), and Ian's exploit strategy against the
+     pass-1 villain (for the risk), at Ian's node and hand.
+
+  - **The binary gains this,** as an optional `read` in its spec. Without
+    one, it runs as today. Its new SHA-256 is recorded. If postflop-solver
+    can't evaluate fixed strategies, the build stops and asks Ian.
+  - **Two range tracks.** The base track narrows the ranges for later streets
+    as DECISIONS 47 does. The exploit track narrows them by the locked solves
+    and tilted curves. Both keep DECISIONS 47's floors.
+  - **Timeouts** are twice the bars: the base keeps Gate V's 6 s turn and 3 s
+    river; the exploit chain gets 12 s and 4 s. On a timeout or failure, the
+    base answer stands with the note "no exploit:" and the reason.
+
+**Gate O: all six bars must pass.**
+1. **Counts from a hand-counted fixture.** At least 30 hand-made logged
+   hands, 2 to 9 handed, with made-up names.
+   - Every friend's chances n, actions X and each chance's model rate equal a
+     count done by hand.
+   - Preflop and push/fold model rates are written by hand from the charts.
+   - Postflop model rates are checked by a separate code path, to 1e-9:
+     against the bridge's own output for that node (as Gate V bar 3 did), or
+     against the stopgap curve's stored values.
+   - The fixture covers at least 3 chances of each of the seven tendencies;
+     at least 2 hands dealt 3+ handed that are heads-up by the flop
+     (postflop counts, preflop doesn't); at least 1 that is not (nothing
+     counts); and a chance whose model rate is 0.
+2. **Shrinkage and the k fit, by hand.**
+   - At least 10 reads in the fixture, unmarked and under each label and with
+     no chances among them, equal a hand calculation from their counts, prior
+     and k, to 1e-12.
+   - Each fitted k and each label ratio equals a recomputation from the
+     stored per-player counts by a separate function, to 1e-9.
+3. **Locks hold.** At least 20 seeded locked live solves: turn and river,
+   both read kinds, ρ̂ below and above 1.
+   - In the locked solve's report, every locked villain row equals the scaled
+     mix computed from the unlocked solve's report, to 1e-6.
+   - Each locked node's rate equals ρ̂ times the solved rate, to 1e-6, unless
+     it is noted as short.
+4. **Push/fold simulations.**
+   - **The bots:** a BB that calls with 1.5× Nash's calling share, and an SB
+     that jams with 0.5× Nash's jamming share, both by the cutoff rule, at 10
+     and 20 bb: four runs. Ian takes the other seat.
+   - **The deals:** 100,000 per run, seed 20261119. Each deal gives both
+     hands and a full board, and an all-in is settled on that board by eval7's
+     `evaluate`.
+   - **The gain.** On the same deals, Ian's exploit for the bot's true read
+     and Ian's Nash strategy each play the bot. The measured gain, the mean
+     paired difference, is within 3 standard errors of the predicted exact
+     gain, above or below.
+   - **The risk.** On the same deals against a Nash bot, the measured risk is
+     within 3 standard errors of the predicted exact risk, above or below.
+   - The standard error is the paired differences' sd / √100,000.
+5. **Preflop latency.** Over Ian's preflop decisions with a read in bar 6's
+   hands, from feeding the frame to the suggestion event with the exploit,
+   base, gain and risk: the 95th percentile is at most 300 ms. There must be
+   at least 30 decisions. Separate process, no coverage, idle laptop
+   (DECISIONS 32).
+6. **Live latency.** Gate V bar 4's method and its 500 hands (seed 20261116):
+   - every-change frames through the tracker;
+   - Ian the SB in even hands;
+   - the villain marked Nit, TAG, LAG and Station in turn by hand number,
+     with an empty hand log that the run does not add to, so its reads are
+     the labels'.
+
+   From feeding the frame that first shows the street's card:
+   - **the base line:** turn 95th percentile ≤ 3 s, river ≤ 1 s;
+   - **the exploit line, with gain and risk:** turn ≤ 6 s, river ≤ 2 s.
+
+   Numpy's linear percentile. Timeouts and failures count at their full time.
+   There must be at least 30 per street for each line, or the bar is not
+   measured, which is a FAIL.
+
+**Reported, not gated** (Ian did not tick these as bars):
+- on bar 3's spots, the sign of each gain and risk, and whether Ian's river
+  bluffs rise against ρ̂ = 1.5 folds and fall against 0.5;
+- the labels in the log, and the buttons;
+- each tendency's fitted k, the label ratios, and the group sizes;
+- the new binary with no read against ef5ab1cf, on Gate V bar 3's 40 specs.
+
+Ian also did not pick preflop simulations above 20 bb.
+
+**Older tests, decided here.** The opponent model acts only when the advisor
+is given an opponent store with a read in it. `Advisor.load()` without one
+behaves as today. So:
+- Gates R, T and V are unchanged;
+- Gate T bar 6's overlay texts are unchanged (the buttons are separate
+  widgets);
+- Gate V's tests run on the new streets binary.
+
+Any older test that fails anyway is reported to Ian before it changes.
+
+**Rules out:**
+- labels set by anything but Ian's buttons; automatic player typing stays
+  parked;
+- committing friends' names, labels, reads or hands: `data/live/` stays
+  gitignored, and the fixture's names are made up;
+- changing the definitions, the k fit, the label groups, the lock rule, the
+  bots, the seeds or any bar after the first evidence run, except by a dated
+  amendment;
+- changing the flop bridge's binary;
+- a library run.
