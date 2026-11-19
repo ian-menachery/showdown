@@ -2680,3 +2680,197 @@ No one loses more than their stack.
 - This changes only the 1 bb game.
 - With no ante the cap never binds, since S is at least 1. So bar 2 still
   compares like with like.
+
+---
+
+### 49. Step 4: the preflop re-solve, with a 4× 3-bet and R fitted to our flop solves; Gate Q pre-registered (2026-11-19)
+
+**Decided:** Ian picked these on 2026-11-19. DECISIONS 48 went to the
+push/fold ante, so the preflop re-solve is 49 and the opponent model 50. SCOPE
+amendment A10 brings the second 3-bet size and the fitted R into scope.
+
+**The problem (the 2026-11-16 audit).** The model leans on jams. A called
+raise or 3-bet pays the BB only R of its equity, but a called all-in pays all
+of it, so jamming dodges the discount. On the stored model at R 0.90:
+
+| Depth | BB facing the open: fold / call / 3-bet / jam |
+|---|---|
+| 25 bb | 15 / 57 / 0 / 28% |
+| 50 bb | 9 / 70 / 0 / 21% |
+| 100 bb | 5 / 78 / 11 / 6% |
+
+A share here, and in bar 3, is of the deals that reach the BB's decision at
+the open: each BB class is weighted by its combos against the SB's opening
+range.
+
+**The tree.** DECISIONS 34's, with a second 3-bet size:
+- SB first in: fold, raise to 2.5, or jam.
+- BB facing the open: fold, call, 3-bet to 7.5 (3×), 3-bet to 10 (4×), or jam.
+- SB facing either 3-bet: fold, call, or jam.
+- Calls or folds against every jam.
+
+Not added, by Ian's picks: a min-raise, a 3 bb open, a limp, and a 4-bet below
+all-in.
+
+**Payoffs.** DECISIONS 34's, except that R depends on the pot and the depth:
+- a fold loses what the folder put in;
+- a called all-in nets the SB S(2E − 1);
+- a called raise or 3-bet, with c bb in from each player, nets the SB
+  c(2·share − 1), with share = 1 − R(p, d)·(1 − E). The pot p is the open
+  (c = 2.5), the 3× 3-bet (c = 7.5) or the 4× 3-bet (c = 10); d is the depth.
+- R is used as measured, above 1 included: an out-of-position 3-bettor can
+  realize more than its equity. The game rejects only R outside (0, 2), as a
+  typo guard.
+
+**Fitting R.**
+- **What R is:** the share of its flop equity the BB, out of position, turns
+  into EV once the flop is played. On one flop, R = EV_BB / (pot × E_BB):
+  - EV_BB is the flop bridge's root EV for the BB (`root_ev[0]`, in chips);
+  - E_BB is the BB's range equity at the root, from a report at the root path
+    (its per-hand equity and weights);
+  - the flop bridge's binary is unchanged (c45af752). If it cannot report the
+    root, the build stops and asks Ian.
+
+  A unit test checks the units on a check-down spot, where R must be 1. It is
+  an ordinary test; Ian did not make it a bar.
+- **The solves:** the flop bridge, tree T1, a 2% target, at most 1,000
+  iterations (DECISIONS 40's settings). The ranges are each seat's model
+  weights along the pot's line, as `model_range` gives them to the library.
+  The pot is 2c and the stack d − c.
+- **The cells:** the three pots at 25, 50 and 100 bb, 9 in all.
+- **The flops:** 20, drawn uniformly without replacement from all 22,100
+  flops with seed 20261119. The same 20 serve every cell and both rounds.
+- **A cell's R** is the mean of its 20 per-flop values. Its standard error
+  (sd / √20) is reported.
+- **Unreached cells.** When the round's model reaches a cell's pot in under
+  0.1% of deals (DECISIONS 35's rule), the cell is not measured. It takes the
+  same pot's R from the nearest measured fit depth, or 0.90 if no depth
+  measured that pot. The stored model labels it.
+- **Between fit depths,** R is a straight line in depth: 30 and 40 bb from 25
+  and 50; 60 to 90 bb from 50 and 100.
+- **Two rounds:**
+  1. the new tree solved at R 0.90 for every pot, at 25, 50 and 100 bb; R
+     measured on those ranges;
+  2. the new tree solved at round 1's R, at the same depths; R measured again.
+
+  The product model uses round 2's R. The change between rounds is bar 4.
+
+**The product solve.**
+- **The grid and lookup** are DECISIONS 34's: 25, 30, 40, 50, 60, 70, 80, 90
+  and 100 bb; the nearest depth, ties to the smaller; push/fold at 20 bb or
+  less; 100 bb above 100.
+- **Three solves per depth,** 27 in all: round 2's R, and every pot's R moved
+  down 0.05 and up 0.05 together.
+- **"Depends on R"** compares the −0.05 and +0.05 solves, as DECISIONS 34
+  compared R 0.85 and 0.95.
+- **Every solve,** the rounds' included: `cfr_plus`, exactly 1,000
+  iterations, the average policy, the exact matrix. No early stopping, and no
+  re-running until an answer matches.
+- **Gate P's two 20 bb check solves are not repeated.** Ian did not keep the
+  continuity bar.
+- **Files.**
+  - The old model is renamed `data/preflop_model_v1.json`, byte for byte.
+  - The new one is `data/preflop_model.json`. It stores each cell's R, whether
+    it was measured or a fallback, and the ±0.05 shift.
+  - The fit's per-flop values go in a committed `data/preflop_r_fit.json`.
+    The bridge outputs are cached under `data/external/`, which is gitignored.
+- **Compute,** started only when Ian says so, on AC power. A rough estimate:
+  about 3 h of flop solves per round, so 6 h for both, plus about 3 h of
+  preflop solves.
+
+**The switch.** Ian picked all three.
+- **Preflop advice above 20 bb** comes from the new model.
+  - The `--facing` names stay. `bb_vs_raise` has five actions: fold, call,
+    3-bet 3×, 3-bet 4×, jam. Ties go to the earlier one, in that order. A
+    suggested 3-bet is 3× or 4× the open faced.
+  - **A faced 3-bet maps to a size.** Its ratio to the open it was made over
+    (2.5 bb when a typed spot does not say) picks the nearer of 3× and 4×;
+    3.5× goes to 3×. `bb_vs_4bet_jam` is placed the same way by the BB's own
+    3-bet, read from the spot as the effective stack less the amount to call.
+  - The size note is DECISIONS 35's, against the mapped size: "model assumes
+    a 10 bb 3-bet; you face 9 bb".
+  - The source reads "model chart, fitted R, D bb".
+  - DECISIONS 35's 0.1% reach rule applies to every node, as before.
+- **Postflop ranges.** The equity helper, the stopgap's starting ranges and
+  the live turn and river solves (DECISIONS 47) take the new model's ranges.
+  - A 3-bet pot picks its line by the same ratio rule.
+  - A live solve's pot and stacks stay the hand's real ones.
+  - The stopgap's fitted curves (`data/range_model.json`, Gate N) do not
+    change.
+- **The flop library** (still empty) uses the new ranges. Its 3BP100 spot
+  uses the 3-bet size the new model's BB makes more often at 100 bb. Nothing
+  is run here; Ian starts library runs.
+
+**Gate Q: all seven bars must pass.**
+1. **Exploitability:** at most 0.001 bb/hand at all 9 depths, for all three R
+   sets, by `showdown.cfr.exploitability` on the compiled tree.
+2. **Payoffs:** a separate closed-form function, written from this entry's
+   rules and not from the game's code, gives every terminal payoff for every
+   class pair. It matches every terminal utility in the compiled tree to
+   1e-12, at 25 and 100 bb, for all three R sets.
+3. **The jam lean at 50 bb.** With round 2's R, the BB jams over the open in at
+   most 10% of the deals that reach that decision. It 3-bets, to 7.5 and to 10
+   together, in at least 5%. Shares are as defined above.
+4. **R settles.** Every cell measured in both rounds has its round-2 R within
+   0.02 of round 1's.
+   - Cells unmeasured in either round are listed with the R they got. They do
+     not fail the bar.
+   - Each of the three pots must be measured in both rounds at one fit depth
+     at least, or the bar fails.
+5. **Advisor spots** (Gate G extended, again). A new fixture of at least 30
+   preflop spots above 20 bb. Each spot's depth, decision, action and R flag
+   are written by hand from `showdown preflop chart` before the test runs.
+   - At least 4 for each of the six decisions, at depths where the model
+     reaches it.
+   - For `sb_vs_3bet` and `bb_vs_4bet_jam`, at least 4 at each 3-bet size.
+     At least 2 suggested BB 3-bets of each size. A size the model reaches at
+     no depth is a FAIL, not a skip.
+   - At least 2 spots face an off-model size, each with its note.
+   - Every mix equals the stored model to 1e-12.
+   - The 95th percentile time over the old and new spots is at most 300 ms,
+     measured as DECISIONS 32 sets out.
+6. **Live solves are legal.** Gate V bar 2's 500 simulated hands (seed
+   20261116), advised for both players. Every live-solve answer is legal by
+   Gate V bar 2's rule. At least 100 live-solve answers, at least 20 of them
+   in 4× 3-bet pots; fewer is not measured, which is a FAIL.
+7. **Live latency.** Gate V bar 4's method, on bar 6's hands:
+   - every-change frames through the tracker, with Ian the SB in even hands
+     and the BB in odd ones;
+   - a separate process without coverage, on an idle laptop, with the flop's
+     full 20,000 samples;
+   - from feeding the frame that first shows the street's card to the
+     answer; timeouts and failures count at their full time;
+   - turn 95th percentile ≤ 3 s and river ≤ 1 s, numpy's linear percentile;
+   - at least 30 per street, or the bar is not measured, which is a FAIL.
+
+**Reported, not gated:**
+- the jam lean at 100 bb;
+- each cell's R, its standard error, and any fallbacks;
+- every node's frequencies at every depth, beside the old model's;
+- Gate R's three saved hands under the new model, and what changed;
+- solve times.
+
+Ian also did not pick reproducing the old model with the 4× size off, or a
+gated check of the R measurement.
+
+**Older tests, decided here.**
+- **Pinned to `data/preflop_model_v1.json`,** because their expectations were
+  written from the old model:
+  - Gate P's tests, fast and slow;
+  - Gate G extended's fixture (`model_spots.toml`);
+  - Gate J's model answers;
+  - Gate X's spots, so its cache still replays and X3 stays a strict xfail;
+  - Gate N's and the range fit's tests, where they read model ranges.
+- **Run on the new model, unchanged:** Gates R, T and V, whose bars check
+  legality, tracker against replay, and solver rows, not old-model numbers;
+  and Gate G's old fixture, which runs with `--ranges fixed`.
+- **Any other test that fails after the switch** is reported to Ian, with the
+  reason, before it changes. Nothing is re-baselined silently.
+
+**Rules out:**
+- changing the tree, the fit's cells, flops, seed or rounds, the iteration
+  count or any bar after the first fit run, except by a dated amendment;
+- changing either bridge binary;
+- a library run;
+- limps, min-raises, other opens, and 4-bets below all-in (SCOPE A7, A10);
+- calling the model's answers Nash or GTO.
