@@ -18,6 +18,7 @@ showdown advise --hero AhJs --seat bb --stack 60 --facing bb_vs_raise --pot 3.5 
 showdown preflop chart 50
 showdown preflop fit-r --round 1
 showdown preflop build
+showdown capture
 """
 
 from __future__ import annotations
@@ -557,6 +558,26 @@ def _live(args: argparse.Namespace) -> int:
     return 0
 
 
+def _capture(args: argparse.Namespace) -> int:
+    from showdown.live import capture
+
+    folder, saved = Path(args.out), []
+
+    def report(path: Path | None) -> None:
+        if path is None:
+            print("F9: the window in front isn't a Poker Now tab; nothing saved")
+        else:
+            saved.append(path)
+            print(f"saved {path} ({len(saved)})")
+
+    print(f"press F9 on the Poker Now window to save it to {folder}; Ctrl+C to stop")
+    try:
+        capture.run(folder, report)
+    except KeyboardInterrupt:
+        print(f"stopped: {len(saved)} saved")
+    return 0
+
+
 def _preflop_build(args: argparse.Namespace) -> int:
     import os
 
@@ -850,6 +871,12 @@ def build_parser() -> argparse.ArgumentParser:
     live.add_argument("--delay", type=float, default=1.5, help="seconds per suggestion shown")
     live.add_argument("--save", action="store_true", help="write finished hands to data/live")
     live.set_defaults(handler=_live)
+
+    cap = commands.add_parser(
+        "capture", help="F9 saves the Poker Now window, for the screen reader (spike S1)"
+    )
+    cap.add_argument("--out", default=str(Path("data") / "live" / "screens"))
+    cap.set_defaults(handler=_capture)
 
     pre = commands.add_parser(
         "preflop", help="the preflop model above 20 bb (DECISIONS 33, 34, 49)"

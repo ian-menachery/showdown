@@ -563,8 +563,22 @@ uses until this is built.
     of the exact prediction, either way), preflop latency ≤ 300 ms, and live
     latency (base: turn ≤ 3 s, river ≤ 1 s; exploit from the card: turn
     ≤ 6 s, river ≤ 2 s).
+- **The path to a live heads-up game (planned 2026-11-20).** Ian's picks:
+  - **First game:** heads-up with one friend. The 3–9 game waits for
+    multiway.
+  - **Screenshots:** a capture hotkey during a self-play session.
+  - **Labels:** drafted from the images, with Ian spot-checking 10.
+  - **Gate Q's solves:** overnight, on AC.
+
+  The order is S1 (the reader; Gate S1), then Phase 11 (the Poker Now log
+  parser; Gate I), then Phase 10 (`showdown live --screen`; Gate H, on 100+
+  heads-up hands with a friend who knows). Each gets a DECISIONS entry at the
+  next free number before its code.
+  - **Built so far:** `showdown capture` (`live/capture.py`). F9 saves the
+    window in front to `data/live/screens/`, only when its title says Poker
+    Now. It adds the `live` extra, with mss 10.2.0.
 - **Still open:**
-  - S1, which waits for Ian's screenshots;
+  - S1, which waits for Ian's screenshots, taken with `showdown capture`;
   - D5, the self-hosted table;
   - the first library run, which Ian starts.
 

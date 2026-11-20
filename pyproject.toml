@@ -23,6 +23,11 @@ dev = [
   "pytest-cov>=5.0",
   "ruff>=0.6",
 ]
+# The screen reader (DECISIONS 30): pinned when installed. Pillow and the OCR bindings
+# join when spike S1's reader needs them.
+live = [
+  "mss==10.2.0",
+]
 
 [project.scripts]
 showdown = "showdown.cli:main"
