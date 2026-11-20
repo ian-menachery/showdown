@@ -24,9 +24,18 @@ AUTOMATIONS = (
 )
 
 
-def play(rng: random.Random):
-    """(the finished pokerkit state, the starting stacks, the PHH actions without showdowns)."""
-    stacks = (rng.randint(100, 1000), rng.randint(100, 1000))
+FOUR_X_OPENING = (25, 100, "cc")
+"""Gate Q bar 6's 4x hands (DECISIONS 49's amendment): open to 2.5, 3-bet to 10, call."""
+
+
+def play(rng: random.Random, chips: tuple[int, int] = (100, 1000), opening: tuple = ()):
+    """(the finished pokerkit state, the starting stacks, the PHH actions without showdowns).
+
+    `opening` forces the first actions: a raise-to in chips, or "cc". Without it, the hands
+    are Gate R's and Gate V's.
+    """
+    stacks = (rng.randint(*chips), rng.randint(*chips))
+    forced = list(opening)
     with warnings.catch_warnings():  # pokerkit warns that our seeded cards aren't its deck's
         warnings.simplefilter("ignore")
         state = NoLimitTexasHoldem.create_state(AUTOMATIONS, True, 0, (5, 10), 10, stacks, 2)
@@ -44,6 +53,15 @@ def play(rng: random.Random):
                 state.deal_board(cards)
             elif state.actor_index is not None:
                 p = f"p{state.actor_index + 1}"
+                if forced:
+                    move = forced.pop(0)
+                    if move == "cc":
+                        state.check_or_call()
+                        actions.append(f"{p} cc")
+                    else:
+                        state.complete_bet_or_raise_to(move)
+                        actions.append(f"{p} cbr {move}")
+                    continue
                 r = rng.random()
                 if state.checking_or_calling_amount > 0 and r < 0.15:
                     state.fold()

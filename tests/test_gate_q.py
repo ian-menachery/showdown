@@ -381,6 +381,30 @@ def test_advise_takes_the_open_and_the_3bet(capsys) -> None:
         main([*args[:-1], "--open", "0", "--no-log"])
 
 
+def test_bar6s_4x_hands_open_3bet_to_10_and_call() -> None:
+    """The amendment's hands, before any model: every pot is a 4x 3-bet pot, 25 to 100 bb."""
+    import random
+    import warnings
+
+    from pokerkit import HandHistory
+    from test_gate_q_slow import FOUR_X_HANDS, FOUR_X_SEED, in_4x_pot, simulate_4x
+
+    rng = random.Random(FOUR_X_SEED)
+    later = 0
+    for k in range(FOUR_X_HANDS):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            replay = hand.replay_history(HandHistory.loads(simulate_4x(rng)), f"4x{k}")
+        assert 25 <= min(replay.starting_bb.values()) <= max(replay.starting_bb.values()) <= 100
+        pre = [(m.seat, m.kind, m.to_bb) for d in replay.decisions[:3] if (m := d.taken)]
+        assert pre == [("sb", "raise", 2.5), ("bb", "raise", 10.0), ("sb", "call", 10.0)], k
+        turns = [d for d in replay.decisions if d.street in ("turn", "river")]
+        assert all(in_4x_pot(d) for d in turns)
+        later += len(turns)
+    print(f"\n{later} turn and river decisions in {FOUR_X_HANDS} 4x hands")
+    assert later >= 20
+
+
 def test_solve_context_needs_no_size_for_single_raised_pots(advisor) -> None:
     moves = (
         hand.Move("preflop", "sb", "raise", 2.5, 2.0, False),

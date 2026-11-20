@@ -2883,6 +2883,23 @@ gated check of the R measurement.
 - **Gate Q's evidence tests** sit in the slow suite and skip, saying why, until the fit or
   the product model exists. A skip is not a pass (DECISIONS 6).
 
+**Amendment (2026-11-19), before the first fit run: bar 6's 4× count gets its own hands.**
+Ian chose this after a count that needs no model: Gate V's 500 hands hold only 12 turn and
+river decisions in 4× 3-bet pots (and 19 in 3× ones), so bar 6's 20 could not be reached
+whatever the model does.
+- **On the 500 hands,** bar 6 is unchanged except for the 4× minimum: every live-solve
+  answer is legal by Gate V bar 2's rule, and there are at least 100.
+- **A second set of 200 hands,** seed 20261119:
+  - each player's stack is drawn uniformly from 25 to 100 bb, in whole chips of 0.1 bb;
+  - the SB opens to 2.5, the BB 3-bets to 10 and the SB calls, so every pot is a 4× 3-bet
+    pot;
+  - after that, play is random and legal, as in Gate V's hands;
+  - both players are advised.
+
+  Every live-solve answer is legal by the same rule. At least 20 answers are needed;
+  fewer is not measured, which is a FAIL.
+- **Bar 7 is unchanged.**
+
 ---
 
 ### 50. Step 5: the opponent model, playstyle labels and an exploit line on the overlay; Gate O pre-registered (2026-11-19)

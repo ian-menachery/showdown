@@ -25,6 +25,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from live_sim import FOUR_X_OPENING, phh_text, play
 from pokerkit import HandHistory
 from test_gate_q import TERMINALS_PER_DEAL, check_terminals
 from test_gate_r_slow import HANDS, SEED, simulate
@@ -61,6 +62,8 @@ SPOTS_MIN, PER_DECISION, PER_SIZE, SUGGESTED_PER_SIZE, OFF_SIZE = 30, 4, 4, 2, 2
 P95_MS = 300
 # Bars 6 and 7
 BAR6_MIN, BAR6_4X_MIN, BAR7_MIN = 100, 20, 30
+FOUR_X_SEED, FOUR_X_HANDS, FOUR_X_CHIPS = 20261119, 200, (250, 1000)
+"""Bar 6's 4x hands (DECISIONS 49's amendment): 200, seed 20261119, stacks of 25 to 100 bb."""
 P95_S = {"turn": 3.0, "river": 1.0}
 FIXES = ("fits the legal sizes", "more than can be matched", "is not legal here", "not fold")
 """DECISIONS 41's notes when the legality rule changes an action."""
@@ -392,26 +395,61 @@ def replayed(model):
     return solved, fallbacks
 
 
+def check_legal(k: int, d: hand.Decision, s) -> None:
+    """Gate V bar 2's rule: a legal action, its size within pokerkit's limits and the cap."""
+    legal, why = d.legal, (k, d.seat, d.street, d.legal, s)
+    if s.action in ("fold", "call"):
+        assert legal.to_call_bb > 0, why
+    elif s.action == "check":
+        assert legal.to_call_bb == 0, why
+    else:
+        assert s.action in RAISES and legal.can_raise, why
+        assert legal.raise_min_bb - 1e-9 <= s.size_bb <= legal.raise_max_bb + 1e-9, why
+        assert s.size_bb <= legal.cap_bb + 1e-9, why
+
+
 def test_bar6_every_live_solve_answer_is_legal(replayed) -> None:
     solved, fallbacks = replayed
-    counts, fours = Counter(), 0
+    counts = Counter()
     for k, d, _, s in solved:
-        legal, why = d.legal, (k, d.seat, d.street, d.legal, s)
         counts[(d.street, s.action)] += 1
-        fours += in_4x_pot(d)
-        if s.action in ("fold", "call"):
-            assert legal.to_call_bb > 0, why
-        elif s.action == "check":
-            assert legal.to_call_bb == 0, why
-        else:
-            assert s.action in RAISES and legal.can_raise, why
-            assert legal.raise_min_bb - 1e-9 <= s.size_bb <= legal.raise_max_bb + 1e-9, why
-            assert s.size_bb <= legal.cap_bb + 1e-9, why
-    print(f"\n{len(solved)} live-solve answers, {fours} in 4x 3-bet pots")
+        check_legal(k, d, s)
+    fours = sum(in_4x_pot(d) for _, d, _, _ in solved)
+    print(f"\n{len(solved)} live-solve answers, {fours} in 4x 3-bet pots (reported)")
     print(f"actions {dict(sorted(counts.items()))}")
     print(f"fallbacks on the turn and river: {dict(fallbacks.most_common())}")
     assert len(solved) >= BAR6_MIN
-    assert fours >= BAR6_4X_MIN
+
+
+def simulate_4x(rng: random.Random) -> str:
+    """One of bar 6's 4x hands (the amendment): stacks of 25 to 100 bb, open, 3-bet, call."""
+    _, stacks, actions = play(rng, FOUR_X_CHIPS, FOUR_X_OPENING)
+    return phh_text(stacks, actions)
+
+
+def test_bar6_every_live_solve_answer_in_the_4x_hands_is_legal(model) -> None:
+    advisor = Advisor.load(samples=500)
+    rng = random.Random(FOUR_X_SEED)
+    solved, counts, fallbacks = 0, Counter(), Counter()
+    for k in range(FOUR_X_HANDS):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            replay = hand.replay_history(HandHistory.loads(simulate_4x(rng)), f"4x{k}")
+        for d in replay.decisions:
+            s = advisor.suggest(d.spot())
+            if d.street not in ("turn", "river"):
+                continue
+            assert in_4x_pot(d), (k, d.history)
+            if not s.source.startswith(solve.SOURCE):
+                fallbacks[re.sub(r"[\d.]+", "N", s.source.split("no live solve: ")[-1])] += 1
+                continue
+            check_legal(k, d, s)
+            counts[(d.street, s.action)] += 1
+            solved += 1
+    print(f"\n{solved} live-solve answers in {FOUR_X_HANDS} 4x hands")
+    print(f"actions {dict(sorted(counts.items()))}")
+    print(f"fallbacks on the turn and river: {dict(fallbacks.most_common())}")
+    assert solved >= BAR6_4X_MIN
 
 
 _LIVE_SCRIPT = r"""
