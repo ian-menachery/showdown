@@ -3150,3 +3150,92 @@ Any older test that fails anyway is reported to Ian before it changes.
   amendment;
 - changing the flop bridge's binary;
 - a library run.
+
+---
+
+### 51. Spike S1, the screen reader: Gate S1's measurement fixed before any screenshot or reader code (2026-11-21)
+
+**Decided.** Ian picked these on 2026-11-20, when he asked for the shortest
+path to a live game (plan doc, Status, "The path to a live heads-up game"):
+- the first live game is heads-up with one friend who knows;
+- the screenshots come from `showdown capture` (F9) during a self-play
+  session;
+- I draft the truth labels, and Ian checks 10 of them.
+
+S1's bars stay as Phase 8 set them, and as DECISIONS 42 widened them: 100% of
+cards, at least 99% of numbers, and at most 300 ms per read. This entry fixes
+how they are measured, and adds one bar.
+
+**The screenshots.**
+- **The session:**
+  - Ian self-plays a private play-money Poker Now game in two browser
+    windows;
+  - the four-colour deck is on;
+  - one window size and zoom is used throughout, and is recorded in GATES.md.
+- **What to capture:** at least 100 F9 captures, covering:
+  - every street, both buttons and both players' turns;
+  - bets in front;
+  - an all-in run-out and a showdown with cards shown;
+  - end-of-hand frames;
+  - stacks of 1 to 4 digits.
+- **Where they live:** the gitignored `data/live/screens/`. They are never
+  committed.
+- **The split,** by capture order (the file names sort by time):
+  - the first captures, at most 50, are the dev set;
+  - the rest, at least 50, are the test set;
+  - with fewer than 100, the test set keeps 50 and the dev set gets what is
+    left. With fewer than 60 in all, S1 waits for more.
+
+**The labels.**
+- **What each frame should read as:** DECISIONS 42's `TableState`, plus the
+  blinds:
+  - Ian's cards and the board;
+  - for each seat, its name, stack and bet, whether it holds cards, and its
+    shown cards;
+  - the button, the seat to act, `ended`, and the pot when it is shown.
+- **The cross-check:** the game's downloaded log gives each hand's cards,
+  stacks and actions. A label that disagrees with the log is redrafted.
+- **Ian's check:** 10 test frames, picked at random with the seed recorded.
+  One mismatch means every label is redrafted and checked again.
+- **Sealing:** the test labels are written and checked, and their SHA-256 is
+  recorded in GATES.md, before the reader first runs on any test frame.
+  - The labels and screenshots are pinned by a manifest hash, as
+    `require_pluribus` does (DECISIONS 25).
+  - A missing or changed file fails the test, never skips it.
+
+**Gate S1,** scored once on the test set:
+1. **Cards: 100%.** That covers Ian's cards, the board and shown cards. A
+   missing or extra card counts as wrong.
+2. **Numbers: at least 99%.** That covers stacks, bets, the pot (when shown)
+   and the blinds, each exact to the chip.
+3. **The tracker's fields: at least 99% each.** This bar is new, because the
+   tracker depends on these fields. They are the button, the seat to act,
+   whether each seat holds cards, and `ended`. Names are reported, not gated.
+4. **Speed: every test read takes at most 300 ms.** It is measured as
+   DECISIONS 32 does: in a subprocess, without coverage, on an idle laptop. A
+   read runs from the PNG's pixels in memory to the `TableState`.
+
+A read may return a `ReadError` instead of a frame, and the advice then says
+"no suggestion". On the test set, a `ReadError` counts as wrong for every
+field of its frame.
+
+**The method,** as first planned. It may change, but only on the dev set.
+- **Window size:** each read is normalised by the table's position and size
+  in the window. A window size the dev set never showed gives a `ReadError`
+  ("window size changed").
+- **Cards:** ranks by template matching against glyphs cut from the dev set;
+  suits by colour, which the four-colour deck makes distinct.
+- **Numbers and names:** Windows OCR (Windows.Media.Ocr, through pywinrt) on
+  small crops.
+- **The button, the turn and `ended`:** fixed visual markers.
+- **Packages:** Pillow and the pywinrt packages join the `live` extra, pinned,
+  when the reader first needs them. Their versions are recorded in GATES.md.
+
+**Rules out:**
+- running the reader on a test frame before the test labels are sealed;
+- tuning on the test set;
+- changing the split, a sealed label or any bar after the first test run,
+  except by a dated amendment;
+- reading any window but Poker Now's, or sending screenshots off the laptop
+  (D1, DECISIONS 30);
+- committing screenshots, labels or game logs.
