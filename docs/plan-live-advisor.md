@@ -601,6 +601,18 @@ uses until this is built.
     - **D11:** step 5 after Gate H, then multiway.
 
     The answers, or "decided without Ian", go here.
+  - **D2 is settled (2026-11-21):** F9 saved the pokernow.com window. The
+    new-game tab's title ("Poker Now - New Game - Private Poker with
+    friends") passes the filter too.
+  - **Decided without Ian (2026-11-21): Gate H runs on self-play.**
+    - Ian has no one to play heads-up with right now.
+    - Live advice on ClubWPT Gold stays out: it means strangers and prizes,
+      and it is against DECISIONS 29.
+    - He had no preference among the three options, so the recommended
+      reversible one was taken. He plays 100+ hands against himself in two
+      Poker Now windows, and the advisor reads one of them.
+    - Gate H's entry says so. A game with a friend can follow whenever
+      someone is free.
 - **Still open:**
   - S1, which waits for Ian's screenshots, taken with `showdown capture`;
   - D5, the self-hosted table;
