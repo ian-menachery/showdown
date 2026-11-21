@@ -3239,3 +3239,163 @@ field of its frame.
 - reading any window but Poker Now's, or sending screenshots off the laptop
   (D1, DECISIONS 30);
 - committing screenshots, labels or game logs.
+
+---
+
+### 52. Phase 10: `showdown live --screen` and Gate H, on self-play; pre-registered before the loop's code (2026-11-21)
+
+**Decided.**
+- Ian approved D1 to D11 on 2026-11-21 (plan doc, Status).
+- Gate H runs on self-play, decided without Ian on 2026-11-21: Ian plays
+  himself in two Poker Now windows. A game with a friend can follow later,
+  under the same bars.
+- This entry fixes the screen loop and Gate H before any loop code. The reader
+  (S1, DECISIONS 51) and the Poker Now log parser (Phase 11, Gate I) don't
+  exist yet. So the loop takes the reader through an interface, and is built
+  and tested with fake images now.
+
+**The interface:** `read(png: bytes) -> TableState | ReadError`.
+- `ReadError` sits beside the frame contract in `live/table.py` and carries a
+  reason.
+- S1's `live/reader.py` implements `read`. Until it exists,
+  `showdown live --screen` stops with "the screen reader (spike S1) isn't
+  built yet".
+
+**The loop,** `src/showdown/live/screen.py`, run by `showdown live --screen`:
+- **One window.** At start the loop waits for a Poker Now window in front,
+  and locks onto that window (its handle). That window is Ian's seat; in
+  self-play the other window is the opponent's, and the loop never reads it.
+  - It captures only while the locked window is in front and its title says
+    Poker Now. Otherwise it waits.
+  - Both windows are maximised (D10), so the table can only be seen while
+    it is in front.
+- **Every 250 ms** it grabs the window with `capture.grab_png`.
+- **Unchanged images are skipped.** An image identical to the one before is
+  not read again; it counts as the same read.
+- **Two reads alike.** A frame goes to the tracker only when two captures in a
+  row read the same and it differs from the last frame fed. Animations, such
+  as cards dealing or chips sliding, change between captures, so they never
+  reach the tracker.
+- **Reading errors** that read the same twice are logged and shown as "no
+  suggestion: reading error: why", once per change. They never reach the
+  tracker.
+- **Exceptions.** An exception inside one capture's work is logged with its
+  traceback as a crash line, and the loop goes on.
+- **PNGs saved,** under the gitignored `data/live/decisions/<session>/`:
+  - the image of every frame fed with Ian to act;
+  - the image of every logged reading error.
+- **The overlay** is DECISIONS 42's window:
+  - it is placed beside the table: to the right of the window if the screen
+    has room, else inside the window's top-right corner;
+  - Ian can drag it;
+  - it stays on top and visible to screen share.
+- **The session log,** `data/live/sessions/<start>.jsonl` (gitignored), is
+  flushed after every line. There is one line per:
+  - frame fed, the whole `TableState` with its capture time;
+  - tracker event, with the decision, the suggestion, the timings and the PNG;
+  - reading error;
+  - crash.
+
+  Each line names the tracker's hand number. `--screen` always saves: the
+  session log, the PNGs, and PHH for every ended hand. That is V1's "every
+  hand logged".
+- **Live solves** still hold the loop while they run, up to Gate V's
+  timeouts. The overlay shows "solving…" meanwhile.
+- **Never:** clicks, keystrokes, another window, or anything sent off the
+  laptop.
+
+**Gate H, the session.**
+- One private play-money Poker Now game. Ian is alone in two browser windows,
+  both maximised at S1's window size and zoom (D10). The four-colour deck is
+  on if S1 had it (D3). The blinds and stacks are recorded in GATES.md.
+- At least 100 hands dealt heads-up, counted from Poker Now's downloaded log.
+- No other heavy process runs during it: no library build, no solve, no gate
+  run.
+- **The truth** is Poker Now's log, read by the Phase 11 parser after Gate I
+  passes. Gate H is scored once, after the session.
+- **Hands are matched in order.** Each tracker hand goes to the first unmatched
+  log hand after the last match with the same two starting stacks. A
+  tracker hand's starting stacks are stack plus bet on its first frame.
+- **Ian's seat** in the log is the nickname of the window the loop read,
+  recorded in GATES.md.
+
+**Gate H's bars:**
+1. **Cards: 100%.** That covers every card in every frame fed to the tracker:
+   - the board, which must equal the log's board up to that street;
+   - the opponent's shown cards, which must equal the log's;
+   - Ian's hole cards, which must equal the log's.
+
+   If the log lacks Ian's hole cards (D6): 20 hands are drawn, with seed
+   20261122, from those with a saved decision PNG. I label Ian's cards from
+   the PNG, and each must equal the tracker's. A tracker hand that matches no
+   log hand fails this bar.
+2. **Latency.**
+   - **Preflop: median at most 2 s. Flop: median at most 15 s.** These are
+     over Ian's decisions answered with a real suggestion, taking each
+     decision's first one. The time runs from the capture of the first of
+     the two images that let the decision's frame through, to the overlay
+     showing the suggestion. So it includes the second capture, both reads
+     and the tracker.
+   - **Turn and river: Gate V's bars,** measured as Gate V measures them.
+     That is from feeding the frame that first shows the card to the answer,
+     for decisions where a live solve was started. The bars are a 95th
+     percentile of at most 3 s on the turn and 1 s on the river (numpy's
+     linear percentile). The same times from that frame's first capture are
+     reported, not gated.
+3. **No crash.** Zero crash lines in the session log. The session runs in one
+   run of the command, and every hand the tracker ended is written as PHH.
+4. **Coverage: at least 90% (D7).**
+   - **Ian's decisions** are his actions in the log: fold, check, call, bet
+     or raise. Blinds and shows don't count.
+   - **A decision is covered** when the session log has a real suggestion
+     for it: an action, not "no suggestion". It is found by its matched
+     hand and the number of actions before it in the hand.
+   - **Left out of both counts, and reported:** decisions the advisor turns
+     down by its own rules. In those the tracker read the spot, and the
+     advisor gave "no suggestion" (such as DECISIONS 35's 0.1% reach rule)
+     or a spot error.
+   - **Uncovered:** reading errors, abandoned hands, hands with no match and
+     turns never seen.
+5. **Reported, not gated:**
+   - hands the tracker abandoned, by cause (the reading error's text, "N
+     players dealt in", "joined mid-hand", no end frame);
+   - uncovered decisions, by cause;
+   - bets written at an unseen size;
+   - the read time per capture: median and 95th percentile.
+
+**The order:**
+1. A dry run of about 20 self-play hands. Fix once, then stop. Its hands don't
+   count.
+2. The Gate H session: 100 or more hands.
+3. Ian downloads the game's log into `data/live/`.
+4. Gate H is scored once, and recorded in GATES.md as PASS or FAIL.
+
+**The loop's tests, before the reader exists.** They use fake PNG bytes and a
+fake reader that turns each into a frame from Gate T's saved hands:
+- a frame seen once between two others never reaches the tracker;
+- unchanged images are not read again;
+- every decision that Gate T's every-change frames give comes through, and
+  each one's PNG is saved;
+- reading errors are logged once per change and never fed;
+- a crash in one capture is logged, and the next capture still works;
+- captures happen only while the locked window is in front;
+- the overlay's position.
+
+**Decided without Ian (2026-11-21),** each the reversible option:
+- the loop reads only the locked window, and only while it is in front, since
+  self-play uses two maximised windows;
+- coverage leaves out the advisor's own refusals and reports them. They are a
+  model gap, which Gates G, P and V already cover, and not a reading failure;
+- hands are matched by starting stacks, in order;
+- D6's seed is 20261122;
+- the turn and river are timed as Gate V does, and the full time from the
+  capture is reported beside it;
+- `--screen` always saves, so a forgotten flag can't lose the session.
+
+**Rules out:**
+- clicking anything, or hiding the overlay from screen share;
+- reading the opponent's window or any window but Poker Now's;
+- sending images off the laptop;
+- committing screenshots, PNGs, the session log or game logs;
+- ClubWPT, ever (DECISIONS 29);
+- changing a bar after the session, except by a dated amendment.

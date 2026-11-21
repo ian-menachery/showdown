@@ -613,6 +613,12 @@ uses until this is built.
       Poker Now windows, and the advisor reads one of them.
     - Gate H's entry says so. A game with a friend can follow whenever
       someone is free.
+  - **Phase 10 is pre-registered** (DECISIONS 52, 2026-11-21), before its
+    code: `showdown live --screen` and Gate H on self-play. The bars are
+    cards 100%, latency medians of 2 s preflop and 15 s on the flop plus
+    Gate V's turn and river bars, no crash, and coverage of at least 90%.
+    The loop reads one locked window, only while it is in front. Six choices
+    were decided without Ian and are listed there.
 - **Still open:**
   - S1, which waits for Ian's screenshots, taken with `showdown capture`;
   - D5, the self-hosted table;
