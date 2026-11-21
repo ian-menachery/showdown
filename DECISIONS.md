@@ -2900,6 +2900,20 @@ whatever the model does.
   fewer is not measured, which is a FAIL.
 - **Bar 7 is unchanged.**
 
+**Result (2026-11-21): Gate Q FAIL on bars 4 and 5; step 4 stops here.** R did not settle:
+- the 3× 3-bet pot was reached at no fit depth;
+- every measured cell moved 0.04 to 0.10 between the rounds.
+
+The same unreached 3× size, and the SB's first-in jam, failed bar 5's counts. Bars 1, 2, 3,
+6 and 7 passed (GATES.md). Ian chose, on 2026-11-21:
+- the old model stays live as `data/preflop_model.json`, byte for byte;
+- the new one is kept, unused, as `data/preflop_model_v2.json`;
+- step 5 builds on the old model;
+- no successor gate is registered.
+
+The ideas that were not taken up: damped extra rounds, filling an unmeasured 3× pot from the
+4× pot's R, and dropping the 3× size.
+
 ---
 
 ### 50. Step 5: the opponent model, playstyle labels and an exploit line on the overlay; Gate O pre-registered (2026-11-19)

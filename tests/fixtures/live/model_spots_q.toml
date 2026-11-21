@@ -1,0 +1,64 @@
+# Gate Q bar 5 (DECISIONS 49): the product model in the advisor.
+#
+# Preflop spots above 20 bb. Each expected depth, action and R flag was written by
+# hand from `showdown preflop chart <depth> --node <node>` on the product model
+# (fitted R, written 2026-11-21). Suited hands sit above the diagonal. A letter is
+# the most likely action: R raise (the open), Q the 3-bet to 4x, J jam, C call,
+# F fold. Lower case means mixed below 90%, and * means "depends on R". The test
+# checks each mix against the stored model separately.
+#
+# The open is 2.5 bb, and the 4x 3-bet is to 10. Facing the open: pot 3.5, to call 1.5.
+# Facing the 10 bb 3-bet: pot 12.5, to call 7.5. Facing the SB's jam over the 3-bet at
+# D bb: pot D + 10, to call D - 10. Facing the BB's jam over the open: pot D + 2.5,
+# to call D - 2.5.
+#
+# Not here, because the product model reaches them in under 0.1% of deals at every
+# depth (DECISIONS 35 gives no answer there), so they had no chart to write from:
+# the 3x 3-bet, node rr, at most 0.002%; the jam over it, rrj, 0.000%; and the SB's
+# first-in jam, node j, bb_vs_jam, at most 0.034%. Bar 5 counts a size the model
+# reaches at no depth as a FAIL.
+
+spots = [
+  # SB first in, node ''.
+  { hero = "7c2d", seat = "sb", bb = 25, decision = "sb_first", depth = 25, action = "fold", r = false },  # 25 '': 72o = F
+  { hero = "Jc3d", seat = "sb", bb = 25, decision = "sb_first", depth = 25, action = "fold", r = true },  # 25 '': J3o = f*
+  { hero = "AsKd", seat = "sb", bb = 50, decision = "sb_first", depth = 50, action = "raise", r = false, size = 2.5 },  # 50 '': AKo = R
+  { hero = "9c4d", seat = "sb", bb = 50, decision = "sb_first", depth = 50, action = "fold", r = true },  # 50 '': 94o = F*
+  { hero = "7c3d", seat = "sb", bb = 100, decision = "sb_first", depth = 100, action = "fold", r = false },  # 100 '': 73o = F
+  { hero = "8c4d", seat = "sb", bb = 100, decision = "sb_first", depth = 100, action = "raise", r = true, size = 2.5 },  # 100 '': 84o = r*
+
+  # BB facing the open, node 'r'.
+  { hero = "AhAd", seat = "bb", bb = 50, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 50, action = "raise", r = false, size = 10.0 },  # 50 r: AA = Q
+  { hero = "Kh9h", seat = "bb", bb = 50, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 50, action = "call", r = true },  # 50 r: K9s = c*
+  { hero = "7c2d", seat = "bb", bb = 50, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 50, action = "fold", r = false },  # 50 r: 72o = F
+  { hero = "Ah2h", seat = "bb", bb = 50, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 50, action = "jam", r = true },  # 50 r: A2s = J*
+  { hero = "KcQd", seat = "bb", bb = 100, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 100, action = "raise", r = false, size = 10.0 },  # 100 r: KQo = Q
+  { hero = "Jc5d", seat = "bb", bb = 100, decision = "bb_vs_raise", pot = 3.5, to_call = 1.5, depth = 100, action = "fold", r = true },  # 100 r: J5o = F*
+  # Sizes the model doesn't use: a 3 bb open (pot 4, to call 2).
+  { hero = "KcQd", seat = "bb", bb = 100, decision = "bb_vs_raise", pot = 4.0, to_call = 2.0, depth = 100, action = "raise", r = false, size = 12.0, note = "model assumes a 2.5 bb open; you face 3 bb" },  # 100 r: KQo = Q
+  { hero = "Th7h", seat = "bb", bb = 50, decision = "bb_vs_raise", pot = 4.0, to_call = 2.0, depth = 50, action = "call", r = false, note = "model assumes a 2.5 bb open; you face 3 bb" },  # 50 r: T7s = C
+
+  # SB facing the 3-bet to 10 (4x), node 'r4'.
+  { hero = "AhKh", seat = "sb", bb = 50, decision = "sb_vs_3bet", pot = 12.5, to_call = 7.5, depth = 50, action = "jam", r = false },  # 50 r4: AKs = J
+  { hero = "Kh9h", seat = "sb", bb = 50, decision = "sb_vs_3bet", pot = 12.5, to_call = 7.5, depth = 50, action = "call", r = true },  # 50 r4: K9s = C*
+  { hero = "7c2d", seat = "sb", bb = 50, decision = "sb_vs_3bet", pot = 12.5, to_call = 7.5, depth = 50, action = "fold", r = false },  # 50 r4: 72o = F
+  { hero = "Ac4d", seat = "sb", bb = 50, decision = "sb_vs_3bet", pot = 12.5, to_call = 7.5, depth = 50, action = "call", r = true },  # 50 r4: A4o = C*
+  { hero = "Ah9h", seat = "sb", bb = 100, decision = "sb_vs_3bet", pot = 12.5, to_call = 7.5, depth = 100, action = "call", r = false },  # 100 r4: A9s = C
+  { hero = "QhQd", seat = "sb", bb = 100, decision = "sb_vs_3bet", pot = 12.5, to_call = 7.5, depth = 100, action = "jam", r = false },  # 100 r4: QQ = J
+  # A 3-bet to 9 (ratio 3.6, so 4x): pot 11.5, to call 6.5.
+  { hero = "Ah9h", seat = "sb", bb = 100, decision = "sb_vs_3bet", pot = 11.5, to_call = 6.5, depth = 100, action = "call", r = false, note = "model assumes a 10 bb 3-bet; you face 9 bb" },  # 100 r4: A9s = C
+
+  # BB facing the SB's jam over the 3-bet to 10, node 'r4j'.
+  { hero = "AhKh", seat = "bb", bb = 50, decision = "bb_vs_4bet_jam", pot = 60.0, to_call = 40.0, depth = 50, action = "call", r = false },  # 50 r4j: AKs = C
+  { hero = "Kh6h", seat = "bb", bb = 50, decision = "bb_vs_4bet_jam", pot = 60.0, to_call = 40.0, depth = 50, action = "call", r = true },  # 50 r4j: K6s = c*
+  { hero = "Ah2h", seat = "bb", bb = 50, decision = "bb_vs_4bet_jam", pot = 60.0, to_call = 40.0, depth = 50, action = "fold", r = true },  # 50 r4j: A2s = f*
+  { hero = "AhJd", seat = "bb", bb = 100, decision = "bb_vs_4bet_jam", pot = 110.0, to_call = 90.0, depth = 100, action = "call", r = false },  # 100 r4j: AJo = C
+  { hero = "KhTh", seat = "bb", bb = 100, decision = "bb_vs_4bet_jam", pot = 110.0, to_call = 90.0, depth = 100, action = "fold", r = true },  # 100 r4j: KTs = f*
+
+  # SB facing the BB's jam over the open, node 'rj'.
+  { hero = "Kh6h", seat = "sb", bb = 25, decision = "sb_vs_jam", pot = 27.5, to_call = 22.5, depth = 25, action = "fold", r = false },  # 25 rj: K6s = f
+  { hero = "QhTd", seat = "sb", bb = 25, decision = "sb_vs_jam", pot = 27.5, to_call = 22.5, depth = 25, action = "call", r = true },  # 25 rj: QTo = C*
+  { hero = "Ac2d", seat = "sb", bb = 30, decision = "sb_vs_jam", pot = 32.5, to_call = 27.5, depth = 30, action = "fold", r = false },  # 30 rj: A2o = F
+  { hero = "2h2d", seat = "sb", bb = 30, decision = "sb_vs_jam", pot = 32.5, to_call = 27.5, depth = 30, action = "call", r = true },  # 30 rj: 22 = C*
+  { hero = "Ac5d", seat = "sb", bb = 40, decision = "sb_vs_jam", pot = 42.5, to_call = 37.5, depth = 40, action = "call", r = true },  # 40 rj: A5o = C*
+]

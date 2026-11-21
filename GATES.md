@@ -1204,3 +1204,88 @@ player posts 0.1 bb, and S is the stack before the blinds and antes.
 showdown pushfold build --ante 0.1 --out data/pushfold_ante10.json
 .venv\Scripts\python -m pytest tests/test_gate_pa.py tests/test_gate_pa_slow.py -m "slow or not slow" -s
 ```
+
+## Gate Q: the preflop re-solve with a 4× 3-bet and fitted R: FAIL, bars 4 and 5 (2026-11-21)
+
+Evidence:
+- `tests/test_gate_q.py` (fast suite);
+- `tests/test_gate_q_slow.py` (`-m "slow or not slow"`): 61 passed, 2 failed, in 377 s;
+- `data/preflop_r_fit.json` (commit 1411d6c);
+- the product model, now `data/preflop_model_v2.json`;
+- bar 5's fixture, `tests/fixtures/live/model_spots_q.toml`.
+
+The bars were pre-registered in DECISIONS 49 (commit 50c910a) before any code. The one
+amendment, bar 6's 200 hands of its own, came before the first fit run (7f30b22). The fixture
+was written from `showdown preflop chart` on the product model, before bar 5's test ran.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Exploitability | all 27 solves (9 depths × R −0.05, fit, +0.05); worst 2.87e-4 bb/hand (100 bb, −0.05); a fresh best response at 25 and 100 bb matches the stored value | ≤ 1e-3 | PASS |
+| 2. Closed-form payoffs | every terminal utility at 25 and 100 bb, for all three R sets: 428,415 terminals each (169 × 169 × 15) | to 1e-12 | PASS |
+| 3. The jam lean at 50 bb | the BB jams over the open in 3.1% and 3-bets in 30.4%, all of it to 10 | jam ≤ 10%, 3-bets ≥ 5% | PASS |
+| 4. R settles | the 3× pot was measured in neither round (the model reaches it in at most 0.006% of deals); the measured cells moved 0.036 to 0.098 | each pot measured in both rounds at some depth; every cell within 0.02 | **FAIL** |
+| 5. Advisor spots | all 31 spots match: action, R flag, size, notes, and the mix to 1e-12. Latency p95 is 67 ms over 133 suggestions. But there are 0 `bb_vs_jam` spots, 0 at the 3× size, and 0 suggested 3× 3-bets: the model reaches the 3× 3-bet (at most 0.002%), the jam over it (0.000%) and the SB's first-in jam (at most 0.034%) at no depth | ≥ 4 per decision and per size, ≥ 2 suggested per size; a size reached at no depth is a FAIL | **FAIL** |
+| 6. Live solves legal | Gate V's 500 hands: 221 answers, all legal (11 in 4× pots). Bar 6's 200 4× hands: 574 answers, all legal | ≥ 100; ≥ 20 in the 4× hands | PASS |
+| 7. Live latency | on bar 6's hands, 119 decisions with a live solve. Turn: 68, p95 1.81 s. River: 51, p95 0.13 s | turn ≤ 3.0 s, river ≤ 1.0 s, ≥ 30 per street | PASS |
+
+**R by round** (20 flops a cell, seed 20261119; "fill" means taken from another depth or the 0.90 default):
+
+| Pot | Depth | Round 1 (SE) | Round 2 (SE) | Change |
+|---|---|---|---|---|
+| open | 25 | 0.721 (0.040) | 0.626 (0.050) | −0.095 |
+| open | 50 | 0.774 (0.015) | 0.711 (0.037) | −0.063 |
+| open | 100 | 0.777 (0.019) | 0.679 (0.038) | −0.098 |
+| 4× | 25 | 1.020 (fill: 50 bb) | 1.101 (fill: 50 bb) | not measured |
+| 4× | 50 | 1.020 (0.026) | 1.101 (0.012) | +0.081 |
+| 4× | 100 | 1.021 (0.016) | 1.057 (0.012) | +0.036 |
+| 3× | all | 0.90 (fill) | 0.90 (fill) | not measured |
+
+**What the model does** (reported, not gated). As R fell, calling the open got worse:
+- At 100 bb, the BB facing the open folds 35.1% (old model 3.0%), calls 20.1% (75.7%) and
+  3-bets to 10 in 44.8% (the old model 3-bet to 7.5 in 12.8%).
+- The BB's jam over the open is 44.8% at 25 bb (old 36.7%) and 0.0% at 100 bb.
+- The SB opens 86.6% at 100 bb (old 87.9%) and 80.2% at 25 bb (old 58.0%).
+- The 3-bet to 7.5 is never used. Its R stayed at the 0.90 fill while the 4× pot measured
+  1.06 to 1.10, so the 3× size was never reached and never measured.
+
+**Gate R's three saved hands** under the new model:
+- preflop and the flop are unchanged;
+- `hu_full_hand`: the turn goes from a raise to 13.81 to a call, and the river from all-in
+  to a call;
+- `hu_river_shove`: the turn is a call, not a raise, and the river call is now 81.5%;
+- `hu_short_stack_river`: unchanged.
+
+**Older tests on the new model** (DECISIONS 49's report rule): `py gate.py` with the new model
+in place gave 2 failed and 486 passed. Both failures came from the switch:
+- `tests/test_gate_g_model.py:307`: the `showdown advise` CLI facing a 3 bb open with K9s
+  now says "RAISE 12 bb" (4×), not "RAISE 9 bb";
+- `tests/test_postflop.py:43`: the typed 100 bb 3-bet pot now uses the 3-bet to 10 (pot 200,
+  stack 900 chips), not 7.5 (150, 925), by Ian's more-common-size rule.
+
+Both pass again with the old model back.
+
+**Solve times:**
+- round 1: 5,149 s for the run that finished, resumed from the cache after two stops (the
+  laptop went on battery once, and a session ended once);
+- round 2: 12,445 s;
+- the product build: 7,064 s with 12 workers, after one rerun (the first run died when its
+  session ended).
+
+**After the gate.** Ian chose to stop step 4 here (DECISIONS 49, Result):
+- the old model stays live, and `data/preflop_model.json` is byte-identical to before;
+- the new model is kept, unused, as `data/preflop_model_v2.json`;
+- step 5 builds on the old model;
+- no successor gate is registered.
+
+While the old model is live, Gate Q's slow tests skip: their fixture wants a version 2
+`data/preflop_model.json`.
+
+**Rerun** (on AC; the fit takes about 6 h and the build about 2 h):
+```
+showdown preflop fit-r --round 1
+showdown preflop fit-r --round 2
+showdown preflop build --workers 12
+.venv\Scripts\python -m pytest tests/test_gate_q.py tests/test_gate_q_slow.py -m "slow or not slow" -s -rs
+```
+To rerun only the tests, copy `data/preflop_model.json` to `data/preflop_model_v1.json`, and
+`data/preflop_model_v2.json` to `data/preflop_model.json`; afterwards, put them back.

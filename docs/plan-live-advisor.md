@@ -520,10 +520,10 @@ uses until this is built.
   - DECISIONS 48 took the number that DECISIONS 47 had pointed at the preflop
     re-solve. The re-solve (step 4) and the opponent model (step 5) now take
     the next free numbers.
-- **Step 4 is built, not solved: the preflop re-solve, Gate Q pre-registered**
-  (DECISIONS 49, SCOPE A10, 2026-11-19). The code and tests are in; no fit or product
-  solve has run. The switch takes effect when `showdown preflop build` writes the new
-  `data/preflop_model.json`.
+- **Step 4 stopped at Gate Q's FAIL: the preflop re-solve** (DECISIONS 49, SCOPE A10;
+  solved 2026-11-21). R did not settle between the fit rounds, and the model never uses
+  the 3× 3-bet, so bars 4 and 5 failed. Ian kept the old model live; the new one is
+  `data/preflop_model_v2.json`, unused. The plan as it was:
   - **The tree:** the BB gets a second 3-bet size, 4× the open (to 10), next
     to 3× (to 7.5). The 2.5 open and the SB's jam-only 4-bet stay.
   - **R is fitted** per pot (the open, either 3-bet) at 25, 50 and 100 bb:
@@ -540,7 +540,8 @@ uses until this is built.
   - **Compute,** only when Ian says go: roughly 6 h of flop solves and 3 h
     of preflop solves.
 - **Step 5 is planned: the opponent model, Gate O pre-registered**
-  (DECISIONS 50, SCOPE A11, 2026-11-19). It builds after Gate Q passes.
+  (DECISIONS 50, SCOPE A11, 2026-11-19). It builds on the old preflop model, as Ian
+  chose after Gate Q's FAIL (2026-11-21).
   - **Reads** are ratios to the model, over each friend's logged chances,
     for seven tendencies:
     - SB open, BB defend and BB 3-bet;
