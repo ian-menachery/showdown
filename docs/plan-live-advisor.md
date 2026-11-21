@@ -577,6 +577,30 @@ uses until this is built.
   - **Built so far:** `showdown capture` (`live/capture.py`). F9 saves the
     window in front to `data/live/screens/`, only when its title says Poker
     Now. It adds the `live` extra, with mss 10.2.0.
+  - **S1 is pre-registered** (DECISIONS 51, 2026-11-21):
+    - a dev and test split, by capture order;
+    - the test labels are sealed by SHA-256 before any test read;
+    - Ian checks 10 of them;
+    - a new bar for the tracker's fields, at 99% each.
+  - **Waiting on Ian:**
+    - the F9 test on pokernow.com;
+    - the self-play capture session, then the game log;
+    - the 10-frame label check.
+  - **Asked in advance (2026-11-21), through the setup session.** Each has a
+    recommended reversible option, which is taken if nobody answers.
+    - **D1:** move to a fresh session.
+    - **D2:** an F9 title fix.
+    - **D3:** suits by shape if there's no four-colour deck.
+    - **D4:** wait for Ian's label check.
+    - **D5:** S1b with fresh test frames after a FAIL.
+    - **D6:** Ian's hole cards checked on saved PNGs if the log lacks them.
+    - **D7:** Gate H gets a coverage bar of 90% of decisions answered.
+    - **D8:** today's preflop model if Gate Q hasn't passed.
+    - **D9:** step 5 after the first live game.
+    - **D10:** one window size.
+    - **D11:** step 5 after Gate H, then multiway.
+
+    The answers, or "decided without Ian", go here.
 - **Still open:**
   - S1, which waits for Ian's screenshots, taken with `showdown capture`;
   - D5, the self-hosted table;
