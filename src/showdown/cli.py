@@ -19,6 +19,7 @@ showdown preflop chart 50
 showdown preflop fit-r --round 1
 showdown preflop build
 showdown capture
+showdown live --screen
 """
 
 from __future__ import annotations
@@ -518,6 +519,13 @@ def _live(args: argparse.Namespace) -> int:
 
     from pokerkit import HandHistory
 
+    if args.screen:
+        try:
+            from showdown.live.reader import read
+        except ImportError:
+            raise SystemExit("the screen reader (spike S1) isn't built yet") from None
+        return _screen_session(read, args)
+
     from showdown.live.advisor import Advisor
     from showdown.live.overlay import Overlay, event_lines
     from showdown.live.table import TableState, frames_from_history
@@ -555,6 +563,55 @@ def _live(args: argparse.Namespace) -> int:
     if overlay is not None:
         print("close the overlay window to finish")
         overlay.wait()
+    return 0
+
+
+def _screen_session(read, args: argparse.Namespace) -> int:  # pragma: no cover - a desktop
+    """Read the Poker Now window Ian plays in, every 250 ms, until Ctrl+C (DECISIONS 52)."""
+    from showdown.live import capture, screen
+    from showdown.live.advisor import Advisor
+    from showdown.live.overlay import Overlay, event_lines
+    from showdown.live.tracker import HANDS_DIR, Tracker
+
+    try:
+        import mss  # noqa: F401
+    except ImportError:
+        raise SystemExit("needs the live extra: pip install -e .[live]") from None
+    capture.dpi_aware()
+    overlay = None if args.no_window else Overlay()
+
+    def wait(seconds: float) -> None:
+        if overlay is not None:
+            overlay.root.update()  # keeps the overlay drawn and draggable
+        time.sleep(seconds)
+
+    def show(event) -> None:
+        head, details, state = event_lines(event)
+        print(f"[{event.kind}] {head}" + (f"  ({state})" if state else ""))
+        for line in details:
+            print(f"    {line}")
+        if overlay is not None and event.kind in ("advice", "solving", "no suggestion", "error"):
+            overlay.show(event)
+
+    print("click the Poker Now window you play in; the other seat's window is never read")
+    hwnd, rect = screen.wait_for_poker_now(capture.front_handle, capture.window, wait)
+    if overlay is not None:
+        overlay.move(*screen.overlay_xy(rect, overlay.root.winfo_screenwidth()))
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    log_path = screen.SESSIONS_DIR / f"{stamp}.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    tracker = Tracker(Advisor.load(), HANDS_DIR, on_solving=show)
+    poll = screen.locked_window(hwnd, capture.front_handle, capture.window, capture.grab_png)
+    with log_path.open("a", encoding="utf-8") as log:
+        loop = screen.ScreenLoop(read, tracker, show, log, screen.SHOTS_DIR / stamp)
+        print(f"reading that window while it is in front; log {log_path}; Ctrl+C to stop")
+        try:
+            screen.run(loop, poll, wait)
+        except KeyboardInterrupt:
+            loop.close()
+    print(f"stopped: {loop.hand_no} hands seen, {tracker.written} written")
+    if overlay is not None:
+        overlay.close()
     return 0
 
 
@@ -858,10 +915,12 @@ def build_parser() -> argparse.ArgumentParser:
     replay.set_defaults(handler=_replay)
 
     live = commands.add_parser(
-        "live", help="the tracker and overlay, fed recorded table frames (no screen reading yet)"
+        "live", help="the tracker and overlay, fed recorded frames or the Poker Now window"
     )
-    live.add_argument(
-        "--replay", required=True, help="frames as .jsonl, or a heads-up .phh hand to make them"
+    source = live.add_mutually_exclusive_group(required=True)
+    source.add_argument("--replay", help="frames as .jsonl, or a heads-up .phh hand to make them")
+    source.add_argument(
+        "--screen", action="store_true", help="read the Poker Now window you play in, live"
     )
     live.add_argument("--hero", choices=["sb", "bb"], help="your seat, for a .phh hand")
     live.add_argument(

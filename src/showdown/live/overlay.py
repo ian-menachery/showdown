@@ -58,6 +58,10 @@ class Overlay:
         self.state.config(text=state)
         self.root.update()
 
+    def move(self, x: int, y: int) -> None:
+        self.root.geometry(f"+{x}+{y}")
+        self.root.update()
+
     def texts(self) -> tuple[str, str, str]:
         return self.head.cget("text"), self.detail.cget("text"), self.state.cget("text")
 

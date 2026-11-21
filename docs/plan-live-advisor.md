@@ -619,6 +619,18 @@ uses until this is built.
     Gate V's turn and river bars, no crash, and coverage of at least 90%.
     The loop reads one locked window, only while it is in front. Six choices
     were decided without Ian and are listed there.
+  - **The screen loop is built** (`live/screen.py`, DECISIONS 52), tested
+    with fake images and a fake reader. `showdown live --screen` stops with
+    "the screen reader (spike S1) isn't built yet" until `live/reader.py`
+    exists.
+    - It captures every 250 ms and skips unchanged images. It feeds the
+      tracker a read only when two captures in a row agree.
+    - It saves a PNG at each of Ian's turns, logs each session to
+      `data/live/sessions/`, and logs a crash without stopping.
+    - **For S1's reader:** with maximised windows, the overlay sits inside
+      the window's top-right corner, 120 px down. So it appears in the
+      loop's captures (not in S1's). The reader must read nothing there, or
+      the dry run moves the overlay.
 - **Still open:**
   - S1, which waits for Ian's screenshots, taken with `showdown capture`;
   - D5, the self-hosted table;

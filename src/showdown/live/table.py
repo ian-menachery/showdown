@@ -56,6 +56,13 @@ class TableState:
         return cls(**data)
 
 
+@dataclass(frozen=True)
+class ReadError:
+    """What the reader gives instead of a frame it can't read in full (DECISIONS 51, 52)."""
+
+    reason: str
+
+
 def frame_from_state(
     state,
     hero: int,

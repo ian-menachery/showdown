@@ -43,11 +43,28 @@ def save_shot(
 
 def foreground() -> tuple[str, Rect]:  # pragma: no cover - needs a Windows desktop
     """The title and visible frame of the window in front."""
+    return window(front_handle())
+
+
+def front_handle() -> int:  # pragma: no cover - needs a Windows desktop
+    import ctypes
+
+    return ctypes.windll.user32.GetForegroundWindow()
+
+
+def dpi_aware() -> None:  # pragma: no cover - needs a Windows desktop
+    """Window coordinates in real pixels."""
+    import ctypes
+
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+
+
+def window(hwnd: int) -> tuple[str, Rect]:  # pragma: no cover - needs a Windows desktop
+    """A window's title and visible frame."""
     import ctypes
     from ctypes import wintypes
 
     user32 = ctypes.windll.user32
-    hwnd = user32.GetForegroundWindow()
     buffer = ctypes.create_unicode_buffer(user32.GetWindowTextLengthW(hwnd) + 1)
     user32.GetWindowTextW(hwnd, buffer, len(buffer))
     if user32.IsIconic(hwnd):
@@ -78,7 +95,7 @@ def run(folder: Path, report: Callable[[Path | None], None]) -> None:  # pragma:
         import mss  # noqa: F401
     except ImportError:
         raise SystemExit("needs the live extra: pip install -e .[live]") from None
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # window coordinates in real pixels
+    dpi_aware()
     user32 = ctypes.windll.user32
     msg = wintypes.MSG()
     user32.PeekMessageW(ctypes.byref(msg), None, 0, 0, 0)  # make this thread's queue
