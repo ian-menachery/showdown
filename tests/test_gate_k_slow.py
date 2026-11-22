@@ -42,7 +42,8 @@ def _session(tmp_path, name: str, choose) -> tuple[list[dict], dict]:
 
 
 def _expected(row: dict) -> tuple[str, float]:
-    """DECISIONS 55's grade, from a fresh answer."""
+    """DECISIONS 55's grade, from a fresh answer, at the R Gate K was scored at."""
+    S.R["raise_oop"] = S.GATED_RAISE_OOP
     spot = S.Spot(row["seat"], row["limpers"], row["ante"])
     a = S.answer(spot, S.load_profiles()["standard"], class_index(row["class"]))
     ev = dict(zip(a.actions, a.ev, strict=True))
@@ -58,9 +59,14 @@ def _expected(row: dict) -> tuple[str, float]:
 @pytest.fixture(scope="module")
 def sessions(tmp_path_factory) -> dict:
     tmp = tmp_path_factory.mktemp("drills")
-    a_rows, a_sum = _session(tmp, "a", lambda a: S.kind(a.best))
-    pick = random.Random(CHOICE_SEED)
-    b_rows, b_sum = _session(tmp, "b", lambda a: pick.choice(_kinds(a)))
+    mp = pytest.MonkeyPatch()
+    mp.setitem(S.R, "raise_oop", S.GATED_RAISE_OOP)  # Gate K was scored at 0.90 (DECISIONS 56)
+    try:
+        a_rows, a_sum = _session(tmp, "a", lambda a: S.kind(a.best))
+        pick = random.Random(CHOICE_SEED)
+        b_rows, b_sum = _session(tmp, "b", lambda a: pick.choice(_kinds(a)))
+    finally:
+        mp.undo()
     with ProcessPoolExecutor(max_workers=min(12, os.cpu_count() or 1)) as pool:
         expected = list(pool.map(_expected, a_rows + b_rows))
     return {

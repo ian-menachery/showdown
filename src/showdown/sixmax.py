@@ -52,7 +52,9 @@ POSTFLOP = {"SB": 0, "BB": 1, "UTG": 2, "HJ": 3, "CO": 4, "BTN": 5}
 MAX_LIMPERS = {"UTG": 0, "HJ": 1, "CO": 2, "BTN": 3, "SB": 3, "BB": 3}
 STACK = 100.0
 BLINDS = {"SB": 0.5, "BB": 1.0}
-R = {"raise_ip": 1.00, "raise_oop": 0.90, "limp_ip": 0.85, "limp_oop": 0.75}
+R = {"raise_ip": 1.00, "raise_oop": 0.75, "limp_ip": 0.85, "limp_oop": 0.75}
+"""raise_oop was 0.90 until DECISIONS 56; Gates M, M2 and K were scored at 0.90."""
+GATED_RAISE_OOP = 0.90
 R_BAND = (-0.1, 0.0, 0.1)
 FOLD_BAND = (-0.10, 0.0, 0.10)
 NOISE_SE = 3.0

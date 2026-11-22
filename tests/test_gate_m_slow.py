@@ -36,8 +36,13 @@ def _kind(action: str) -> str:
 
 def _chart(job: tuple) -> tuple:
     """(job, per class (best action, tier, the best raise size, kind stable)). Kind stable:
-    every band point's winner, and a review's runner-up, is the same kind as the best."""
-    seat, k, ante, name = job
+    every band point's winner, and a review's runner-up, is the same kind as the best.
+
+    The job is (seat, limpers, ante, profile), with an optional fifth item, R for an
+    out-of-position raiser. It defaults to the 0.90 Gates M and M2 were scored at
+    (DECISIONS 56)."""
+    seat, k, ante, name, *rest = job
+    S.R["raise_oop"] = rest[0] if rest else S.GATED_RAISE_OOP
     rows = []
     for a in S.chart(S.Spot(seat, k, ante), S.load_profiles()[name]):
         raises = [i for i, n in enumerate(a.actions) if " to " in n]
