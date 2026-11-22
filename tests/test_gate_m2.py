@@ -26,12 +26,16 @@ def test_standard_is_regular_with_seat_defence() -> None:
     profiles = S.load_profiles()
     regular, std = profiles["regular"], profiles["standard"]
     assert regular.for_seat("BTN") == regular
-    for seat, (bb, sb, others) in S.STANDARD_DEFENCE.items():
+    fitted = {"UTG": 0.2004, "HJ": 0.2554, "CO": 0.3254, "BTN": 0.4054, "SB": 0.4154}
+    for seat, (flat, three_bet) in S.BB_CHART.items():
         p = std.for_seat(seat)
-        assert (p.bb_call, p.bb_3bet, p.sb_call, p.sb_3bet) == (*bb, *sb)
-        assert (p.behind_call, p.behind_3bet) == others
+        assert p.bb_call == pytest.approx(flat - regular.behind_slope * 0.5)
+        assert p.bb_call == pytest.approx(fitted[seat], abs=1e-4)
+        assert p.bb_3bet == three_bet
+        (sb_call, sb_3bet), others = S.ASSUMED_DEFENCE[seat]
+        assert (p.sb_call, p.sb_3bet, (p.behind_call, p.behind_3bet)) == (sb_call, sb_3bet, others)
         for rate in S.RATES:
             if rate not in S.DEFENCE_RATES:
                 assert getattr(p, rate) == getattr(regular, rate)
-    assert all(std.source[r] == "assumed" for r in S.DEFENCE_RATES)
-    assert std.for_seat("BB") == std.for_seat("BB").for_seat("BB")
+    assert [std.source[r] for r in S.DEFENCE_RATES] == ["fitted"] * 2 + ["assumed"] * 4
+    assert std.for_seat("BB") == std

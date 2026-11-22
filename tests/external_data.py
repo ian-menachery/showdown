@@ -58,6 +58,12 @@ SHA256 = {
     "pokerstrategy/bss-2257.html": (
         "f1ac3ea6d3e1e57731d737028c771a929662aab2fda8f4c266325dea585c37c8"
     ),
+    # VIP-Grinders' "Big blind defense" (2026-06-15), saved 2026-11-22 for the standard
+    # profile's BB fit (DECISIONS 54): curl -sL -A "Mozilla/5.0" -o <this path>
+    # https://www.vip-grinders.com/poker-strategy/big-blind-defense/
+    "vip-grinders/big-blind-defense.html": (
+        "3563ffeccda76b78d8b5645391dab55a3d3b91e5b144107e4fb2e787930c9420"
+    ),
 }
 
 

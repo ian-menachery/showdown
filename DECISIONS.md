@@ -3714,3 +3714,43 @@ the master session:
 - calling "standard" solver output: its numbers are assumptions;
 - tuning the standard profile toward PokerStrategy's chart after seeing results;
 - moving a bar after results, except by a dated amendment.
+
+**Amendment to DECISIONS 54 (2026-11-22, before Gate M2 was scored): the BB's defence is
+fitted to a published chart.**
+- **What changed.** Ian answered decision 1 through the master session: fit, don't
+  hand-pick. Use a free published modern chart of blind defence by the raiser's seat,
+  saved like the PokerStrategy pages. If none exists, keep the assumed numbers. He
+  approved this source and fit rule in this session the same day. A Gate M2 run on the
+  hand-picked numbers had started at e156792. It was stopped and its output never read,
+  so Gate M2 is scored once, on the fitted profile. No bar moves.
+- **The source:** VIP-Grinders, "Big blind defense", by João Mourato, published
+  2026-06-15, https://www.vip-grinders.com/poker-strategy/big-blind-defense/. Saved on
+  2026-11-22 to the gitignored `data/external/vip-grinders/big-blind-defense.html`
+  (108,158 bytes, SHA-256
+  `3563ffeccda76b78d8b5645391dab55a3d3b91e5b144107e4fb2e787930c9420`), never committed.
+  - It is a different source from Gate M2's reference chart (PokerStrategy's opening
+    ranges), so the gate is not graded against its own input.
+  - Its table gives the BB's defend, 3-bet and flat shares against each opener's 2.5x
+    open (BTN, CO, HJ, LJ/UTG, SB) as ranges. It assumes 100 bb six-max cash at NL50 to
+    NL200 rake. It names no solver.
+- **The fit:**
+  - BB 3-bet = the midpoint of the 3-bet range for the hero's seat;
+  - BB call = the midpoint of the flat range, moved from 2.5x to the engine's 3 bb
+    reference by the regular profile's fitted slope (0.0493 per bb, so −2.46 points);
+  - no rake adjustment;
+  - a test parses the saved page and checks the profile against it.
+
+  | Hero's seat | Page, 2.5x: 3-bet / flat | Fitted BB call / 3-bet |
+  |---|---|---|
+  | UTG | 4–6 / 21–24% | 20.0 / 5.0% |
+  | HJ | 6–8 / 26–30% | 25.5 / 7.0% |
+  | CO | 8–10 / 32–38% | 32.5 / 9.0% |
+  | BTN | 11–13 / 41–45% | 40.5 / 12.0% |
+  | SB | 13–16 / 42–46% | 41.5 / 14.5% |
+
+- **Still assumed,** because the page has no numbers for them: the SB's defence and the
+  non-blind players behind, as in the table above. They are labelled "assumed" in the
+  output.
+- **Decided without Ian:** the midpoint of each range; the move to 3 bb by the fitted
+  slope; and ignoring the page's 3x row (its 2.5x to 3x drop is about 20 points, far off
+  every other source here).

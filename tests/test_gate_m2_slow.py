@@ -6,11 +6,14 @@ see the report.
 """
 
 import os
+import re
 from concurrent.futures import ProcessPoolExecutor
 
 import pytest
+from external_data import require
 from test_gate_m_slow import ANTES, LESSONS, SPOTS, _chart, _raise, chart_range
 
+from showdown import sixmax as S
 from showdown.equity.cards import CLASS_NAMES
 
 pytestmark = pytest.mark.slow
@@ -29,6 +32,17 @@ def charts() -> dict:
 
 def _stable(*rows) -> bool:
     return all(r[3] for r in rows)
+
+
+def test_the_bb_fit_matches_the_saved_page() -> None:
+    """DECISIONS 54's amendment: the BB's rates are the page's 2.5x midpoints."""
+    html = require("vip-grinders/big-blind-defense.html").read_text("utf-8")
+    text = re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", html))
+    row = r"{} 2\.5x (\d+) to (\d+) (\d+) to (\d+) (\d+) to (\d+)"
+    for seat, label in {"UTG": "LJ/UTG", "HJ": "HJ", "CO": "CO", "BTN": "BTN", "SB": "SB"}.items():
+        m = re.search(row.format(re.escape(label)), text)
+        _, _, t_lo, t_hi, f_lo, f_hi = (int(g) for g in m.groups())
+        assert S.BB_CHART[seat] == ((f_lo + f_hi) / 200, (t_lo + t_hi) / 200), seat
 
 
 def test_bar2_the_ante_widens(charts) -> None:

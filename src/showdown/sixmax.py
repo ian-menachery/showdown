@@ -187,25 +187,40 @@ RATES = (
 )
 
 
-STANDARD_DEFENCE = {
-    # Hero seat: (BB call, BB 3-bet), (SB call, SB 3-bet), (others call, others 3-bet).
-    # Assumed from published 100 bb six-max solver frequencies (DECISIONS 54).
-    "UTG": ((0.24, 0.09), (0.00, 0.08), (0.04, 0.07)),
-    "HJ": ((0.27, 0.10), (0.00, 0.09), (0.04, 0.07)),
-    "CO": ((0.33, 0.11), (0.00, 0.11), (0.04, 0.07)),
-    "BTN": ((0.44, 0.14), (0.03, 0.14), (0.04, 0.07)),
-    "SB": ((0.50, 0.14), (0.00, 0.00), (0.04, 0.07)),
+BB_CHART = {
+    # Hero seat: the midpoints of the BB's (flat, 3-bet) ranges against a 2.5x open, from
+    # VIP-Grinders' "Big blind defense" (2026-06-15), fitted in DECISIONS 54's amendment.
+    "UTG": (0.225, 0.05),
+    "HJ": (0.28, 0.07),
+    "CO": (0.35, 0.09),
+    "BTN": (0.43, 0.12),
+    "SB": (0.44, 0.145),
 }
-DEFENCE_RATES = ("bb_call", "bb_3bet", "sb_call", "sb_3bet", "behind_call", "behind_3bet")
+CHART_SIZE = 2.5
+ASSUMED_DEFENCE = {
+    # Hero seat: (SB call, SB 3-bet), (others call, others 3-bet). Not on the page, so
+    # assumed from published 100 bb six-max solver frequencies (DECISIONS 54).
+    "UTG": ((0.00, 0.08), (0.04, 0.07)),
+    "HJ": ((0.00, 0.09), (0.04, 0.07)),
+    "CO": ((0.00, 0.11), (0.04, 0.07)),
+    "BTN": ((0.03, 0.14), (0.04, 0.07)),
+    "SB": ((0.00, 0.00), (0.04, 0.07)),
+}
+BB_RATES = ("bb_call", "bb_3bet")
+DEFENCE_RATES = (*BB_RATES, "sb_call", "sb_3bet", "behind_call", "behind_3bet")
 
 
 def standard(regular: Profile) -> Profile:
-    """The regular profile, with players behind defending like a modern chart."""
-    by_seat = {
-        seat: dict(zip(DEFENCE_RATES, (*bb, *sb, *others), strict=True))
-        for seat, (bb, sb, others) in STANDARD_DEFENCE.items()
-    }
+    """The regular profile, with players behind defending like a modern chart: the BB
+    fitted to VIP-Grinders' table, moved to the 3 bb reference by the fitted slope."""
+    shift = regular.behind_slope * (3.0 - CHART_SIZE)
+    by_seat = {}
+    for seat, (flat, three_bet) in BB_CHART.items():
+        (sb_call, sb_3bet), (others_call, others_3bet) = ASSUMED_DEFENCE[seat]
+        values = (flat - shift, three_bet, sb_call, sb_3bet, others_call, others_3bet)
+        by_seat[seat] = dict(zip(DEFENCE_RATES, values, strict=True))
     source = regular.source | dict.fromkeys(DEFENCE_RATES, "assumed")
+    source |= dict.fromkeys(BB_RATES, "fitted")
     return replace(regular, name="standard", source=source, by_seat=by_seat)
 
 

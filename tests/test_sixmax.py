@@ -105,6 +105,6 @@ def test_cli_prints_ranges_evs_and_a_tier(capsys) -> None:
     assert "the best is open to 2.5" in out  # without stack-offs
     assert main(["sixmax", "BTN", "K9o", "--samples", "2000"]) == 0
     out = capsys.readouterr().out
-    assert "Opponents: standard" in out and "call 44% (assumed)" in out
+    assert "Opponents: standard" in out and "call 41%: " in out and "call 3% (assumed)" in out
     with pytest.raises(SystemExit, match="limpers ahead"):
         main(["sixmax", "UTG", "AA", "--limpers", "1"])
