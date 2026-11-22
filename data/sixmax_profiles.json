@@ -1,0 +1,343 @@
+{
+ "decision": 53,
+ "source": "PHH dataset (Juho Kim, Zenodo, DOI 10.5281/zenodo.17136841, CC BY 4.0), data/handhq/, 3 to 6 players, no antes",
+ "zip_sha256": "65d566e7a3387b4c3ec28213b5416a8a36a4f4f1cf822771b77f5232fbba3281",
+ "min_hands": 500,
+ "min_chances": 1000,
+ "players_seen": 221427,
+ "left_out_loose_aggressive": 1143,
+ "hands_skipped": {
+  "not 3 to 6 players": 7672269,
+  "not one small and one big blind": 309322,
+  "antes": 96053
+ },
+ "profiles": {
+  "tight": {
+   "rates": {
+    "open_raise": 0.18775211627468197,
+    "limp": 0.00808165771131623,
+    "iso_fold": 0.5398701514899285,
+    "iso_reraise": 0.0394688096662962,
+    "iso_slope": 0.04051688822440255,
+    "behind_3bet": 0.04516861361293654,
+    "behind_call": 0.0730166774953843,
+    "sb_3bet": 0.06259998365922136,
+    "sb_call": 0.05443387947132611,
+    "bb_3bet": 0.06868044531783611,
+    "bb_call": 0.09679012803773646,
+    "behind_slope": 0.03455304239464363,
+    "limp_raise": 0.14686559602114901,
+    "overlimp": 0.04472842818168054,
+    "sb_limp_raise": 0.0935594487748822,
+    "sb_complete": 0.20252886160906564,
+    "bb_limp_raise": 0.08988451428310404
+   },
+   "source": {
+    "open_raise": "fitted",
+    "limp": "fitted",
+    "iso_fold": "fitted",
+    "iso_reraise": "fitted",
+    "behind_3bet": "fitted",
+    "behind_call": "fitted",
+    "sb_3bet": "fitted",
+    "sb_call": "fitted",
+    "bb_3bet": "fitted",
+    "bb_call": "fitted",
+    "limp_raise": "fitted",
+    "overlimp": "fitted",
+    "sb_limp_raise": "fitted",
+    "sb_complete": "fitted",
+    "bb_limp_raise": "fitted",
+    "iso_slope": "fitted",
+    "behind_slope": "fitted"
+   },
+   "chances": {
+    "open_raise": 8538471,
+    "limp": 8538471,
+    "iso_fold": 12014,
+    "iso_reraise": 35091,
+    "behind_3bet": 2099356,
+    "behind_call": 2099356,
+    "sb_3bet": 1689026,
+    "sb_call": 757745,
+    "bb_3bet": 1906234,
+    "bb_call": 862402,
+    "limp_raise": 1010543,
+    "overlimp": 1010543,
+    "sb_limp_raise": 545621,
+    "sb_complete": 545621,
+    "bb_limp_raise": 481618,
+    "iso_slope": 35091,
+    "behind_slope": 1906234
+   },
+   "curves": {
+    "iso": [
+     [
+      2.2519913433850256,
+      0.3167355261039867,
+      18637
+     ],
+     [
+      3.880827506797626,
+      0.5398701514899285,
+      12014
+     ],
+     [
+      4.958475199663724,
+      0.6889449348465742,
+      2379
+     ],
+     [
+      16.197036713569474,
+      0.8486171761280932,
+      2061
+     ]
+    ],
+    "bb_open": [
+     [
+      2.1125162256815853,
+      0.7240815221708646,
+      339883
+     ],
+     [
+      2.9995033410559544,
+      0.8278853713233504,
+      862402
+     ],
+     [
+      3.4956263178380245,
+      0.8611927510926503,
+      276621
+     ],
+     [
+      5.464238439793322,
+      0.8734882806649693,
+      427328
+     ]
+    ]
+   },
+   "players": 4517,
+   "player_hands": 18935767,
+   "vpip": 0.17441886563137368,
+   "pfr": 0.13504496543498873
+  },
+  "regular": {
+   "rates": {
+    "open_raise": 0.2443322538216979,
+    "limp": 0.029091342092498598,
+    "iso_fold": 0.4752463054187192,
+    "iso_reraise": 0.04095092698356911,
+    "iso_slope": 0.03785756771589064,
+    "behind_3bet": 0.054368923413247186,
+    "behind_call": 0.12141498907363103,
+    "sb_3bet": 0.07015636515107822,
+    "sb_call": 0.10093365482414779,
+    "bb_3bet": 0.07511567206412469,
+    "bb_call": 0.17338008762012436,
+    "behind_slope": 0.049252945129999504,
+    "limp_raise": 0.19387694671882214,
+    "overlimp": 0.08381216744818873,
+    "sb_limp_raise": 0.11783124922938512,
+    "sb_complete": 0.3265401796904533,
+    "bb_limp_raise": 0.1145571997644211
+   },
+   "source": {
+    "open_raise": "fitted",
+    "limp": "fitted",
+    "iso_fold": "fitted",
+    "iso_reraise": "fitted",
+    "behind_3bet": "fitted",
+    "behind_call": "fitted",
+    "sb_3bet": "fitted",
+    "sb_call": "fitted",
+    "bb_3bet": "fitted",
+    "bb_call": "fitted",
+    "limp_raise": "fitted",
+    "overlimp": "fitted",
+    "sb_limp_raise": "fitted",
+    "sb_complete": "fitted",
+    "bb_limp_raise": "fitted",
+    "iso_slope": "fitted",
+    "behind_slope": "fitted"
+   },
+   "chances": {
+    "open_raise": 14511809,
+    "limp": 14511809,
+    "iso_fold": 64960,
+    "iso_reraise": 182096,
+    "behind_3bet": 3601837,
+    "behind_call": 3601837,
+    "sb_3bet": 3120900,
+    "sb_call": 1512122,
+    "bb_3bet": 3498684,
+    "bb_call": 1698240,
+    "limp_raise": 1317088,
+    "overlimp": 1317088,
+    "sb_limp_raise": 738047,
+    "sb_complete": 738047,
+    "bb_limp_raise": 646917,
+    "iso_slope": 182096,
+    "behind_slope": 3498684
+   },
+   "curves": {
+    "iso": [
+     [
+      2.3609997845459034,
+      0.2521743626867987,
+      96695
+     ],
+     [
+      3.833198227114114,
+      0.4752463054187192,
+      64960
+     ],
+     [
+      4.9272091935289115,
+      0.6202462875769649,
+      11044
+     ],
+     [
+      17.472403160583156,
+      0.7974885601787804,
+      9397
+     ]
+    ],
+    "bb_open": [
+     [
+      2.16190320915138,
+      0.6118561432368964,
+      671112
+     ],
+     [
+      2.99926241088813,
+      0.7461530761258715,
+      1698240
+     ],
+     [
+      3.49346137183396,
+      0.7914930855948784,
+      601064
+     ],
+     [
+      5.484323221988364,
+      0.804928558988998,
+      528268
+     ]
+    ]
+   },
+   "players": 10282,
+   "player_hands": 32083403,
+   "vpip": 0.24545737869514653,
+   "pfr": 0.16868961811812794
+  },
+  "loose-passive": {
+   "rates": {
+    "open_raise": 0.17489861816878266,
+    "limp": 0.3074788943820176,
+    "iso_fold": 0.3920891467513929,
+    "iso_reraise": 0.034594375885090026,
+    "iso_slope": 0.03683373849100782,
+    "behind_3bet": 0.03621270480562074,
+    "behind_call": 0.29842485166317756,
+    "sb_3bet": 0.042674022822491144,
+    "sb_call": 0.3671330464765053,
+    "bb_3bet": 0.04890221888454058,
+    "bb_call": 0.4921257479038681,
+    "behind_slope": 0.08819619457426965,
+    "limp_raise": 0.14178867584079125,
+    "overlimp": 0.36333208957301893,
+    "sb_limp_raise": 0.1374237635437508,
+    "sb_complete": 0.6372062902929606,
+    "bb_limp_raise": 0.14009522754955153
+   },
+   "source": {
+    "open_raise": "fitted",
+    "limp": "fitted",
+    "iso_fold": "fitted",
+    "iso_reraise": "fitted",
+    "behind_3bet": "fitted",
+    "behind_call": "fitted",
+    "sb_3bet": "fitted",
+    "sb_call": "fitted",
+    "bb_3bet": "fitted",
+    "bb_call": "fitted",
+    "limp_raise": "fitted",
+    "overlimp": "fitted",
+    "sb_limp_raise": "fitted",
+    "sb_complete": "fitted",
+    "bb_limp_raise": "fitted",
+    "iso_slope": "fitted",
+    "behind_slope": "fitted"
+   },
+   "chances": {
+    "open_raise": 1829963,
+    "limp": 1829963,
+    "iso_fold": 86868,
+    "iso_reraise": 227378,
+    "behind_3bet": 426563,
+    "behind_call": 426563,
+    "sb_3bet": 376646,
+    "sb_call": 175465,
+    "bb_3bet": 428774,
+    "bb_call": 199892,
+    "limp_raise": 179563,
+    "overlimp": 179563,
+    "sb_limp_raise": 103461,
+    "sb_complete": 103461,
+    "bb_limp_raise": 90310,
+    "iso_slope": 227378,
+    "behind_slope": 428774
+   },
+   "curves": {
+    "iso": [
+     [
+      2.4328785087187543,
+      0.1942804204401808,
+      115498
+     ],
+     [
+      3.829027480391702,
+      0.3920891467513929,
+      86868
+     ],
+     [
+      4.922207254888572,
+      0.5304923854401421,
+      14643
+     ],
+     [
+      17.97735832234975,
+      0.7408621853602083,
+      10369
+     ]
+    ],
+    "bb_open": [
+     [
+      2.147140502148308,
+      0.27957209247946685,
+      68426
+     ],
+     [
+      2.999478415844556,
+      0.4574270105857163,
+      199892
+     ],
+     [
+      3.494548020482071,
+      0.5312573720217032,
+      72063
+     ],
+     [
+      5.341782835367813,
+      0.6098672971841662,
+      88393
+     ]
+    ]
+   },
+   "players": 3805,
+   "player_hands": 4028137,
+   "vpip": 0.4508684784057742,
+   "pfr": 0.12530705882148496
+  }
+ }
+}
