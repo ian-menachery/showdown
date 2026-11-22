@@ -1460,3 +1460,76 @@ hand, so the engine draws the same hero combos as `sixmax.answer` would.
 ```
 .venv\Scripts\python -m pytest tests/test_gate_k_slow.py -m "slow or not slow" -s
 ```
+
+## Gate M4: R 0.75 for an out-of-position raiser and loose-passive limpers in "standard": FAIL, bar 3 only (2026-11-22)
+
+Evidence:
+- `tests/test_gate_m.py`, `tests/test_gate_m2.py` and `tests/test_gate_m4.py` (fast suite):
+  bar 1;
+- `tests/test_gate_m4_slow.py` (`-m "slow or not slow"`): bars 2 and 3 over the standard
+  profile's 34 charts, plus the reported charts;
+- the code at 6f06a4c.
+
+The bars were pre-registered in DECISIONS 57 (commit d6e2d93) before fix (b) was coded.
+Gate M4 replaces Gate M3, which was registered and never scored. It was scored once, at
+6f06a4c, in 127 s.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Closed forms | Gate M's 21 checks and Gate M2's 3 pass unchanged (Gate M2's profile check on the profile as scored). The BB raising a KK limper who always calls matches 0.75 × M[hero, KK] × (0.5 + 6 × ante + 2X) − (X − 1) for AA, KK, A5s and 72o, every size, both antes. "standard" equals regular except the seat defence and the five limper rates, which equal loose-passive's | 1e-9 | PASS |
+| 2. Directions, kind-stable classes | **Ante:** 1,019 compared, none that enters with no ante folds with it. **Limpers:** 610 offsuit classes compared, no new iso with one more limper | none; ≥ 100 and ≥ 50 compared | PASS |
+| 3. PokerStrategy's opens, kind-stable classes | UTG **7** compared (100% agree), HJ 13 (100%), CO 21 (100%), SB 25 (100%). The BTN, not scored, is identical to Gate M2's chart, as required | ≥ 10 compared and ≥ 85% at each of UTG, HJ, CO, SB | **FAIL** (UTG count) |
+
+**Bar 3, seat by seat.** The clear-only agreement is in brackets.
+- **UTG: 7 kind-stable classes**, under the minimum of 10. All 7 agree with the chart: AA,
+  KK, QQ, JJ, TT, AKs, AKo (no clear classes). Gate M2 had 12.
+- **HJ: 13, 100%** (5 clear, 100%). The engine opens 38 classes, the chart 40.
+- **CO: 21, 100%** (11 clear, 100%). The engine opens 55, the chart 68.
+- **SB: 25, 100%** (12 clear, 100%). The engine opens **78 classes**, the chart 66. Under
+  Gate M2 (R 0.90) it opened all 169.
+- **BTN (reported):** 85 compared, 81.2% (77.5% clear), as in Gate M2. It opens 63, the
+  chart 120.
+
+**Why UTG fell short: no bug, so no fix.** One reproduce, as the rule allows: the UTG chart
+at R 0.90 and at 0.75.
+- Five classes stable at 0.90 are not at 0.75: AQs, AJs, ATs, AQo and AJo.
+- Each still opens to 2.5 at the base point, for +0.18 to +0.33 bb.
+- Each flips to fold at one band point only: R −0.1, so 0.65 out of position, with players
+  behind calling 10 points more.
+- That follows from the registered R, the band and the profile. The result stands. The
+  bar's test is a strict xfail, so a pass would show up.
+
+**Reported, not gated:**
+- **Regular profile at the new R:** UTG 65 kind-stable (100%), HJ 12 (100%), CO 28
+  (92.9%: A8o, A7o open), BTN 112 (96.4%), SB 169 (39.1%). Regular still fails at the SB,
+  where the engine opens every class against the 2009 blinds.
+- **The SB's opens** (unopened, no ante): standard 78 of 169; regular, tight and
+  loose-passive 169.
+- **Classes that isolate under "standard"** (no ante / ante 0.5):
+
+  | Spot | Isolates |
+  |---|---|
+  | HJ, 1 limper | 25 / 69 |
+  | CO, 1 limper | 31 / 87 |
+  | CO, 2 limpers | 29 / 49 |
+  | BTN, 1 limper | 39 / 68 |
+  | BTN, 2 limpers | 33 / 49 |
+  | BTN, 3 limpers | 31 / 42 |
+  | SB, 1 limper | 23 / 43 |
+  | SB, 2 limpers | 24 / 29 |
+  | SB, 3 limpers | 24 / 27 |
+  | BB, 1 limper | 45 / 169 |
+  | BB, 2 limpers | 30 / 43 |
+  | BB, 3 limpers | 30 / 30 |
+
+**What it says:**
+- R 0.75 fixes the SB. It now opens 78 classes, close to the chart's 66, and every
+  kind-stable class agrees.
+- UTG to CO agree wherever they are kind-stable. At UTG the band's harshest corner leaves
+  only the strongest 7 hands stable.
+- The BTN is unchanged, still tighter than PokerStrategy's 2 bb chart.
+
+**Rerun** (about 2 minutes on 12 processes):
+```
+.venv\Scripts\python -m pytest tests/test_gate_m.py tests/test_gate_m2.py tests/test_gate_m4.py tests/test_gate_m4_slow.py -m "slow or not slow" -s -rx
+```
