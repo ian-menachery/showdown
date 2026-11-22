@@ -3640,3 +3640,77 @@ master session after the entry was pushed. It narrows the scope and moves no bar
   and anything for a real-money table. README's "Not this" applies: never run showdown
   while a ClubWPT Gold client is open.
 - The roadmap is `docs/plan-sixmax-trainer.md`.
+
+---
+
+### 54. The "standard" six-max profile, whose blinds defend like a modern chart; Gate M2 pre-registered (2026-11-22)
+
+**Decided.** Ian answered on 2026-11-22, in the master session, which relayed it: option 3.
+First a "standard" profile whose blinds defend like a modern chart, with a successor gate
+against PokerStrategy, pre-registered before scoring. Then the drill trainer (DECISIONS
+55), with "standard" as its default profile, grading by kind of action. Gate M's bar 3
+FAIL stays as recorded. His reason: drills against blinds that fold about 73% would teach
+over-stealing against today's players. The decisions below went to the master with
+recommendations on 2026-11-22. This entry uses the recommended ones.
+
+**The profile "standard":**
+- **Copied from the fitted regular profile:** the limp range (open-raise and limp
+  shares), the fold to an iso, the limp-reraise, both size slopes (0.038 per bb for
+  limpers, 0.049 for players behind), and every response to a limp.
+- **Replaced:** how players behind defend against the hero's raise (open or iso), by the
+  hero's seat. Call / 3-bet, as shares of all hands, at the middle size:
+
+  | Hero's seat | BB | SB | Non-blind players behind |
+  |---|---|---|---|
+  | UTG | 24 / 9% | 0 / 8% | 4 / 7% |
+  | HJ | 27 / 10% | 0 / 9% | 4 / 7% |
+  | CO | 33 / 11% | 0 / 11% | 4 / 7% |
+  | BTN | 44 / 14% | 3 / 14% | none behind |
+  | SB | 50 / 14% | none | none |
+
+- **Where the numbers come from:** hand-picked from commonly published 100 bb six-max
+  solver frequencies, with nothing downloaded. They are assumptions and the output says
+  so. The band's ±10 points on calls covers some of their error.
+- **The BB hero** has no one behind, so the table has no row for it.
+- **The engine change:** a profile may carry per-seat rates, used when the hero sits in
+  that seat. The fitted profiles have none, so their answers do not change.
+
+**Gate M2,** recorded before the profile or the engine change exists. It passes when bars 1
+to 3 pass. "Kind-stable" means that at all 9 band points the winning action is the same
+kind (fold, limp or raise) as the best action, and for a review, the runner-up is that
+kind too.
+1. **Closed forms:**
+   - Gate M bar 1's 21 checks still pass, unchanged;
+   - the seat lookup: in a profile with every rate 0, except that the BB always 3-bets
+     when the hero is UTG, the hero UTG with 72o folds to the 3-bet, so each open's EV is
+     −X exactly; from the HJ, where no rate is set, every open's EV is the pot exactly.
+2. **Directions,** on the standard profile's 34 charts (17 seat and limper shapes × 2
+   antes), counting only classes kind-stable in both charts compared:
+   - **the ante widens:** every class that enters (best action not fold) with no ante also
+     enters with the 0.5 ante. At least 100 classes compared in all;
+   - **more limpers, no new offsuit isos:** for BTN, SB and BB from 1 to 2 and 2 to 3
+     limpers, and CO from 1 to 2, both antes: every offsuit class whose best action is a
+     raise with one more limper is a raise with one fewer. At least 50 compared in all.
+3. **PokerStrategy's opens** (DECISIONS 53's pages and parse rule): unopened pots, no ante,
+   standard profile.
+   - At each of UTG, HJ, CO, BTN and SB, at least 30 kind-stable classes are compared, and
+     at least 85% of them agree with the chart on raise vs not raise.
+   - Every disagreement is listed. The clear-only agreement (Gate M bar 3's rule) is
+     reported beside it.
+
+**The order:** this entry and SCOPE A14 committed and pushed; then the profile, the engine
+change and the tests; Gate M2 scored once and recorded in GATES.md. A failing bar gets one
+reproduce-and-fix, for a bug only, then the result stands.
+
+**Decided without Ian (2026-11-22),** each the reversible option, pending his reply in
+the master session:
+- the numbers come from published solver frequencies by memory, not a downloaded chart;
+- defence depends on the hero's seat, everything else is the regular profile's;
+- the directions and the chart are judged on kind-stable classes with minimum counts.
+  This follows the lesson of Gate M bar 3, where 6 clear classes decided the HJ.
+
+**Rules out:**
+- editing Gate M's record;
+- calling "standard" solver output: its numbers are assumptions;
+- tuning the standard profile toward PokerStrategy's chart after seeing results;
+- moving a bar after results, except by a dated amendment.
