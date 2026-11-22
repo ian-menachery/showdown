@@ -3819,3 +3819,61 @@ grades in session B by tier.
 
 **Rules out:** live use of any kind; ClubWPT; grading the size (a later decision, if
 wanted); committing drill logs.
+
+---
+
+### 56. R for an out-of-position raiser falls from 0.90 to 0.75; Gate M3 pre-registered (2026-11-22)
+
+**Decided.** Ian chose this on 2026-11-22, in the master session, which relayed it.
+- **Why:** under "standard" the SB still opens every hand (Gate M2, bar 3). R 0.90 for a
+  raiser out of position was the suspect.
+- **The change:** R for the hero who raised and is out of position postflop goes from
+  0.90 to 0.75. The other three R values (1.00, 0.85, 0.75) stay, and so does the band
+  (every R ±0.1).
+- **The record stands:** Gate M2's bar 3 FAIL stays as recorded.
+
+**Where 0.75 comes from, and how firm it is.**
+- Gate Q's flop solves (GATES.md) measured R for the out-of-position player in a
+  heads-up raised pot. They did not settle: the open pot's R drifted from 0.72 to 0.63
+  at 25 bb, and from 0.78 to 0.68 at 100 bb, between the two rounds.
+- So 0.75 is a value inside a measured range, not a settled one.
+- Gate Q measured the caller, the BB defending. A raiser usually realises more than a
+  caller, so 0.75 is likely on the low side for a raiser. The band's −0.1 and +0.1 cover
+  0.65 to 0.85.
+
+**What it changes:**
+- every profile's answers wherever the hero raises and someone left in the pot acts
+  after them postflop: the SB and BB raising, and early seats called by a later seat;
+- not Gate M's, M2's or K's records. Their slow tests now pin R at 0.90, the value they
+  were scored at, so they still reproduce;
+- `showdown sixmax` and the drills use 0.75 from this entry on.
+
+**Gate M3,** recorded before the change is coded. It is Gate M2's bars on the standard
+profile, at the new R. It passes when bars 1 to 3 pass.
+1. **Closed forms:**
+   - Gate M bar 1 and Gate M2 bar 1 still pass, unchanged;
+   - **the new R:** the hero in the BB raises one limper whose range is KK and who always
+     calls; nobody else acts. EV = 0.75 × M[hero, KK] × (0.5 + 6 × ante + 2X) − (X − 1),
+     to 1e-9, for each of AA, KK, A5s and 72o and every raise size, at both antes.
+2. **Directions,** on the standard profile's 34 charts, kind-stable classes only (DECISIONS
+   54's definition):
+   - the ante widens: at least 100 compared, no violation;
+   - more limpers, no new offsuit isos: at least 50 compared, no violation.
+3. **PokerStrategy's opens,** unopened, no ante, standard profile: at each of UTG, HJ, CO,
+   BTN and SB, at least 30 kind-stable classes compared, and at least 85% agree on raise
+   vs not raise. Disagreements are listed, and the clear-only agreement reported.
+
+**Reported, not gated:** the same bar 3 for the regular profile at the new R, and how many
+classes the SB opens under each profile.
+
+**The order:** this entry, committed and pushed. Then the change, the tests, and the old
+gates pinned to 0.90. Gate M3 is scored once and recorded. A failing bar gets one
+reproduce-and-fix, for a bug only.
+
+**Decided without Ian:**
+- the gate name, M3, and its bars, which copy M2's;
+- the new closed form, the BB raising a fixed-range limper. It is the only spot where the
+  raiser is out of position and the outcome can be worked by hand;
+- pinning the older gates' slow tests to 0.90.
+
+**Rules out:** changing any other R or the band here; editing Gates M, M2 or K's records.
