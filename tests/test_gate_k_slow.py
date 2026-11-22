@@ -28,8 +28,13 @@ def _kinds(a: S.Answer) -> list[str]:
     return sorted({S.kind(n) for n in a.actions})
 
 
+def _gated_standard() -> S.Profile:
+    """The standard profile as Gate K was scored, with regular's limpers (DECISIONS 57)."""
+    return S.load_profiles(standard_limpers=S.GATED_STANDARD_LIMPERS)["standard"]
+
+
 def _session(tmp_path, name: str, choose) -> tuple[list[dict], dict]:
-    std = S.load_profiles()["standard"]
+    std = _gated_standard()
     trainer = D.Trainer(std, seed=SEED)
 
     def ask(prompt: str) -> str:
@@ -45,7 +50,7 @@ def _expected(row: dict) -> tuple[str, float]:
     """DECISIONS 55's grade, from a fresh answer, at the R Gate K was scored at."""
     S.R["raise_oop"] = S.GATED_RAISE_OOP
     spot = S.Spot(row["seat"], row["limpers"], row["ante"])
-    a = S.answer(spot, S.load_profiles()["standard"], class_index(row["class"]))
+    a = S.answer(spot, _gated_standard(), class_index(row["class"]))
     ev = dict(zip(a.actions, a.ev, strict=True))
     mine = max(ev[n] for n in a.actions if S.kind(n) == row["answer"])
     lost = float(ev[a.best] - mine)

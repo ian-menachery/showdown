@@ -1020,8 +1020,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--profile",
         choices=["standard", "tight", "regular", "loose-passive"],
         default="standard",
-        help="standard: blinds defend like a modern chart (DECISIONS 54); "
-        "the others are fitted to 2009 online hands",
+        help="standard: blinds defend like a modern chart, limpers are loose-passive "
+        "(DECISIONS 54, 57); the others are fitted to 2009 online hands",
     )
     six.add_argument("--samples", type=int, default=40_000)
     six.add_argument("--seed", type=int, default=0)

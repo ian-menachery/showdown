@@ -39,12 +39,14 @@ def _chart(job: tuple) -> tuple:
     every band point's winner, and a review's runner-up, is the same kind as the best.
 
     The job is (seat, limpers, ante, profile), with an optional fifth item, R for an
-    out-of-position raiser. It defaults to the 0.90 Gates M and M2 were scored at
-    (DECISIONS 56)."""
+    out-of-position raiser, and sixth, the profile the standard profile's limpers come
+    from. They default to what Gates M and M2 were scored at: 0.90 (DECISIONS 56) and
+    regular (DECISIONS 57)."""
     seat, k, ante, name, *rest = job
     S.R["raise_oop"] = rest[0] if rest else S.GATED_RAISE_OOP
+    limpers = rest[1] if len(rest) > 1 else S.GATED_STANDARD_LIMPERS
     rows = []
-    for a in S.chart(S.Spot(seat, k, ante), S.load_profiles()[name]):
+    for a in S.chart(S.Spot(seat, k, ante), S.load_profiles(standard_limpers=limpers)[name]):
         raises = [i for i, n in enumerate(a.actions) if " to " in n]
         size = a.actions[max(raises, key=lambda i: a.ev[i])].split(" to ")[1]
         kinds = {_kind(a.best)} | {_kind(w) for _, _, w in a.flips}

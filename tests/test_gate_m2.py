@@ -23,7 +23,8 @@ def test_seat_lookup(ante) -> None:
 
 
 def test_standard_is_regular_with_seat_defence() -> None:
-    profiles = S.load_profiles()
+    """The profile as Gate M2 scored it, with regular's limpers (DECISIONS 57)."""
+    profiles = S.load_profiles(standard_limpers=S.GATED_STANDARD_LIMPERS)
     regular, std = profiles["regular"], profiles["standard"]
     assert regular.for_seat("BTN") == regular
     fitted = {"UTG": 0.2004, "HJ": 0.2554, "CO": 0.3254, "BTN": 0.4054, "SB": 0.4154}

@@ -55,6 +55,8 @@ BLINDS = {"SB": 0.5, "BB": 1.0}
 R = {"raise_ip": 1.00, "raise_oop": 0.75, "limp_ip": 0.85, "limp_oop": 0.75}
 """raise_oop was 0.90 until DECISIONS 56; Gates M, M2 and K were scored at 0.90."""
 GATED_RAISE_OOP = 0.90
+GATED_STANDARD_LIMPERS = "regular"
+"""Gates M2 and K were scored with the standard profile's limpers from regular (DECISIONS 57)."""
 R_BAND = (-0.1, 0.0, 0.1)
 FOLD_BAND = (-0.10, 0.0, 0.10)
 NOISE_SE = 3.0
@@ -210,11 +212,13 @@ ASSUMED_DEFENCE = {
 }
 BB_RATES = ("bb_call", "bb_3bet")
 DEFENCE_RATES = (*BB_RATES, "sb_call", "sb_3bet", "behind_call", "behind_3bet")
+LIMPER_RATES = ("open_raise", "limp", "iso_fold", "iso_reraise", "iso_slope")
 
 
-def standard(regular: Profile) -> Profile:
-    """The regular profile, with players behind defending like a modern chart: the BB
-    fitted to VIP-Grinders' table, moved to the 3 bb reference by the fitted slope."""
+def standard(regular: Profile, limpers: Profile) -> Profile:
+    """The regular profile, with players behind defending like a modern chart (the BB
+    fitted to VIP-Grinders' table, moved to the 3 bb reference by the fitted slope) and
+    the limpers' own rates taken from `limpers` (DECISIONS 57: loose-passive)."""
     shift = regular.behind_slope * (3.0 - CHART_SIZE)
     by_seat = {}
     for seat, (flat, three_bet) in BB_CHART.items():
@@ -223,17 +227,22 @@ def standard(regular: Profile) -> Profile:
         by_seat[seat] = dict(zip(DEFENCE_RATES, values, strict=True))
     source = regular.source | dict.fromkeys(DEFENCE_RATES, "assumed")
     source |= dict.fromkeys(BB_RATES, "fitted")
-    return replace(regular, name="standard", source=source, by_seat=by_seat)
+    if limpers is not regular:
+        source |= dict.fromkeys(LIMPER_RATES, f"fitted, {limpers.name}")
+    rates = {r: getattr(limpers, r) for r in LIMPER_RATES}
+    return replace(regular, name="standard", source=source, by_seat=by_seat, **rates)
 
 
-def load_profiles(path: str | Path = PROFILES_PATH) -> dict[str, Profile]:
-    """The three fitted profiles (DECISIONS 53) and "standard" (DECISIONS 54)."""
+def load_profiles(
+    path: str | Path = PROFILES_PATH, *, standard_limpers: str = "loose-passive"
+) -> dict[str, Profile]:
+    """The three fitted profiles (DECISIONS 53) and "standard" (DECISIONS 54, 57)."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     out = {
         name: Profile(name=name, source=p["source"], **p["rates"])
         for name, p in data["profiles"].items()
     }
-    out["standard"] = standard(out["regular"])
+    out["standard"] = standard(out["regular"], out[standard_limpers])
     return out
 
 
@@ -739,7 +748,8 @@ def describe_spot(spot: Spot, p: Profile, hand: str) -> list[str]:
 
     def pct(rate: str, value: float | None = None) -> str:
         v = getattr(p, rate) if value is None else value
-        return f"{v:.0%}" + (" (assumed)" if p.source.get(rate) == "assumed" else "")
+        src = p.source.get(rate, "fitted")
+        return f"{v:.0%}" + ("" if src == "fitted" else f" ({src})")
 
     def rng(weights) -> str:
         return f"{share_of_hands(weights):.1%} of hands: {range_text(weights)}"
@@ -750,7 +760,7 @@ def describe_spot(spot: Spot, p: Profile, hand: str) -> list[str]:
     ante = f"ante {spot.ante:g} from everyone" if spot.ante else "no ante"
     origin = (
         "the regular profile, with players behind defending like a modern 100 bb chart "
-        "(DECISIONS 54)"
+        "and limpers from the loose-passive profile (DECISIONS 54, 57)"
         if p.name == "standard"
         else "fitted to 2009 online 6-max hands (docs/sixmax-profiles.md)"
     )
