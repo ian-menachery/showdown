@@ -76,7 +76,7 @@ def test_tiers_and_seeds() -> None:
 
 def test_profiles_file() -> None:
     profiles = S.load_profiles()
-    assert set(profiles) == {"tight", "regular", "loose-passive"}
+    assert set(profiles) == {"standard", "tight", "regular", "loose-passive"}
     for p in profiles.values():
         assert set(p.source) == set(S.RATES)
         for rate in S.RATES:
@@ -98,10 +98,13 @@ def test_cli_prints_ranges_evs_and_a_tier(capsys) -> None:
         "Verdict:",
     ):
         assert text in out
-    assert main(["sixmax", "UTG", "AsAh", "--samples", "2000"]) == 0
+    assert main(["sixmax", "UTG", "AsAh", "--profile", "regular", "--samples", "2000"]) == 0
     out = capsys.readouterr().out
-    assert "unopened" in out and "Each player behind" in out
+    assert "unopened" in out and "Each player behind" in out and "fitted to 2009" in out
     assert "Verdict: CLOSE" in out and "only the size is close" in out
     assert "the best is open to 2.5" in out  # without stack-offs
+    assert main(["sixmax", "BTN", "K9o", "--samples", "2000"]) == 0
+    out = capsys.readouterr().out
+    assert "Opponents: standard" in out and "call 44% (assumed)" in out
     with pytest.raises(SystemExit, match="limpers ahead"):
         main(["sixmax", "UTG", "AA", "--limpers", "1"])

@@ -753,8 +753,7 @@ def _sixmax(args: argparse.Namespace) -> int:
         hand = S.parse_hand(args.hand)
     except ValueError as exc:
         raise SystemExit(str(exc)) from None
-    profiles = S.load_profiles()
-    p = profiles[args.profile]
+    p = S.load_profiles()[args.profile].for_seat(spot.seat)
     a = S.answer(spot, p, hand, samples=args.samples, seed=args.seed)
 
     def pct(rate: str, value: float | None = None) -> str:
@@ -771,9 +770,15 @@ def _sixmax(args: argparse.Namespace) -> int:
     print(
         f"{spot.seat} with {a.hand}: {limpers}, 100 bb, blinds 0.5/1, {ante} ({spot.pot:g} bb in)"
     )
+    origin = (
+        "the regular profile, with players behind defending like a modern 100 bb chart "
+        "(DECISIONS 54)"
+        if p.name == "standard"
+        else "fitted to 2009 online 6-max hands (docs/sixmax-profiles.md)"
+    )
     print(
-        f"Opponents: {p.name}, one profile for the whole table, fitted to 2009 online "
-        "6-max hands (docs/sixmax-profiles.md). Assumed, not measured on your players."
+        f"Opponents: {p.name}, one profile for the whole table: {origin}. "
+        "Assumed, not measured on your players."
     )
     print("\nAssumed ranges")
     x_ref = spot.sizes[1]
@@ -1083,7 +1088,13 @@ def build_parser() -> argparse.ArgumentParser:
     six.add_argument("hand", help="a class like A5s, or two cards like As5s")
     six.add_argument("--limpers", type=int, default=0, help="limpers ahead, 0 to 3")
     six.add_argument("--ante", type=float, default=0.0, help="from every player, in bb")
-    six.add_argument("--profile", choices=["tight", "regular", "loose-passive"], default="regular")
+    six.add_argument(
+        "--profile",
+        choices=["standard", "tight", "regular", "loose-passive"],
+        default="standard",
+        help="standard: blinds defend like a modern chart (DECISIONS 54); "
+        "the others are fitted to 2009 online hands",
+    )
     six.add_argument("--samples", type=int, default=40_000)
     six.add_argument("--seed", type=int, default=0)
     six.set_defaults(handler=_sixmax)

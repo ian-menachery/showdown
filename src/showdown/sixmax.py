@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import re
 import zlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cache
 from pathlib import Path
 
@@ -153,12 +153,17 @@ class Profile:
     """Rate name -> "fitted" or "assumed"."""
     limp_range: str | None = None
     """A fixed limp range in place of the band below the open-raise range (tests)."""
+    by_seat: dict = field(default_factory=dict, compare=False)
+    """Hero seat -> rates that replace the profile's when the hero sits there (DECISIONS 54)."""
 
     def limp_weights(self) -> np.ndarray:
         if self.limp_range is not None:
             return from_text(self.limp_range)
         lo = 1.0 - self.open_raise - self.limp
         return from_classes(band(ALL_HANDS, lo, 1.0 - self.open_raise))
+
+    def for_seat(self, seat: str) -> Profile:
+        return replace(self, **self.by_seat.get(seat, {}))
 
 
 RATES = (
@@ -182,12 +187,37 @@ RATES = (
 )
 
 
+STANDARD_DEFENCE = {
+    # Hero seat: (BB call, BB 3-bet), (SB call, SB 3-bet), (others call, others 3-bet).
+    # Assumed from published 100 bb six-max solver frequencies (DECISIONS 54).
+    "UTG": ((0.24, 0.09), (0.00, 0.08), (0.04, 0.07)),
+    "HJ": ((0.27, 0.10), (0.00, 0.09), (0.04, 0.07)),
+    "CO": ((0.33, 0.11), (0.00, 0.11), (0.04, 0.07)),
+    "BTN": ((0.44, 0.14), (0.03, 0.14), (0.04, 0.07)),
+    "SB": ((0.50, 0.14), (0.00, 0.00), (0.04, 0.07)),
+}
+DEFENCE_RATES = ("bb_call", "bb_3bet", "sb_call", "sb_3bet", "behind_call", "behind_3bet")
+
+
+def standard(regular: Profile) -> Profile:
+    """The regular profile, with players behind defending like a modern chart."""
+    by_seat = {
+        seat: dict(zip(DEFENCE_RATES, (*bb, *sb, *others), strict=True))
+        for seat, (bb, sb, others) in STANDARD_DEFENCE.items()
+    }
+    source = regular.source | dict.fromkeys(DEFENCE_RATES, "assumed")
+    return replace(regular, name="standard", source=source, by_seat=by_seat)
+
+
 def load_profiles(path: str | Path = PROFILES_PATH) -> dict[str, Profile]:
+    """The three fitted profiles (DECISIONS 53) and "standard" (DECISIONS 54)."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    return {
+    out = {
         name: Profile(name=name, source=p["source"], **p["rates"])
         for name, p in data["profiles"].items()
     }
+    out["standard"] = standard(out["regular"])
+    return out
 
 
 # --- spots and deals ------------------------------------------------------------
@@ -277,6 +307,7 @@ def _deal_hands(weights: list[np.ndarray], n: int, rng: np.random.Generator) -> 
 
 
 def deal(spot: Spot, profile: Profile, *, samples: int = SAMPLES, seed: int = 0) -> Deal:
+    profile = profile.for_seat(spot.seat)
     key = [seed, SEATS.index(spot.seat), spot.limpers, zlib.crc32(profile.name.encode())]
     rng = np.random.default_rng(key)
     kinds, seats = zip(*spot.opponents(), strict=True)
