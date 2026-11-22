@@ -3413,3 +3413,219 @@ fake reader that turns each into a frame from Gate T's saved hands:
 - committing screenshots, PNGs, the session log or game logs;
 - ClubWPT, ever (DECISIONS 29);
 - changing a bar after the session, except by a dated amendment.
+
+---
+
+### 53. A six-max preflop spot engine for unopened and limped pots; Gate M pre-registered (2026-11-22)
+
+**Decided.** Ian approved the design and every bar below on 2026-11-22, all as recommended,
+in one question box asked before any code (SCOPE A12). It is the first slice of a six-max
+cash trainer: given a spot, `showdown sixmax` shows the opponents' assumed ranges, each
+action's EV, the best action and a tier. A drill trainer and six-max hand review are later
+steps with their own entries.
+
+**What it is not.** It is not a solver and finds no equilibrium. It is the best response to
+opponents who follow a stated profile, with postflop valued as equity × R and not played.
+Its answers are as good as the profile and R.
+
+**The spot.**
+- Seats in preflop order: UTG, HJ, CO, BTN, SB, BB. Postflop order: SB, BB, UTG, HJ, CO,
+  BTN.
+- Stacks are 100 bb before blinds and antes. Blinds 0.5/1. The ante is 0 or 0.5 bb from
+  every player (3 bb in all).
+- k limpers, 0 to 3, ahead of the hero. They are non-blind seats; every other seat ahead of
+  the hero folded. With the hero in the BB, the SB folded. Which non-blind seats limped
+  changes no number: they all act before a non-blind hero postflop, and after a blind one.
+- Allowed: UTG k = 0; HJ k ≤ 1; CO k ≤ 2; BTN and SB k ≤ 3; BB k = 1 to 3 (k = 0 is a walk).
+- Players behind: the seats after the hero in preflop order.
+
+**Actions.**
+- Fold: EV 0. Not offered to the BB, whose check is free.
+- Limp: call to 1 bb. The SB completes; the BB checks.
+- Raise to X: unopened, X = 2.5, 3 or 4 bb; with k limpers, X = 3+k, 4+k or 5+k bb. The
+  middle size is the reference size, X_ref.
+
+**EV, in bb relative to folding** (chips already posted are sunk):
+- **The deal.** 40,000 deals per spot, seeded. Each deal gives every opponent a hand: a
+  limper from its profile's limp range, a player behind from all 1,326 combos. The whole
+  set is redrawn if two hands share a card. Then a 5-card board from the rest.
+- **The hero's hand.** In each deal, a combo of the hero's class is drawn uniformly from
+  those that miss every dealt card, and the deal is weighted by how many there are (0 if
+  none). That is the same as dealing the hero first: opponents' ranges are closed under
+  suit relabelling. So one deal serves all 169 classes and every action. An exact combo
+  (`As5s`) can be given instead; it gets weight 1 when it misses every dealt card, else 0.
+- **Strength.** Classes are ranked by exact equity against a random hand (the matrix row,
+  weighted by card-removal pair counts). A hand's place q in a range runs from 0 (weakest)
+  to 1 (strongest), combo-weighted, with combos of a class spread evenly across the class's
+  share. "Top x" means q ≥ 1 − x.
+- **Facing the hero's raise to X** (δ is the band's fold shift, 0 at the base):
+  - a player behind 3-bets with its top t, calls with the next c(X), and folds the rest,
+    where c(X) = max(0, c_ref − s_b·(X − X_ref) − δ). The SB and BB have their own t and
+    c_ref;
+  - a limper re-raises with the top r of its limp range, calls when q ≥ f(X), and folds the
+    rest, where f(X) = min(1 − r, max(0, f_ref + s_L·(X − X_ref) + δ)), q taken within the
+    limp range;
+  - players behind act first, in seat order, then the limpers, in seat order. The first
+    re-raise is the one the hero faces; everyone else then folds, and chips already in stay
+    in the pot.
+- **Facing the hero's limp:** a non-blind player behind raises with its top x and overlimps
+  with the next o; the SB raises with its top x_sb and completes with the next z; the BB
+  raises with its top x_bb and checks the rest.
+- **Payoffs.** The pot P is 6 × ante plus every chip put in.
+  - Everyone folds to the raise: the hero wins the pot.
+  - To the flop: R × share × P − the chips the hero added. The share is exact when one
+    opponent is left: the matrix cell M[hero class, opponent class]. With two or more, it
+    is the deal's board, the pot split equally among the best hands (`multiway.py`'s rule).
+    `multiway.pot_shares` is per set of hands, too slow to call per deal, so the engine
+    ranks each deal's board once with the same evaluator.
+  - A raise behind the hero's limp: the hero folds. **The limp EV is a floor.**
+  - A re-raise: the hero stacks off or folds, whichever its exact equity against the
+    re-raiser's range (`live/jam.py`'s `jam_equity`) says is worth more, given the pot it
+    can see. Stacking off, both put in 100 − ante; the payoff uses M[hero, re-raiser's
+    class] × P − the hero's chips added.
+- **R,** by who has the initiative and who is last to act postflop: hero raised and in
+  position 1.00; raised and out of position 0.90; limped pot in position 0.85; out of
+  position 0.75. Anchor: Gate Q's own flop solves measured 0.63 to 0.78 for an
+  out-of-position caller and 1.02 to 1.10 for the out-of-position 3-bettor (GATES.md).
+- **Standard error** of each EV and of the gap between two actions: self-normalised
+  importance sampling, sqrt(Σ w²(p − EV)²) / Σ w, over the deals.
+
+**Profiles, fitted to the PHH hands.** A spike,
+`spikes/2026-11-22-phh-sixmax-profiles.py`, reads DECISIONS 39's zip (SHA-256 pinned there)
+straight from disk: the HandHQ no-limit hands with 3 to 6 players, all stakes.
+- **Buckets.** Players with at least 500 such hands, by their own VPIP and PFR over them:
+  - tight: VPIP under 20%;
+  - regular: VPIP 20% to under 35%;
+  - loose-passive: VPIP 35% or more and PFR under half of VPIP.
+
+  Loose-aggressive players (VPIP 35% or more, PFR at least half of it) are counted and left
+  out.
+- **What is counted,** preflop, by the acting player's bucket:
+  1. first in, not a blind, everyone before folded: fold, limp, raise;
+  2. facing one or more limpers and no raise, not a blind: fold, overlimp, raise;
+  3. a player who limped (1 or 2), facing exactly one raise when it next acts: fold, call,
+     re-raise; by m = raise-to minus the limpers before the raiser, in bb, in buckets under
+     3.5, 3.5 to 4.5, 4.5 to 5.5, and 5.5 or more;
+  4. the SB and the BB facing one open raise and no limpers: fold, call, 3-bet; by the
+     open's size in bb, in buckets under 2.75, 2.75 to 3.25, 3.25 to 3.75, and 3.75 or more;
+  5. a non-blind player facing one open raise and no limpers, its first action: fold, call,
+     3-bet;
+  6. the SB facing limpers and no raise: fold, complete, raise; the BB: check, raise.
+- **Into the engine:**
+  - limp range: the classes between the top (open-raise %) and the top (open-raise % +
+    limp %) of count 1, by strength, partial classes weighted;
+  - f_ref: count 3's fold share at m 3.5 to 4.5 (the engine's 4+k); r: count 3's re-raise
+    share over all sizes; s_L: the chance-weighted least-squares slope of count 3's fold
+    share on each bucket's mean m;
+  - c_ref (SB, BB): count 4's call share at 2.75 to 3.25 bb (the engine's 3 bb); t (SB,
+    BB): count 4's 3-bet share over all sizes; s_b: the slope of the BB's fold share on each
+    size bucket's mean size, used for every player behind;
+  - a non-blind player behind: t and c_ref from count 5;
+  - x, o from count 2; x_sb, z, x_bb from count 6.
+- **Fallback.** A rate with fewer than 1,000 chances in its bucket, or a slope with fewer
+  than three buckets of 1,000 chances, uses the hand-picked value below. The output says
+  "assumed" beside it.
+
+  | | tight | regular | loose-passive |
+  |---|---|---|---|
+  | open-raise / limp, first in | 12 / 10% | 13 / 20% | 7 / 40% |
+  | limpers vs an iso of 4+k: fold / re-raise; fold slope per bb | 50 / 2%; 0.06 | 40 / 4%; 0.04 | 25 / 3%; 0.02 |
+  | non-blind behind vs an open: 3-bet / call | 4 / 4% | 5 / 7% | 2 / 15% |
+  | SB: 3-bet / call; BB: 3-bet / call | 4 / 5%; 4 / 25% | 5 / 8%; 5 / 35% | 2 / 20%; 2 / 50% |
+  | fold slope per bb, players behind | 0.04 | 0.04 | 0.02 |
+  | vs a limp: raise / overlimp; SB raise / complete; BB raise | 8 / 5%; 8 / 20%; 8% | 10 / 10%; 10 / 35%; 10% | 4 / 30%; 4 / 60%; 4% |
+- **Output:** `data/sixmax_profiles.json` (rates, chances, slopes, the zip's SHA-256) and
+  `docs/sixmax-profiles.md`. Both hold only aggregates, credited to the dataset (CC BY 4.0).
+  One profile covers the whole table, limpers and players behind.
+- These are 2009 online players at 25NL and up, with no antes. They are priors for Ian's
+  games, not measurements of them.
+
+**The verdict.**
+- **Best:** the highest EV at the base point. **Runner-up:** the second.
+- **The band:** 9 points, R moved by −0.1, 0, +0.1 (all R together) × δ = −0.10, 0, +0.10
+  (the limpers' fold to an iso, and the calls of players behind).
+- **Close:** at some band point another action has the highest EV. The runner-up is shown,
+  with the band points where something else wins.
+- **Review:** not close, but either the gap to the runner-up is under 3 standard errors, or
+  the best action changes when the hero folds to every re-raise instead of stacking off.
+- **Clear:** otherwise.
+
+**Gate M,** recorded before any engine or spike code. It passes when bars 1 to 3 pass.
+1. **Closed forms,** each worked by hand in the test from the matrix, not through the
+   engine:
+   - everyone folds (every continue and re-raise rate 0): each raise's EV equals the pot
+     before the hero acts, at every allowed seat and k, both antes;
+   - one caller with a fixed range: hero on the BTN behind one limper whose range is KK,
+     who always calls (f = r = 0), blinds always fold: EV = 1.00 × M[hero, KK] × P − X;
+   - a limped pot with the BB: the hero in the BB checks behind one limper whose range is
+     QQ, SB folded: EV = 0.75 × M[hero, QQ] × (2.5 + 6 × ante);
+   - a stack-off against a limp-reraise: one limper whose range is AA and who always
+     re-raises; KK folds (EV = −X); AA stacks off (EV = 0.5 × P − (100 − ante));
+   - these four match to 1e-9, on AA, KK, A5s, 72o where the spot allows;
+   - a 3-way pot: hero AsAh on the BTN isolates two limpers holding KhKd and QcQs, who always
+     call, blinds folding. The EV is within 4 combined standard errors of R × share × P − X,
+     the share from `multiway.pot_shares` with 200,000 runouts.
+2. **Monotonic,** over the 169 classes of every allowed seat and k, each profile, both
+   antes (102 charts). Classes that are close or review in either chart compared are left
+   out and counted.
+   - **The ante widens:** every class whose best action is not fold with no ante is not
+     fold with the 0.5 ante.
+   - **More limpers, no new offsuit isos:** for BTN, SB and BB from 1 to 2 and 2 to 3
+     limpers, and CO from 1 to 2, each profile and ante: every offsuit class whose best
+     action is a raise with one more limper is a raise with one fewer.
+   - **Looser limpers, larger isos:** for HJ (k = 1), CO (k = 1, 2) and BTN (k = 1, 2, 3),
+     each ante: for each of AA, KK, QQ, AKs and AKo, the best raise size against
+     loose-passive is at least the best against tight.
+   - **Reported, not gated:** how many classes isolate against each profile. Tight limpers
+     fold more, which honestly widens isos against them.
+3. **Chart.** Unopened pots, no ante, regular profile, against PokerStrategy's six-max
+   opening ranges (below). At each of UTG, HJ, CO, BTN and SB, at least 85% of the
+   classes our tier calls clear agree with the chart on raise vs not raise (fold or limp).
+   Every disagreement is listed, and the close and review classes counted.
+
+**The chart.** PokerStrategy.com's "Big Stack Strategy" six-max opening ranges, lessons
+2253 to 2257 (UTG, MP, CO, BU, SB), saved on 2026-11-22 with Ian's approval into the
+gitignored `data/external/pokerstrategy/`, pinned by SHA-256, never committed:
+
+| Lesson | Seat | SHA-256 | Range | Page's count |
+|---|---|---|---|---|
+| 2253 | UTG | `d1a323c47fc26b1cf058463204cb93a8ad643de259479350953d20af4a49ac42` | 13% | 176 combos |
+| 2254 | MP, our HJ | `4cc23c645ce6f0a21a94a0a1669ace8440f9fb4438eadac0199e98b2087e7a4b` | 17% | 226 |
+| 2255 | CO | `58fc8ec282fbaecef5e22d4474fe075d0e4bbce9a5410e531563a2364c6cf83f` | 32% | 426 |
+| 2256 | BU | `fbb9c26a785beff323d03b429a2bc89a4cfbe0e940f7831a9e254a3511665006` | 62% | 826 |
+| 2257 | SB | `f1ac3ea6d3e1e57731d737028c771a929662aab2fda8f4c266325dea585c37c8` | 31% | 410 |
+
+- Each page's first list followed by its "(#N / P%)" or "(P%, #N)" count is its open range.
+  It is parsed with `parse_range`. Where a token reads two ways, the reading whose combo
+  count equals the page's N is used: MP's "65s+" means 65s, 76s, 87s, 98s, T9s and JTs (226
+  combos; 206 the other way). The test asserts every list's count equals the page's.
+- The ranges were built from 1.5 million NL200 hands against a "standard opponent", not by
+  a solver. The pages name open sizes of 2 to 3 bb; we compare raise vs not raise only.
+
+**The order:**
+1. This entry and SCOPE A12, committed and pushed.
+2. The spike, run once on AC. A crash or a wrong count gets one fix, then it stops.
+3. The engine, its tests, and `showdown sixmax`.
+4. Gate M scored once and recorded in GATES.md. A failing bar gets one reproduce-and-fix,
+   then the result stands.
+5. `docs/sixmax-preflop.md`: what the slice can and cannot be trusted for.
+
+**Decided without Ian (2026-11-22),** each the reversible option:
+- the CLI is `showdown sixmax SEAT HAND [--limpers K] [--ante A] [--profile P]
+  [--samples N] [--seed S]`;
+- limpers are non-blind seats, and with the hero in the BB the SB folded;
+- strength is equity against a random hand, so the limp range is the band below the
+  open-raise range;
+- bar 1's limped pot is the hero in the BB checking behind a fixed-range limper. A
+  random-handed BB can only be matched by sampling, not to 1e-9;
+- the PokerStrategy pages are about 470 KB each, not the 50 to 200 KB estimated in the
+  question;
+- seeds: one deal per seat, k and profile, shared by both antes and all actions.
+
+**Rules out:**
+- calling any answer GTO or solved;
+- six-max in the live advisor, the overlay or `showdown advise`;
+- other stacks, 3-bet pots, open-raised pots facing the hero, straddles and ICM;
+- changing the heads-up tree, the live advisor or the Poker Now path;
+- committing the PHH hands or the PokerStrategy pages;
+- moving a bar after results are seen, except by a dated amendment.
