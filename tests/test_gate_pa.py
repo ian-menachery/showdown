@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 from showdown import pushfold as pf
+from showdown.bot.policy import PushFoldStrategy
 from showdown.cfr import compile_game, exploitability, policy_value
 from showdown.cli import main
 from showdown.equity.cards import class_index
@@ -96,3 +97,14 @@ def test_bars_1_and_5_the_stored_ante_solution(matrix) -> None:
         policy = pf.policy_from_vectors(tree, d.push, d.call)
         assert exploitability(tree, policy) == pytest.approx(d.exploitability, abs=1e-12)
         assert policy_value(tree, policy) == pytest.approx(d.value_sb, abs=1e-12)
+
+
+def test_the_trainer_grades_the_ante_file_with_the_ante(matrix) -> None:
+    """`showdown play --pushfold data/pushfold_ante10.json` grades with the ante's EVs."""
+    strategy = PushFoldStrategy.load(ANTE_SOLUTION)
+    d, cls = strategy.solution.at(15.0), class_index("A5s")
+    sb_fold, sb_jam = pf.sb_action_values(d.call, 15, matrix, ante=0.1)
+    bb_fold, bb_call = pf.bb_action_values(d.push, 15, matrix, ante=0.1)
+    sb, bb = strategy.grade(15, "sb", cls, True), strategy.grade(15, "bb", cls, True)
+    assert (sb.ev_fold, sb.ev_allin) == pytest.approx((sb_fold[cls], sb_jam[cls]), abs=1e-12)
+    assert (bb.ev_fold, bb.ev_allin) == pytest.approx((bb_fold[cls], bb_call[cls]), abs=1e-12)

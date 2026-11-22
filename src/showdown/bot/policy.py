@@ -58,9 +58,9 @@ class PushFoldStrategy:
         return float(self.solution.at(depth).call[cls])
 
     def _compute_values(self, depth: int) -> tuple[np.ndarray, ...]:
-        result = self.solution.at(depth)
-        sb_fold, sb_jam = pushfold.sb_action_values(result.call, depth, self.matrix)
-        bb_fold, bb_call = pushfold.bb_action_values(result.push, depth, self.matrix)
+        result, ante = self.solution.at(depth), self.solution.ante
+        sb_fold, sb_jam = pushfold.sb_action_values(result.call, depth, self.matrix, ante)
+        bb_fold, bb_call = pushfold.bb_action_values(result.push, depth, self.matrix, ante)
         return sb_fold, sb_jam, bb_fold, bb_call
 
     def grade(self, depth: int, seat: str, cls: int, allin: bool) -> Grade:
