@@ -78,6 +78,12 @@ def test_bar2_more_limpers_no_new_offsuit_isos(charts) -> None:
     assert not bad
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Gate M2 bar 3 FAIL (GATES.md, 2026-11-22): UTG, HJ and CO have fewer than 30 "
+    "kind-stable classes; BTN agrees 81.2%, SB 59.1%. The bar is unchanged; strict, so a pass "
+    "shows up.",
+)
 def test_bar3_unopened_against_pokerstrategy(charts) -> None:
     failed = []
     for seat, lesson in LESSONS.items():

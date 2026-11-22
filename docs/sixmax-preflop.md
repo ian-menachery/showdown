@@ -68,6 +68,18 @@ make them fold more, by the profile's slope.
 - **Few spots are clear.** Over all charts, 36% of hands are clear, 62% close and 2%
   review. Of the close ones, 4 in 10 differ only in the raise size.
 
+**The "standard" profile (Gate M2, DECISIONS 54).** It is the default. It is the regular
+profile, except that players behind defend like a modern chart. The BB's defence by the
+raiser's seat is fitted to VIP-Grinders' "Big blind defense" table. The SB's and the
+other players' defence is assumed.
+- **Directions: PASS.**
+- **PokerStrategy: FAIL.**
+  - **UTG to CO:** too few hands keep the same kind of action across the band to judge
+    (12 to 26). Those compared agree 87 to 100%.
+  - **BTN:** 81% agreement. The engine folds weak suited connectors and gappers that the
+    chart opens to 2 bb.
+  - **SB:** 59% agreement. The engine still opens every hand there.
+
 ## Trust it for
 
 - **The arithmetic** of every spot it covers. Bar 1 checks it against hand-worked
@@ -91,6 +103,9 @@ make them fold more, by the profile's slope.
 
 ## Do not trust it for
 
+- **Small-blind opens.** Under every profile the SB opens far wider than a standard chart
+  (all 169 hands under "standard"). R 0.90 for an out-of-position raiser is likely
+  generous. Open the SB from a chart until this is fixed.
 - **The exact size.** Sizes often trade places inside the band. When every band point
   picks a raise, the CLI says "only the size is close". Read that as: raise, any of the
   sizes.

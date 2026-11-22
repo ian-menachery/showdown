@@ -12,13 +12,21 @@ Everything runs between sessions, on spots typed in or on completed hands.
 **Status (2026-11-22).** Step 1 is built as `showdown sixmax`. Gate M failed on bar 3
 only: from the HJ and SB the engine opens wider than PokerStrategy's chart, because the
 fitted blinds fold more (GATES.md). Bars 1 and 2 pass. What it can be trusted for is in
-[`sixmax-preflop.md`](sixmax-preflop.md). Steps 2 and 3 are later, each with its own
-DECISIONS entry and gate. Ian decides what follows bar 3 before step 2 builds on it.
+[`sixmax-preflop.md`](sixmax-preflop.md).
+
+Ian chose (2026-11-22) to keep bar 3 as a documented limit. He also chose to add a
+"standard" profile, whose blinds defend like a modern chart, before step 2.
+- **The profile** is DECISIONS 54, with the BB fitted to VIP-Grinders' table.
+- **Gate M2** also failed on its chart bar only. The SB still opens everything, and early
+  seats have too few hands that keep their kind of action across the band.
+- **Step 2,** the drill trainer, is DECISIONS 55, Gate K. It uses "standard" by default
+  and grades the kind of action only.
 
 | Step | What | State |
 |---|---|---|
 | 1 | The spot engine as a CLI | built; Gate M FAIL, bar 3 only |
-| 2 | A drill trainer on the engine | later |
+| 1b | The "standard" profile | built; Gate M2 FAIL, bar 3 only |
+| 2 | A drill trainer on the engine | pre-registered (DECISIONS 55, Gate K) |
 | 3 | Six-max hand review by spot | later |
 
 ---
@@ -127,5 +135,8 @@ Each is the reversible option, logged as the brief asks:
   limper, which can be matched to 1e-9.
 - **Seeds:** one deal per seat, limper count and profile, shared by both antes and all
   actions.
-- **The drill grade** in step 2 (good, marginal, review, as above) is a proposal. It is
-  settled in step 2's own DECISIONS entry.
+- **The drill grade** in step 2 is settled in DECISIONS 55. Ian approved it through the
+  master session.
+- **Building step 2 after Gate M2's FAIL.** Ian asked for drills next, and Gate K tests
+  the trainer, not the profile. The SB caveat is shown in `sixmax-preflop.md`, and the
+  fix for SB opens is left for Ian to pick.

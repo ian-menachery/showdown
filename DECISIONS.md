@@ -3754,3 +3754,68 @@ fitted to a published chart.**
 - **Decided without Ian:** the midpoint of each range; the move to 3 bb by the fitted
   slope; and ignoring the page's 3x row (its 2.5x to 3x drop is about 20 points, far off
   every other source here).
+
+---
+
+### 55. Step 2: a six-max drill trainer; Gate K pre-registered (2026-11-22)
+
+**Decided.**
+- Ian approved decisions 5 to 8 (sent with DECISIONS 54's) through the master session on
+  2026-11-22.
+- In this session he chose "Limit, build drills": Gate M's bar 3 stays a documented
+  limit.
+- "standard" (DECISIONS 54) is the default profile; the fitted ones stay selectable.
+- Study only (SCOPE A13, A15). It runs on dealt practice spots, never on a live hand.
+
+**The command:** `showdown sixmax drill [--count N] [--profile P] [--ante A] [--seed S]
+[--samples N]`. `drill` takes the seat's place.
+
+**A drill:**
+- **The spot:** a seat and limper count drawn uniformly from the 17 allowed shapes. The
+  ante is 0 or 0.5 at random unless `--ante` is given.
+- **The hand:** a combo drawn uniformly from the 1,326 and shown as two cards; its class
+  is graded. If the class's best action is a clear fold, it is shown with probability 1/5.
+  Otherwise another hand is drawn for the same spot, so drills are not mostly 72o.
+- **Before answering,** the trainer shows the spot, the hand and the profile's assumed
+  ranges, as `showdown sixmax` prints them.
+- **The answer:**
+  - f folds; l limps, overlimps, completes or checks; c also checks; r raises; q quits;
+  - the BB has no fold;
+  - only the kind is asked.
+- **The grade,** where a kind's EV is the EV of its best action:
+  - **good:** the answer's kind is the best action's kind;
+  - **marginal:** otherwise, but at one of the 9 band points the winning action is of
+    the answer's kind;
+  - **review:** otherwise. The bb lost is EV(best) − EV(the answer's kind) at the base
+    point.
+- **After answering,** the trainer shows the grade, the best action with its size, each
+  action's EV, the tier and its reasons (as `showdown sixmax`), and the bb lost.
+- **Speed:** one deal of 40,000 per spot and profile, kept for the session.
+- **The log:** `data/drills/<start>.jsonl`, gitignored, flushed per line. Each line holds
+  the time, spot, ante, profile, hand, answer, grade, best action, the EVs, the bb lost,
+  the tier and the seconds taken.
+- **The summary,** at the end: drills by grade, the bb lost in all, and the misses by seat
+  and limper count.
+
+**Gate K,** recorded before any trainer code. It passes when bars 1 to 3 pass. Two scripted
+sessions run with seed 20261122, the standard profile and a random ante. The same seed gives
+the same 300 drills in both.
+1. **Grading.** Each drill's grade is checked against one worked out in the test from
+   `sixmax.answer` for the same spot, hand, samples and seed, by the rule above.
+   - **Session A** answers the best kind every time. All 300 must be graded good.
+   - **Session B** answers a kind drawn uniformly (seed 7) from those allowed.
+     - Every grade must match.
+     - Every review's bb lost must match to 1e-9.
+     - At least 30 good, 10 marginal and 30 review must occur, so each grade is tested.
+2. **Speed.** In session A, the time from the start of a drill to its prompt, the first
+   deal of each spot included: median at most 2 s, 95th percentile at most 5 s. No other
+   heavy process runs meanwhile.
+3. **The log.** Each session's log has exactly 300 lines, one per drill, with the answer
+   given. The summary's counts by grade and its total bb lost equal the sums over the
+   lines, the bb to 1e-9.
+
+**Reported, not gated:** the share of drills whose best action is a clear fold, and the
+grades in session B by tier.
+
+**Rules out:** live use of any kind; ClubWPT; grading the size (a later decision, if
+wanted); committing drill logs.

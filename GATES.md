@@ -1374,3 +1374,54 @@ standard errors ahead of iso to 6.
 ```
 The spike reads the 20 GB PHH zip in about 13 minutes and rewrites
 `data/sixmax_profiles.json`.
+
+## Gate M2: the "standard" six-max profile: FAIL, bar 3 only (2026-11-22)
+
+Evidence:
+- `tests/test_gate_m.py` and `tests/test_gate_m2.py` (fast suite): bar 1;
+- `tests/test_gate_m2_slow.py` (`-m "slow or not slow"`): the fit check, and bars 2 and 3
+  over the standard profile's 34 charts;
+- the profile at 1e2c80e. The BB's defence is fitted to VIP-Grinders' "Big blind defense"
+  (`data/external/vip-grinders/`). The SB and other players behind are assumed.
+
+The bars were pre-registered in DECISIONS 54 (commit cca2bed) before the profile existed.
+Ian then chose a fit over hand-picked numbers, recorded as a dated amendment before
+scoring. A run on the hand-picked numbers (e156792) was stopped and its output never read.
+Gate M2 was scored once, at 1e2c80e, in 117 s.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Closed forms | Gate M bar 1's 21 checks pass unchanged. The seat lookup is exact at both antes: UTG 72o folds to the BB's 3-bet (EV −X); from the HJ every open wins the pot. The profile equals the regular profile except for its seat defence, and its BB rates equal the saved page's midpoints | 1e-9 | PASS |
+| 2. Directions, kind-stable classes | **Ante:** 1,135 compared, none that enters with no ante folds with it. **Limpers:** 565 offsuit classes compared, no new iso with one more limper | none; ≥ 100 and ≥ 50 compared | PASS |
+| 3. PokerStrategy's opens, kind-stable classes | UTG 12 compared (100% agree), HJ 15 (86.7%), CO 26 (96.2%), BTN 85 (81.2%), SB 88 (59.1%) | ≥ 30 compared and ≥ 85% at each seat | **FAIL** |
+
+**Bar 3, seat by seat.** The clear-only agreement (Gate M's rule) is in brackets.
+- **UTG, HJ and CO: too few kind-stable classes** (12, 15, 26; clear only 5, 7, 16).
+  Where they are compared, they agree 87 to 100%. The band's "players behind call 10
+  points less" corner drops the cold-callers' 4% and the SB's 0% calls to 0, and the BB's
+  to 10 to 23%. At that corner, stealing pays with almost any hand. So even UTG 72o
+  (−0.43 bb to open at the base point) is close, not kind-stable.
+- **BTN: 81.2%** (77.5% clear). The engine folds 16 hands the chart opens: weak suited
+  connectors and gappers (T3s, 94s, 84s, 74s, 64s, 53s, 43s and others) and T6o, 96o,
+  86o, 76o, 65o. It opens 63 classes, the chart 120. The chart opens to 2 bb. The
+  engine's smallest open is 2.5 bb, against a BB that calls 40.5% and 3-bets 12%.
+- **SB: 59.1%** (46.2% clear). The engine opens all 169 classes at the base point. The
+  BB folds about 42% to a 2.5 bb SB open. With R 0.90 for the SB as an out-of-position
+  raiser, even 72o is +0.03 bb (close). Gate Q measured an out-of-position caller's R at
+  0.63 to 0.78, so 0.90 is likely generous here.
+
+**Why no fix.** One reproduce (UTG 72o, SB 72o): every number follows from the profile, the
+band and R as registered. Nothing is a bug, so the result stands and the bar is a strict
+xfail.
+
+**What it says:**
+- With "standard" the engine opens about as a standard chart does from UTG to CO.
+- From the BTN it opens tighter than PokerStrategy's 2 bb chart.
+- From the SB it still opens too wide.
+- Kind-stability needs a narrower fold band, or players behind who call more, to say
+  much in early seats.
+
+**Rerun:**
+```
+.venv\Scripts\python -m pytest tests/test_gate_m.py tests/test_gate_m2.py tests/test_gate_m2_slow.py -m "slow or not slow" -s -rx
+```
