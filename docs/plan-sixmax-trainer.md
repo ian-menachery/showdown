@@ -27,6 +27,7 @@ Ian chose (2026-11-22) to keep bar 3 as a documented limit. He also chose to add
 | 1 | The spot engine as a CLI | built; Gate M FAIL, bar 3 only |
 | 1b | The "standard" profile | built; Gate M2 FAIL, bar 3 only |
 | 2 | A drill trainer on the engine | built, `showdown sixmax drill`; Gate K PASS |
+| 2b | R 0.75 out of position (DECISIONS 56, in the code) and standard's limpers from loose-passive | next session: one entry, one re-gate |
 | 3 | Six-max hand review by spot | later |
 
 ---

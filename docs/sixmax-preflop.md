@@ -28,8 +28,10 @@ re-raises the top; a player behind 3-bets its top hands and calls the next. Bigg
 make them fold more, by the profile's slope.
 
 - **A pot that reaches the flop pays R × equity × pot.** Postflop is not played. R is 1.00
-  for the raiser in position, 0.90 out of position, 0.85 in a limped pot in position, and
-  0.75 out of position. Equity is exact (the 169×169 matrix) when one opponent is left,
+  for the raiser in position, 0.75 out of position, 0.85 in a limped pot in position, and
+  0.75 out of position. The out-of-position raiser's R was 0.90 until DECISIONS 56. Gates
+  M, M2 and K were scored at 0.90. The re-gate at 0.75 is the next step (see the
+  roadmap). Equity is exact (the 169×169 matrix) when one opponent is left,
   and comes from the deal's board when there are more.
 - **Facing a re-raise, the hero stacks off or folds,** whichever its equity against the
   re-raise range says.

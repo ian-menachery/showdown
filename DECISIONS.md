@@ -3877,3 +3877,17 @@ reproduce-and-fix, for a bug only.
 - pinning the older gates' slow tests to 0.90.
 
 **Rules out:** changing any other R or the band here; editing Gates M, M2 or K's records.
+
+**Amendment to DECISIONS 56 (2026-11-22): Gate M3 was not scored; the next entry replaces
+it.**
+- **What happened.** While Gate M3's run was under way at 7ced07c, Ian answered in the
+  master session, which relayed it:
+  - make both fixes together under one pre-registered entry and one re-gate: R 0.75 here,
+    and the standard profile's limpers taken from the fitted loose-passive profile
+    instead of the regular one;
+  - do it in a fresh session, not this one.
+- **What was done.** The run was stopped and its output never read. Gate M3 stays
+  unscored and is superseded by that next entry. R 0.75 stays in the code meanwhile. Until
+  the re-gate, answers wherever the hero raises out of position are ungated.
+- **No bar moved.** Gates M, M2 and K's records stand, and their slow tests still pin R at
+  0.90.
