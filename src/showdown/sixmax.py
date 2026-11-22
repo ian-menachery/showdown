@@ -722,3 +722,114 @@ def _runs(ranks: list[int], name, *, top: int) -> list[str]:
 
 def share_of_hands(class_weights: np.ndarray) -> float:
     return float((np.asarray(class_weights) * CLASS_SIZES).sum() / len(ALL_COMBOS))
+
+
+# --- text, for `showdown sixmax` and the drill trainer ------------------------------
+
+
+def kind(action: str) -> str:
+    """fold, limp (limp, overlimp, complete, check) or raise."""
+    return "fold" if action == "fold" else ("raise" if " to " in action else "limp")
+
+
+def describe_spot(spot: Spot, p: Profile, hand: str) -> list[str]:
+    """The spot, the profile, and its assumed ranges. `p` is already `for_seat`."""
+
+    def pct(rate: str, value: float | None = None) -> str:
+        v = getattr(p, rate) if value is None else value
+        return f"{v:.0%}" + (" (assumed)" if p.source.get(rate) == "assumed" else "")
+
+    def rng(weights) -> str:
+        return f"{share_of_hands(weights):.1%} of hands: {range_text(weights)}"
+
+    limpers = (
+        f"{spot.limpers} limper{'s' * (spot.limpers != 1)} ahead" if spot.limpers else "unopened"
+    )
+    ante = f"ante {spot.ante:g} from everyone" if spot.ante else "no ante"
+    origin = (
+        "the regular profile, with players behind defending like a modern 100 bb chart "
+        "(DECISIONS 54)"
+        if p.name == "standard"
+        else "fitted to 2009 online 6-max hands (docs/sixmax-profiles.md)"
+    )
+    lines = [
+        f"{spot.seat} with {hand}: {limpers}, 100 bb, blinds 0.5/1, {ante} ({spot.pot:g} bb in)",
+        f"Opponents: {p.name}, one profile for the whole table: {origin}. "
+        "Assumed, not measured on your players.",
+        "",
+        "Assumed ranges",
+    ]
+    x_ref = spot.sizes[1]
+    kinds = [k for k, _ in spot.opponents()]
+    if "limper" in kinds:
+        limp = p.limp_weights()
+        f = min(1 - p.iso_reraise, max(0.0, p.iso_fold))
+        lines += [
+            f"  Each limper: limp range {rng(band(limp, 0, 1 + 1e-12))}",
+            f"    facing an iso to {x_ref:g} bb: fold {pct('iso_fold', f)}",
+            f"      call: {rng(band(limp, f, 1 - p.iso_reraise))}",
+            f"      re-raise ({pct('iso_reraise')} of the range): {rng(top(limp, p.iso_reraise))}",
+        ]
+    rates = {
+        "behind": ("Each player behind", "behind_3bet", "behind_call"),
+        "SB": ("SB", "sb_3bet", "sb_call"),
+        "BB": ("BB", "bb_3bet", "bb_call"),
+    }
+    for who in ("behind", "SB", "BB"):
+        if who not in kinds:
+            continue
+        label, t_rate, c_rate = rates[who]
+        t, c = getattr(p, t_rate), getattr(p, c_rate)
+        lines += [
+            f"  {label}, facing a raise to {x_ref:g} bb:",
+            f"    3-bet {pct(t_rate)}: {range_text(top(ALL_HANDS, t))}",
+            f"    call {pct(c_rate)}: {range_text(band(ALL_HANDS, 1 - t - c, 1 - t))}",
+        ]
+    behind = []
+    if "behind" in kinds:
+        behind.append(f"each player behind raises {pct('limp_raise')}, overlimps {pct('overlimp')}")
+    if "SB" in kinds:
+        behind.append(f"SB raises {pct('sb_limp_raise')}, completes {pct('sb_complete')}")
+    if "BB" in kinds:
+        behind.append(f"BB raises {pct('bb_limp_raise')}")
+    if behind:
+        limp_name = next(n for n in spot.action_names() if kind(n) == "limp")
+        lines.append(f"  Facing your {limp_name}: " + "; ".join(behind))
+    lines.append(
+        f"  Sizes move fold rates by {p.iso_slope:+.3f} (limpers) and {p.behind_slope:+.3f} "
+        "(players behind) per bb away from the middle size."
+    )
+    return lines
+
+
+def describe_answer(a: Answer, samples: int, seed: int) -> list[str]:
+    """Each action's EV, the verdict, and why."""
+    lines = [
+        f"EV of each action, in bb against folding ({samples:,} deals, seed {seed})",
+        f"  {'':12s} {'EV':>7s}  {'SE':>4s}",
+    ]
+    for name, ev, se in zip(a.actions, a.ev, a.se, strict=True):
+        mark = "   best" if name == a.best else ""
+        lines.append(f"  {name:12s} {ev:+7.2f}  {se:4.2f}{mark}")
+    lines += [
+        "",
+        f"Verdict: {a.tier.upper()}. Best: {a.best}. Runner-up: {a.runner_up} "
+        f"({a.gap_se:.1f} standard errors behind).",
+    ]
+    if a.flips:
+        winners = sorted({w for _, _, w in a.flips})
+        for w in winners:
+            where = [f"R {r:+.1f}/fold {d:+.0%}" for r, d, x in a.flips if x == w]
+            lines.append(f"  {w} wins at " + ", ".join(where))
+        if all(kind(w) == kind(a.best) for w in winners):
+            lines.append(f"  Every band point picks a {kind(a.best)}: only the size is close.")
+    if a.no_stackoff_best != a.best:
+        lines.append(
+            f"  Folding to every re-raise instead of stacking off, the best is {a.no_stackoff_best}."
+        )
+    lines.append(
+        "Band: every R moved 0.1 either way, fold-to-raise rates 10 points either way. "
+        "The limp EV is a floor: a raise behind it is folded. Facing a re-raise, the hero "
+        "stacks off or folds."
+    )
+    return lines

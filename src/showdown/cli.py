@@ -741,109 +741,33 @@ def _preflop_chart(args: argparse.Namespace) -> int:
     return 0
 
 
-def _kind(action: str) -> str:
-    return "fold" if action == "fold" else ("raise" if " to " in action else "limp")
-
-
 def _sixmax(args: argparse.Namespace) -> int:
     from showdown import sixmax as S
 
+    if args.seat.lower() == "drill":
+        return _drill(args)
     try:
-        spot = S.Spot(args.seat.upper(), args.limpers, args.ante)
+        if args.hand is None:
+            raise ValueError("give a hand, like A5s or As5s")
+        spot = S.Spot(args.seat.upper(), args.limpers, args.ante or 0.0)
         hand = S.parse_hand(args.hand)
     except ValueError as exc:
         raise SystemExit(str(exc)) from None
     p = S.load_profiles()[args.profile].for_seat(spot.seat)
     a = S.answer(spot, p, hand, samples=args.samples, seed=args.seed)
+    print("\n".join(S.describe_spot(spot, p, a.hand)))
+    print()
+    print("\n".join(S.describe_answer(a, args.samples, args.seed)))
+    return 0
 
-    def pct(rate: str, value: float | None = None) -> str:
-        v = getattr(p, rate) if value is None else value
-        return f"{v:.0%}" + (" (assumed)" if p.source.get(rate) == "assumed" else "")
 
-    def rng(weights) -> str:
-        return f"{S.share_of_hands(weights):.1%} of hands: {S.range_text(weights)}"
+def _drill(args: argparse.Namespace) -> int:
+    from showdown import sixmax as S
+    from showdown import sixmax_drill as D
 
-    limpers = (
-        f"{spot.limpers} limper{'s' * (spot.limpers != 1)} ahead" if spot.limpers else "unopened"
-    )
-    ante = f"ante {spot.ante:g} from everyone" if spot.ante else "no ante"
-    print(
-        f"{spot.seat} with {a.hand}: {limpers}, 100 bb, blinds 0.5/1, {ante} ({spot.pot:g} bb in)"
-    )
-    origin = (
-        "the regular profile, with players behind defending like a modern 100 bb chart "
-        "(DECISIONS 54)"
-        if p.name == "standard"
-        else "fitted to 2009 online 6-max hands (docs/sixmax-profiles.md)"
-    )
-    print(
-        f"Opponents: {p.name}, one profile for the whole table: {origin}. "
-        "Assumed, not measured on your players."
-    )
-    print("\nAssumed ranges")
-    x_ref = spot.sizes[1]
-    kinds = [k for k, _ in spot.opponents()]
-    if "limper" in kinds:
-        limp = p.limp_weights()
-        f = min(1 - p.iso_reraise, max(0.0, p.iso_fold))
-        print(f"  Each limper: limp range {rng(S.band(limp, 0, 1 + 1e-12))}")
-        print(f"    facing an iso to {x_ref:g} bb: fold {pct('iso_fold', f)}")
-        print(f"      call: {rng(S.band(limp, f, 1 - p.iso_reraise))}")
-        print(
-            f"      re-raise ({pct('iso_reraise')} of the range): {rng(S.top(limp, p.iso_reraise))}"
-        )
-    rates = {
-        "behind": ("Each player behind", "behind_3bet", "behind_call"),
-        "SB": ("SB", "sb_3bet", "sb_call"),
-        "BB": ("BB", "bb_3bet", "bb_call"),
-    }
-    for kind in ("behind", "SB", "BB"):
-        if kind not in kinds:
-            continue
-        who, t_rate, c_rate = rates[kind]
-        t, c = getattr(p, t_rate), getattr(p, c_rate)
-        print(f"  {who}, facing a raise to {x_ref:g} bb:")
-        print(f"    3-bet {pct(t_rate)}: {S.range_text(S.top(S.ALL_HANDS, t))}")
-        print(f"    call {pct(c_rate)}: {S.range_text(S.band(S.ALL_HANDS, 1 - t - c, 1 - t))}")
-    behind = []
-    if "behind" in kinds:
-        behind.append(f"each player behind raises {pct('limp_raise')}, overlimps {pct('overlimp')}")
-    if "SB" in kinds:
-        behind.append(f"SB raises {pct('sb_limp_raise')}, completes {pct('sb_complete')}")
-    if "BB" in kinds:
-        behind.append(f"BB raises {pct('bb_limp_raise')}")
-    if behind:
-        print(f"  Facing your {a.actions[1]}: " + "; ".join(behind))
-    print(
-        f"  Sizes move fold rates by {p.iso_slope:+.3f} (limpers) and {p.behind_slope:+.3f} "
-        "(players behind) per bb away from the middle size."
-    )
-
-    print(f"\nEV of each action, in bb against folding ({args.samples:,} deals, seed {args.seed})")
-    print(f"  {'':12s} {'EV':>7s}  {'SE':>4s}")
-    for name, ev, se in zip(a.actions, a.ev, a.se, strict=True):
-        mark = "   best" if name == a.best else ""
-        print(f"  {name:12s} {ev:+7.2f}  {se:4.2f}{mark}")
-    print(
-        f"\nVerdict: {a.tier.upper()}. Best: {a.best}. Runner-up: {a.runner_up} "
-        f"({a.gap_se:.1f} standard errors behind)."
-    )
-    if a.flips:
-        winners = sorted({w for _, _, w in a.flips})
-        for w in winners:
-            where = [f"R {r:+.1f}/fold {d:+.0%}" for r, d, x in a.flips if x == w]
-            print(f"  {w} wins at " + ", ".join(where))
-        if all(_kind(w) == _kind(a.best) for w in winners):
-            print(f"  Every band point picks a {_kind(a.best)}: only the size is close.")
-    if a.no_stackoff_best != a.best:
-        print(
-            f"  Folding to every re-raise instead of stacking off, the best is {a.no_stackoff_best}."
-        )
-    print(
-        "Band: every R moved 0.1 either way, fold-to-raise rates 10 points either way. "
-        "The limp EV is a floor: "
-        "a raise behind it is folded. Facing a re-raise, the hero stacks off or folds."
-    )
+    profile = S.load_profiles()[args.profile]
+    trainer = D.Trainer(profile, ante=args.ante, samples=args.samples, seed=args.seed)
+    D.run(trainer, args.count, log_dir=D.LOG_DIR)
     return 0
 
 
@@ -1082,12 +1006,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     six = commands.add_parser(
         "sixmax",
-        help="six-max preflop spot: ranges, EV of each action, tier (DECISIONS 53)",
+        help="six-max preflop spot: ranges, EV of each action, tier (DECISIONS 53); "
+        "or `sixmax drill`, practice spots graded by kind of action (DECISIONS 55)",
     )
-    six.add_argument("seat", help="UTG, HJ, CO, BTN, SB or BB")
-    six.add_argument("hand", help="a class like A5s, or two cards like As5s")
+    six.add_argument("seat", help="UTG, HJ, CO, BTN, SB or BB; or drill")
+    six.add_argument("hand", nargs="?", help="a class like A5s, or two cards like As5s")
     six.add_argument("--limpers", type=int, default=0, help="limpers ahead, 0 to 3")
-    six.add_argument("--ante", type=float, default=0.0, help="from every player, in bb")
+    six.add_argument(
+        "--ante", type=float, help="from every player, in bb (default 0; drills: 0 or 0.5)"
+    )
+    six.add_argument("--count", type=int, default=20, help="drills in a session")
     six.add_argument(
         "--profile",
         choices=["standard", "tight", "regular", "loose-passive"],

@@ -30,5 +30,8 @@ venv/
 # The live advisor's hand log is personal play data and is never committed (DECISIONS 32).
 /data/live/
 
+# Six-max drill logs are personal study data and are never committed (DECISIONS 55).
+/data/drills/
+
 # TexasSolver writes its iteration log to its working directory (spike S2).
 /tmp_log.txt
