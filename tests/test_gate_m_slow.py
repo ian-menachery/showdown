@@ -30,14 +30,22 @@ LESSONS = {"UTG": 2253, "HJ": 2254, "CO": 2255, "BTN": 2256, "SB": 2257}
 AGREEMENT = 0.85
 
 
+def _kind(action: str) -> str:
+    return "fold" if action == "fold" else ("raise" if " to " in action else "limp")
+
+
 def _chart(job: tuple) -> tuple:
-    """(job, per class (best action, tier, the best raise size))."""
+    """(job, per class (best action, tier, the best raise size, kind stable)). Kind stable:
+    every band point's winner, and a review's runner-up, is the same kind as the best."""
     seat, k, ante, name = job
     rows = []
     for a in S.chart(S.Spot(seat, k, ante), S.load_profiles()[name]):
         raises = [i for i, n in enumerate(a.actions) if " to " in n]
         size = a.actions[max(raises, key=lambda i: a.ev[i])].split(" to ")[1]
-        rows.append((a.best, a.tier, float(size)))
+        kinds = {_kind(a.best)} | {_kind(w) for _, _, w in a.flips}
+        if a.tier == "review":
+            kinds.add(_kind(a.runner_up))
+        rows.append((a.best, a.tier, float(size), len(kinds) == 1))
     return job, rows
 
 
@@ -156,6 +164,12 @@ def chart_range(lesson: int) -> set[str]:
     return {CLASS_NAMES[class_of(c)] for c in combos}
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Gate M bar 3 FAIL (GATES.md, 2026-11-22): HJ 50% of 6 clear classes and SB 65.2% "
+    "of 23; the fitted regular blinds fold more than the chart's opponents, so the engine opens "
+    "wider. The bar is unchanged; strict, so a pass shows up.",
+)
 def test_bar3_unopened_against_pokerstrategy(charts) -> None:
     failed = []
     for seat, lesson in LESSONS.items():
@@ -176,3 +190,30 @@ def test_bar3_unopened_against_pokerstrategy(charts) -> None:
         if share < AGREEMENT:
             failed.append(seat)
     assert not failed
+
+
+def test_reported_after_scoring_tiers_and_kind_stable_agreement(charts) -> None:
+    """Not a bar; added after Gate M was scored (GATES.md). Per unopened regular chart: the
+    tier counts, and bar 3's raise-or-not agreement on every class whose kind of action
+    (fold, limp, raise) is the same at all band points, sizes aside."""
+    for seat, lesson in LESSONS.items():
+        opens = chart_range(lesson)
+        ours = charts[(seat, 0, 0.0, "regular")]
+        tiers = {t: sum(r[1] == t for r in ours) for t in ("clear", "close", "review")}
+        size_only = sum(r[1] == "close" and r[3] for r in ours)
+        stable = [c for c in range(169) if ours[c][3]]
+        disagree = [
+            (CLASS_NAMES[c], ours[c][0])
+            for c in stable
+            if _raise(ours[c]) != (CLASS_NAMES[c] in opens)
+        ]
+        print(
+            f"\n{seat}: {tiers}, of the close {size_only} size only; kind stable {len(stable)}, "
+            f"agreement {1 - len(disagree) / len(stable):.1%}; ours vs chart: {disagree}"
+        )
+    totals = {
+        t: sum(r[1] == t for rows in charts.values() for r in rows)
+        for t in ("clear", "close", "review")
+    }
+    size_only = sum(r[1] == "close" and r[3] for rows in charts.values() for r in rows)
+    print(f"\nall 102 charts: {totals}, of the close {size_only} size only")

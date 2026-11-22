@@ -3629,3 +3629,14 @@ gitignored `data/external/pokerstrategy/`, pinned by SHA-256, never committed:
 - changing the heads-up tree, the live advisor or the Poker Now path;
 - committing the PHH hands or the PokerStrategy pages;
 - moving a bar after results are seen, except by a dated amendment.
+
+**Amendment to DECISIONS 53 (2026-11-22, before Gate M was scored): study and training
+only (SCOPE A13).** Ian's instruction of 2026-11-21 reached this session through the
+master session after the entry was pushed. It narrows the scope and moves no bar.
+- `showdown sixmax`, and the drill trainer and hand review that build on it, are study
+  tools under DECISIONS 29. They run between sessions, on spots typed in or on completed
+  hands.
+- Ruled out: advice during a hand, screen reading, anything for ClubWPT (DECISIONS 13),
+  and anything for a real-money table. README's "Not this" applies: never run showdown
+  while a ClubWPT Gold client is open.
+- The roadmap is `docs/plan-sixmax-trainer.md`.

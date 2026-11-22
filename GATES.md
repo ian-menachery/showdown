@@ -1289,3 +1289,88 @@ showdown preflop build --workers 12
 ```
 To rerun only the tests, copy `data/preflop_model.json` to `data/preflop_model_v1.json`, and
 `data/preflop_model_v2.json` to `data/preflop_model.json`; afterwards, put them back.
+
+## Gate M: the six-max preflop spot engine: FAIL, bar 3 only (2026-11-22)
+
+Evidence:
+- `tests/test_gate_m.py` (fast suite): bar 1;
+- `tests/test_gate_m_slow.py` (`-m "slow or not slow"`): bars 2 and 3, over 102 charts
+  (every allowed seat and limper count, 3 profiles, 2 antes, 169 classes, 40,000 deals
+  each);
+- the engine at aa25000, the profiles in `data/sixmax_profiles.json` (f296dda).
+
+The bars were pre-registered in DECISIONS 53 (commit b7657ee) before any spike or engine
+code. The study-only amendment (SCOPE A13) came before scoring and moved no bar. Gate M
+was scored once, at aa25000, in 302 s on 12 processes. A rerun with an added diagnostic
+(below) reproduced every gated number exactly.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Closed forms | 21 of 21. Everyone folds: each raise's EV is the pot, at every allowed seat and limper count, both antes, 4 hands. One caller holding KK, the BB's limped pot against QQ, and the stack-off against a limp-reraising AA: exact. The 3-way pot (AsAh, KhKd, QcQs): within 4 SE of `multiway.pot_shares` at all 3 sizes | 1e-9; 4 SE | PASS |
+| 2. Monotonic | **Ante:** 1,393 classes compared, none that enters with no ante folds with it. **Limpers:** 765 offsuit classes compared, no new iso with one more limper. **Sizes:** 23 premium spots compared, the best size against loose-passive is never smaller than against tight. Left out as close or review: 7,226, 2,511 and 37 | no violation | PASS |
+| 3. PokerStrategy's opens | Raise or not, on the classes our tier calls clear: UTG 100% (36 classes), HJ 50.0% (6), CO 100% (13), BTN 100% (32), SB 65.2% (23). Ours opens A9s, ATo, A9o from the HJ, and A5o–A8o and 22–55 from the SB, where the chart folds | ≥ 85% at each seat | **FAIL** |
+
+**Why bar 3 failed: no bug, so no fix.** One reproduce, as the rule allows.
+- SB 22, opening to 2.5: the CLI gives +0.94 bb, as worked by hand. The fitted regular
+  BB calls 17.3% and 3-bets 7.5% against a 3 bb open, and calls 2.5 points more against
+  2.5 bb, so it folds about 73%.
+- HJ A9o: +0.29 bb, from the same fold-heavy players behind.
+- The engine answers its profile correctly. The 2009 online regulars defend less than
+  PokerStrategy's "standard opponent", so the engine steals wider from the HJ and SB.
+- The bar is unchanged. Its test is a strict xfail, so a pass would show up.
+
+**The tier leaves few clear classes** (a finding). Across the 102 charts: 6,322 clear,
+10,629 close (4,338 of them size only: every band point picks the same kind of action)
+and 287 review. In the unopened regular charts, only 6 (HJ) to 36 (UTG) classes are
+clear. So bars 2 and 3 compare a small, strong-or-weak subset.
+
+**Reported after scoring, not a bar.** The same raise-or-not comparison on every class
+whose kind of action (fold, limp, raise) is the same at all 9 band points:
+
+| Seat | Kind-stable classes | Agreement | Ours opens, the chart folds |
+|---|---|---|---|
+| UTG | 43 | 100% | none |
+| HJ | 18 | 77.8% | A9s, A8s, ATo, A9o |
+| CO | 37 | 89.2% | A5o–A8o |
+| BTN | 112 | 96.4% | Q6o, K2o–K4o |
+| SB | 169 | 39.1% | everything the chart folds: the engine opens all 169 classes against the regular BB |
+
+**Reported, not gated: classes that isolate** (best action a raise), against tight /
+regular / loose-passive limpers:
+
+| Spot | No ante | Ante 0.5 |
+|---|---|---|
+| HJ, 1 limper | 40 / 46 / 29 | 169 / 107 / 62 |
+| CO, 1 limper | 51 / 56 / 41 | 169 / 160 / 81 |
+| CO, 2 limpers | 36 / 58 / 40 | 91 / 99 / 57 |
+| BTN, 1 limper | 89 / 76 / 54 | 169 / 169 / 128 |
+| BTN, 2 limpers | 46 / 64 / 49 | 116 / 116 / 78 |
+| BTN, 3 limpers | 36 / 66 / 47 | 44 / 97 / 63 |
+| SB, 1 limper | 165 / 130 / 59 | 169 / 169 / 150 |
+| SB, 2 limpers | 38 / 67 / 47 | 102 / 115 / 62 |
+| SB, 3 limpers | 36 / 63 / 44 | 37 / 73 / 51 |
+| BB, 1 limper | 169 / 165 / 100 | 169 / 169 / 169 |
+| BB, 2 limpers | 37 / 81 / 52 | 94 / 123 / 83 |
+| BB, 3 limpers | 35 / 65 / 46 | 37 / 86 / 52 |
+
+- Against loose-passive limpers the engine isolates fewer hands, not more. They call more
+  and fold only 39% to an iso, against tight limpers' 54%.
+- With the 0.5 ante, 3 bb is dead, so isolating one limper with any two cards is often
+  the answer.
+- Best iso sizes against loose-passive and tight were equal in 54 of 60 premium spots.
+  In the other 6, loose-passive's was 1 bb larger: HJ and CO with one limper, mostly
+  with no ante.
+
+**The example the brief asked for:** `showdown sixmax BTN A5s --limpers 2 --ante 0.5
+--profile loose-passive` prints the ranges, then fold 0.00, overlimp +0.49, iso to 5
++1.92, iso to 6 +1.99, and iso to 7 +2.16 (SE 0.05, best). Its verdict is clear, 7.2
+standard errors ahead of iso to 6.
+
+**Rerun** (about 5 minutes on 12 processes; needs the PokerStrategy pages in
+`data/external/pokerstrategy/`):
+```
+.venv\Scripts\python -I spikes\2026-11-22-phh-sixmax-profiles.py
+.venv\Scripts\python -m pytest tests/test_gate_m.py tests/test_gate_m_slow.py -m "slow or not slow" -s -rx
+```
+The spike reads the 20 GB PHH zip in about 13 minutes and rewrites
+`data/sixmax_profiles.json`.
