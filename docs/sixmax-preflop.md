@@ -94,6 +94,8 @@ to 0.75, and "standard" took its limpers from the loose-passive profile.
   - **BTN:** unchanged and not scored. Neither fix can move it.
   - Why UTG falls short: at R 0.65 out of position with 10 points more calls behind,
     AQs, AJs, ATs, AQo and AJo fold, though each opens at the base point.
+  - **A documented limit (Ian, 2026-11-22).** The UTG count stays as recorded. The band
+    is not narrowed to make more hands stable.
 
 ## Trust it for
 
@@ -121,6 +123,9 @@ to 0.75, and "standard" took its limpers from the loose-passive profile.
 
 ## Do not trust it for
 
+- **UTG opens beyond the strongest hands, under "standard".** Only AA to TT, AKs and AKo
+  keep their kind of action across the band. Even AQs to ATs, AQo and AJo fold at its
+  harshest corner. This is a documented limit: the band stays as it is (Gate M4).
 - **Small-blind opens against the fitted profiles.** Under "standard" at R 0.75 the SB
   opens 78 hands, close to the chart's 66. Against the 2009 tight, regular and
   loose-passive blinds it still opens all 169, because they fold so often.
@@ -135,10 +140,16 @@ to 0.75, and "standard" took its limpers from the loose-passive profile.
   jammed. AA's EV (about +15 bb under the gun, regular profile) is inflated, and its
   best size is pulled
   by stack-offs. "Folding to every re-raise, the best is …" shows how much that matters.
-- **Limping.** A raise behind a limp is always folded, so the limp EV is a floor. At
-  tables that iso a lot (in the fitted profiles each non-blind player behind raises a
-  limp 14 to 19% of the time), limping looks worse than it is, mostly for suited and
-  paired hands that could call.
+- **Limping: a raise behind a limp counts as a fold.** The engine has the limper give up
+  the chips whenever someone raises behind, so the limp EV is a floor.
+  - At tables that iso a lot, limping looks worse than it is. In the fitted profiles each
+    non-blind player behind raises a limp 14 to 19% of the time. This hits hands that
+    could call or re-raise: suited, paired and premium hands.
+  - In hand review it makes fake leaks. Pluribus's small-blind limps with KK, QQ, AK and
+    AQ grade as review, each 1.7 to 6.8 bb behind a raise (Gate W). A limp-trap with a
+    premium hand is never graded fairly.
+  - **A known limit, left for later.** Fixing it needs the limper to call or re-raise a
+    raise behind, which needs its own DECISIONS entry and gate.
 - **Who limp-reraises.** A limper's re-raise range is the top of its limp range, and the
   limp range sits just below its open-raise range. So a limp-reraise holds hands like
   K8s, not the AA or KK a passive player sometimes limps. Facing a real limp-reraise,
@@ -177,5 +188,5 @@ Two tools build on this engine, and both grade the kind of action only:
 
 Read a review's leaks with this page's limits in mind. On Pluribus's 10,000 hands, the
 biggest "leak" was limping KK, QQ and AK from the small blind. That is the limp EV floor
-at work, not a mistake by Pluribus. Raised pots, which are 45% of Pluribus's hands, are not
+at work, not a mistake by Pluribus (see "Limping" above). Raised pots, which are 45% of Pluribus's hands, are not
 graded. There is no Poker Now log parser yet.

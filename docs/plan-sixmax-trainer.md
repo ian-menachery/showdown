@@ -38,6 +38,13 @@ Ian chose (2026-11-22) to keep bar 3 as a documented limit. He also chose to add
   Pluribus's 10,000 hands. The check on Ian's own hands waits for a file from an allowed
   source: a Poker Now log needs Phase 11's parser first.
 
+**The plan is done** (Ian, 2026-11-22).
+- **Gate M4's UTG count stays a documented limit.** The band is not narrowed.
+- **Left for later, each needing its own entry:**
+  - the limp EV floor, where a raise behind a limp counts as a fold. It makes premium
+    limps look like leaks in review (`sixmax-preflop.md`, "Limping");
+  - reviewing Ian's own hands, once he has an allowed file.
+
 ---
 
 ## Step 1: the spot engine as a CLI
