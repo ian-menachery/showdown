@@ -1,0 +1,9 @@
+# The BTN limps; the SB completes J9s; the BB raises to 10 and both fold.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [200, 200, 200, 200, 200, 200]
+actions = ['d dh p1 Jd9d', 'd dh p2 8c2h', 'd dh p3 Jc5s', 'd dh p4 Qh3d', 'd dh p5 6s6h', 'd dh p6 Td7s', 'p3 f', 'p4 f', 'p5 f', 'p6 cc', 'p1 cc', 'p2 cbr 10', 'p6 f', 'p1 f']
+players = ['Hero', 'Ann', 'Bob', 'Cat', 'Dan', 'Eve']

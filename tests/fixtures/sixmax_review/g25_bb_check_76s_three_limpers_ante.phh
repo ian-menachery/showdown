@@ -1,0 +1,9 @@
+# Ante 0.5 bb. HJ, CO and BTN limp, the SB folds, the BB checks 76s. Flop: the BB checks, the HJ bets 6, all fold.
+variant = 'NT'
+ante_trimming_status = true
+antes = [1, 1, 1, 1, 1, 1]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [200, 200, 200, 200, 200, 200]
+actions = ['d dh p1 8c2h', 'd dh p2 7c6c', 'd dh p3 9d4c', 'd dh p4 Jc5s', 'd dh p5 Qh3d', 'd dh p6 6s6h', 'p3 f', 'p4 cc', 'p5 cc', 'p6 cc', 'p1 f', 'p2 cc', 'd db AsKdTh', 'p2 cc', 'p4 cbr 6', 'p5 f', 'p6 f', 'p2 f']
+players = ['Ann', 'Hero', 'Bob', 'Cat', 'Dan', 'Eve']

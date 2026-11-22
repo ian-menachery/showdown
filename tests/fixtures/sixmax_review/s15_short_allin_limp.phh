@@ -1,0 +1,9 @@
+# UTG has 1 chip and calls all in for 0.5 bb: short all-in before you. The HJ folds AKo, the rest fold to the BB, who checks; the board runs out.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [200, 200, 1, 200, 200, 200]
+actions = ['d dh p1 8c2h', 'd dh p2 9d4c', 'd dh p3 Jc5s', 'd dh p4 AsKd', 'd dh p5 Qh3d', 'd dh p6 6s6h', 'p3 cc', 'p4 f', 'p5 f', 'p6 f', 'p1 f', 'p2 cc', 'p2 sm 9d4c', 'p3 sm Jc5s', 'd db 2c7d9h', 'd db 3s', 'd db Kc']
+players = ['Ann', 'Bob', 'Cat', 'Hero', 'Dan', 'Eve']

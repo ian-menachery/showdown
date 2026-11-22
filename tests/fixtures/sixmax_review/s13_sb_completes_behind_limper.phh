@@ -1,0 +1,9 @@
+# The BTN limps and the SB completes: the SB completed. The BB raises K8s to 10; both fold.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [200, 200, 200, 200, 200, 200]
+actions = ['d dh p1 8c2h', 'd dh p2 Kh8h', 'd dh p3 9d4c', 'd dh p4 Jc5s', 'd dh p5 Qh3d', 'd dh p6 6s6h', 'p3 f', 'p4 f', 'p5 f', 'p6 cc', 'p1 cc', 'p2 cbr 10', 'p6 f', 'p1 f']
+players = ['Ann', 'Hero', 'Bob', 'Cat', 'Dan', 'Eve']

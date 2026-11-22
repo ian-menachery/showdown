@@ -1,0 +1,69 @@
+# Gate W, bar 1 (DECISIONS 58): six-max hands written and labelled by hand before the
+# review classifier existed. All are fictional. The player is "Hero" in every hand.
+#
+# Blinds are 1/2 chips unless a hand's comment says otherwise, so 1 bb = 2 chips. Seats in
+# pokerkit's order: p1 SB, p2 BB, p3 UTG, p4 HJ, p5 CO, p6 BTN.
+#
+# A graded hand gives seat, limpers (non-blind 1 bb calls ahead of Hero), ante (bb),
+# hand (class), kind (fold, limp or raise; limp covers limp, overlimp, complete and
+# check) and, for a raise, size (raise-to in bb). A skipped hand gives its cause, the first
+# that applies in DECISIONS 58's order. "absent" means Hero is not in the hand.
+# PokerStars hands are keyed "<file stem>#<hand number in the file>".
+
+g01_utg_open_aks = { seat = "UTG", limpers = 0, ante = 0.0, hand = "AKs", kind = "raise", size = 3.0 }
+g02_utg_fold_72o = { seat = "UTG", limpers = 0, ante = 0.0, hand = "72o", kind = "fold" }
+g03_utg_limp_55_ante = { seat = "UTG", limpers = 0, ante = 0.5, hand = "55", kind = "limp" }
+g04_hj_open_kqo = { seat = "HJ", limpers = 0, ante = 0.0, hand = "KQo", kind = "raise", size = 2.5 }
+g05_hj_overlimp_t9s = { seat = "HJ", limpers = 1, ante = 0.0, hand = "T9s", kind = "limp" }
+g06_hj_iso_ajo_ante = { seat = "HJ", limpers = 1, ante = 0.5, hand = "AJo", kind = "raise", size = 5.0 }
+g07_co_open_a5s = { seat = "CO", limpers = 0, ante = 0.0, hand = "A5s", kind = "raise", size = 2.5 }
+g08_co_fold_98o_limper = { seat = "CO", limpers = 1, ante = 0.0, hand = "98o", kind = "fold" }
+g09_co_overlimp_66 = { seat = "CO", limpers = 2, ante = 0.0, hand = "66", kind = "limp" }
+g10_co_iso_qq_ante = { seat = "CO", limpers = 2, ante = 0.5, hand = "QQ", kind = "raise", size = 7.0 }
+g11_btn_open_k9o = { seat = "BTN", limpers = 0, ante = 0.0, hand = "K9o", kind = "raise", size = 2.5 }
+g12_btn_fold_j4s_ante = { seat = "BTN", limpers = 0, ante = 0.5, hand = "J4s", kind = "fold" }
+g13_btn_iso_a2s_odd_size = { seat = "BTN", limpers = 1, ante = 0.0, hand = "A2s", kind = "raise", size = 4.5 }
+g14_btn_overlimp_87s = { seat = "BTN", limpers = 2, ante = 0.0, hand = "87s", kind = "limp" }
+g15_btn_iso_aqo_three_limpers = { seat = "BTN", limpers = 3, ante = 0.0, hand = "AQo", kind = "raise", size = 8.0 }
+g16_btn_fold_43o_ante = { seat = "BTN", limpers = 3, ante = 0.5, hand = "43o", kind = "fold" }
+g17_sb_fold_83s = { seat = "SB", limpers = 0, ante = 0.0, hand = "83s", kind = "fold" }
+g18_sb_open_kjs = { seat = "SB", limpers = 0, ante = 0.0, hand = "KJs", kind = "raise", size = 3.0 }
+g19_sb_complete_22_ante = { seat = "SB", limpers = 0, ante = 0.5, hand = "22", kind = "limp" }
+g20_sb_complete_j9s_limper = { seat = "SB", limpers = 1, ante = 0.0, hand = "J9s", kind = "limp" }
+g21_sb_iso_a9o_two_limpers = { seat = "SB", limpers = 2, ante = 0.0, hand = "A9o", kind = "raise", size = 6.0 }
+g22_sb_fold_t2o_three_limpers = { seat = "SB", limpers = 3, ante = 0.0, hand = "T2o", kind = "fold" }
+g23_bb_check_94o_limper = { seat = "BB", limpers = 1, ante = 0.0, hand = "94o", kind = "limp" }
+g24_bb_raise_ako_two_limpers = { seat = "BB", limpers = 2, ante = 0.0, hand = "AKo", kind = "raise", size = 6.0 }
+g25_bb_check_76s_three_limpers_ante = { seat = "BB", limpers = 3, ante = 0.5, hand = "76s", kind = "limp" }
+g26_bb_raise_jj_limper_ante = { seat = "BB", limpers = 1, ante = 0.5, hand = "JJ", kind = "raise", size = 5.0 }
+g27_hj_open_99_ante = { seat = "HJ", limpers = 0, ante = 0.5, hand = "99", kind = "raise", size = 4.0 }
+g28_utg_jam_aa = { seat = "UTG", limpers = 0, ante = 0.0, hand = "AA", kind = "raise", size = 100.0 }
+g29_co_open_ato_60bb = { seat = "CO", limpers = 0, ante = 0.0, hand = "ATo", kind = "raise", size = 2.5 }
+g30_btn_fold_92o_150bb = { seat = "BTN", limpers = 0, ante = 0.0, hand = "92o", kind = "fold" }
+g31_hj_open_a3o_big_chips = { seat = "HJ", limpers = 0, ante = 0.0, hand = "A3o", kind = "raise", size = 2.5 }
+"ps_review#1" = { seat = "BTN", limpers = 0, ante = 0.0, hand = "A8s", kind = "raise", size = 2.5 }
+"ps_review#2" = { seat = "CO", limpers = 1, ante = 0.0, hand = "Q4o", kind = "fold" }
+
+s01_five_handed = { cause = "not six-handed" }
+s02_seven_handed = { cause = "not six-handed" }
+s03_straddle = { cause = "blinds" }
+s04_blinds_one_three = { cause = "blinds" }
+s05_ante_quarter_bb = { cause = "ante" }
+s06_ante_bb_only = { cause = "ante" }
+s07_hero_fifty_bb = { cause = "stack depth" }
+s08_all_two_hundred_bb = { cause = "stack depth" }
+s09_others_forty_bb = { cause = "stack depth" }
+s10_bb_walk = { cause = "no decision" }
+s11_raised_before_btn = { cause = "raised before you" }
+s12_limp_then_iso_before_co = { cause = "raised before you" }
+s13_sb_completes_behind_limper = { cause = "the SB completed" }
+s14_sb_completes_unopened = { cause = "the SB completed" }
+s15_short_allin_limp = { cause = "short all-in before you" }
+s16_sb_four_limpers = { cause = "too many limpers" }
+s17_bb_four_limpers = { cause = "too many limpers" }
+s18_cards_unknown = { cause = "cards unknown" }
+s19_five_handed_cards_unknown = { cause = "not six-handed" }
+s20_raised_before_cards_unknown = { cause = "raised before you" }
+"ps_review#3" = { cause = "raised before you" }
+
+a01_no_hero = { absent = true }

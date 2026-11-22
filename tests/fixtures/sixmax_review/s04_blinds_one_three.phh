@@ -1,0 +1,9 @@
+# Blinds 1/3, not 1:2: blinds. UTG opens QQ to 9; everyone folds.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 3, 0, 0, 0, 0]
+min_bet = 3
+starting_stacks = [300, 300, 300, 300, 300, 300]
+actions = ['d dh p1 8c2h', 'd dh p2 9d4c', 'd dh p3 QdQc', 'd dh p4 Jc5s', 'd dh p5 Qh3d', 'd dh p6 6s6h', 'p3 cbr 9', 'p4 f', 'p5 f', 'p6 f', 'p1 f', 'p2 f']
+players = ['Ann', 'Bob', 'Hero', 'Cat', 'Dan', 'Eve']

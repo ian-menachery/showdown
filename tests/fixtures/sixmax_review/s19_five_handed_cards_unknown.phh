@@ -1,0 +1,9 @@
+# Five players and Hero's cards unknown: the first cause in order, not six-handed.
+variant = 'NT'
+ante_trimming_status = true
+antes = [0, 0, 0, 0, 0]
+blinds_or_straddles = [1, 2, 0, 0, 0]
+min_bet = 2
+starting_stacks = [200, 200, 200, 200, 200]
+actions = ['d dh p1 8c2h', 'd dh p2 9d4c', 'd dh p3 ????', 'd dh p4 Jc5s', 'd dh p5 Qh3d', 'p3 cbr 5', 'p4 f', 'p5 f', 'p1 f', 'p2 f']
+players = ['Ann', 'Bob', 'Hero', 'Cat', 'Dan']

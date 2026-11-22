@@ -1,0 +1,9 @@
+# Blinds 2/4 with an ante of 1 (0.25 bb): ante. The CO opens KQs to 10; everyone folds.
+variant = 'NT'
+ante_trimming_status = true
+antes = [1, 1, 1, 1, 1, 1]
+blinds_or_straddles = [2, 4, 0, 0, 0, 0]
+min_bet = 4
+starting_stacks = [400, 400, 400, 400, 400, 400]
+actions = ['d dh p1 8c2h', 'd dh p2 9d4c', 'd dh p3 Jc5s', 'd dh p4 Qh3d', 'd dh p5 KhQs', 'd dh p6 6s6h', 'p3 f', 'p4 f', 'p5 cbr 10', 'p6 f', 'p1 f', 'p2 f']
+players = ['Ann', 'Bob', 'Cat', 'Dan', 'Hero', 'Eve']
