@@ -3891,3 +3891,223 @@ it.**
   the re-gate, answers wherever the hero raises out of position are ungated.
 - **No bar moved.** Gates M, M2 and K's records stand, and their slow tests still pin R at
   0.90.
+
+---
+
+### 57. Both six-max fixes: R 0.75 for an out-of-position raiser, and the standard profile's limpers from loose-passive; Gate M4 pre-registered (2026-11-22)
+
+**Decided.**
+- Ian chose both fixes under one entry and one re-gate (DECISIONS 56's amendment).
+- The up-front decisions went to the master session on 2026-11-22. Ian answered "all
+  recommended", relayed by the master. This entry uses those answers.
+- Gate M2's bar 3 FAIL, Gate M3 (registered, never scored) and Gates M and K stay as
+  recorded.
+
+**Fix (a): R for an out-of-position raiser is 0.75.**
+- It has been in `sixmax.py` since 7ced07c (DECISIONS 56).
+- The other three R values (1.00, 0.85, 0.75) stay, and so does the band: every R ±0.1,
+  fold rates ±10 points.
+- How firm is 0.75? Gate Q's flop solves never settled. The open pot's R moved from 0.72
+  to 0.63 at 25 bb and from 0.78 to 0.68 at 100 bb between rounds. They measured an
+  out-of-position *caller*. A raiser usually realises more, so 0.75 is likely on the low
+  side for one. The band covers 0.65 to 0.85.
+
+**Fix (b): the standard profile's limpers come from the fitted loose-passive profile.**
+- **Taken from loose-passive:** the limpers' own five rates:
+  - open-raise 17.5% and limp 30.7%, so the limp range is the 31% of hands just below the
+    top 17.5%;
+  - fold to an iso 39%;
+  - limp-reraise 3.5% of the limp range;
+  - fold slope 0.037 per bb.
+- **Unchanged:**
+  - players behind's responses to the hero's limp stay regular's: raise 19%, overlimp
+    8%, SB raise 12% and complete 33%, BB raise 11%;
+  - the seat defence stays as DECISIONS 54 had it: the BB fitted to VIP-Grinders, the SB
+    and the others assumed;
+  - the players-behind slope (0.049) stays regular's, including the BB's move from 2.5 bb
+    to the 3 bb reference.
+- **Why:** 2009 regulars limp only 2.9% of hands (44, K6s, A4o, K8o), nothing like the
+  limpers at Ian's tables (Ian, 2026-11-22).
+- **The output** labels the five rates "fitted (loose-passive)".
+
+**What it changes:**
+- Unopened pots change through R alone. The BTN's unopened answers cannot change: it is
+  in position against both blinds (R 1.00), and there are no limpers.
+- Pots with limpers change under "standard" only. The fitted profiles' limpers are
+  untouched.
+- `showdown sixmax` and the drills use both fixes from this entry on.
+- **Old gates keep reproducing.** The slow tests of Gates M2 and K pin the standard
+  profile as it was scored, with regular's limpers, as well as R 0.90.
+  `load_profiles(standard_limpers=...)` picks the source. Gate M2's fast check of the
+  profile is pinned the same way.
+
+**Gate M4,** recorded before fix (b) is coded. It replaces Gate M3. It passes when bars 1
+to 3 pass. "Kind-stable" is DECISIONS 54's definition.
+1. **Closed forms:**
+   - Gate M bar 1's 21 checks and Gate M2 bar 1 (the seat lookup, and the M2 profile check
+     on the profile as scored) pass unchanged;
+   - **the new R:** the hero in the BB raises one limper whose range is KK and who always
+     calls; nobody else acts. EV = 0.75 × M[hero, KK] × (0.5 + 6 × ante + 2X) − (X − 1),
+     to 1e-9, for AA, KK, A5s and 72o, every raise size, both antes (Gate M3's check);
+   - **the profile:** "standard" equals regular, except the seat defence (as Gate M2
+     checks) and the five limper rates, which equal loose-passive's exactly.
+2. **Directions,** on the standard profile's 34 charts at the new R, kind-stable classes
+   only:
+   - the ante widens: at least 100 compared, no violation;
+   - more limpers, no new offsuit isos (BTN, SB and BB from 1 to 2 and 2 to 3 limpers, CO
+     from 1 to 2, both antes): at least 50 compared, no violation.
+3. **PokerStrategy's opens** (DECISIONS 53's pages and parse rule), unopened, no ante,
+   standard profile:
+   - at each of UTG, HJ, CO and SB, at least 10 kind-stable classes are compared, and at
+     least 85% of them agree on raise vs not raise;
+   - the minimum of 10 sits just under the fewest Gate M2 saw (UTG 12, HJ 15, CO 26). There,
+     the ±10-point fold band, not R, limits kind-stability;
+   - **the BTN is not scored.** Its chart must be identical, in every class's best action,
+     tier, best size and kind-stability, to the chart under Gate M2's profile and R 0.90.
+     If it is not, bar 3 fails. Its agreement is reported;
+   - every disagreement is listed, and the clear-only agreement reported.
+
+**Reported, not gated:**
+- bar 3 for the regular profile at the new R;
+- how many classes the SB opens under each profile;
+- how many classes isolate, under the standard profile, by limped spot and ante.
+
+**The order:**
+1. This entry and SCOPE A16, committed and pushed.
+2. Fix (b), `test_gate_m3*.py` renamed to `test_gate_m4*.py` and extended, and Gates M2
+   and K pinned.
+3. Gate M4 scored once and recorded in GATES.md. A failing bar gets one
+   reproduce-and-fix, for a bug only, then the result stands.
+
+**Rules out:**
+- changing any other R, the band or the seat defence here;
+- tuning either fix after seeing results;
+- editing the records of Gates M, M2, M3 or K.
+
+---
+
+### 58. Step 3: six-max hand review by spot; Gate W pre-registered (2026-11-22)
+
+**Decided.**
+- Ian approved decisions 6 to 11 ("all recommended", relayed by the master session) on
+  2026-11-22.
+- Step 3 of `docs/plan-sixmax-trainer.md`. Study only (SCOPE A13, A17):
+  - completed hands only, never during a session;
+  - never ClubWPT, except a file the site itself exports (DECISIONS 13);
+  - hand histories are never committed.
+
+**The command:** `showdown sixmax review PATHS... --player NAME [--profile P] [--samples N]
+[--seed S]`.
+- PATHS are files or folders of PHH (`.phh`) and PokerStars text (`.txt`), read by
+  `hh/parse.py`'s `load` (DECISIONS 25).
+- There is no Poker Now parser here. That is Phase 11, which needs one real downloaded log
+  first.
+- It prints a report and writes no file.
+
+**The analyzer keeps more of each hand.** `HandRecord` gains each player's ante and the
+preflop actions in order: who, fold, check, call or raise, and the amount. Seats come from
+pokerkit's order: with six players, p1 SB, p2 BB, p3 UTG, p4 HJ, p5 CO, p6 BTN.
+
+**What is graded.** For each hand the named player is in, the player's first preflop
+decision is graded when it fits an engine spot. Otherwise it is skipped, and counted under
+the first of these causes that applies:
+1. **not six-handed:** not exactly six players dealt in;
+2. **blinds:** p1 does not post half of p2's blind, or anyone else posts a blind or
+   straddle;
+3. **ante:** antes are not all equal, or not 0 or 0.5 bb;
+4. **stack depth:** the effective stack is outside 60 to 150 bb. That is the smaller of the
+   player's starting stack and the largest other one;
+5. **no decision:** the player never acted preflop (a walk);
+6. **raised before you:** someone bet or raised before the player's first action;
+7. **the SB completed:** the player is the BB and the SB called;
+8. **short all-in before you:** someone called for less than 1 bb;
+9. **too many limpers:** more limpers than the engine allows from that seat (SB and BB at
+   most 3);
+10. **cards unknown:** the player's hole cards are not in the history.
+
+The spot is the seat, the limpers ahead (non-blind calls of 1 bb) and the ante. The answer's
+kind:
+- a fold is fold;
+- a call or a check is limp (limp, overlimp, complete or check);
+- a raise is raise, with its size, raise-to in bb.
+
+**The grade:**
+- The class of the player's hand is graded against `sixmax.answer` for that spot and
+  profile ("standard" by default), as a fresh answer would give it.
+- The rule is DECISIONS 55's:
+  - **good:** the answer's kind is the best action's kind;
+  - **marginal:** otherwise, but the answer's kind wins at some band point;
+  - **review:** otherwise.
+- The bb lost is EV(best) − EV(the answer's kind).
+- The size is shown beside the engine's best size, not graded.
+- Answers are cached per seat, limpers, ante and class. The deal's random state is put
+  back before each one, as the drills do, so each equals a fresh answer.
+
+**The report:**
+- **Coverage:** files read, hands parsed and failed, hands with the player, decisions
+  graded, skips by cause.
+- **Grades by tier:** clear, close and review, each by good, marginal and review.
+- **bb lost:** in all, and on clear spots.
+- **Leaks:** the review-graded decisions, grouped by seat, unopened or limped, and the
+  answer's kind → the best kind. A group needs at least 3 decisions.
+  - The top 3 groups by bb lost are shown, each with its count and bb.
+  - Each lists up to 5 hands, largest bb lost first: the file and hand, the cards, the
+    spot, and the answer beside the best.
+
+**Gate W,** recorded before any review code or fixture. It passes when bars 1 to 3 pass.
+1. **Classification,** on a fixture written and labelled by hand before the classifier
+   exists, in `tests/fixtures/sixmax_review/`, committed in its own commit before any review
+   code:
+   - at least 40 hands, all fictional, with the player "Hero";
+   - at least 2 of them in PokerStars text, the rest PHH;
+   - for every hand, the spot (seat, limpers, ante), the hand class, the kind and the raise
+     size, or the skip cause, must match the labels exactly;
+   - the fixture holds every seat graded at least once, 0, 1, 2 and 3 limpers, both antes,
+     each kind, and every skip cause.
+2. **Grading,** on every graded fixture decision plus 300 graded Pluribus decisions drawn
+   with seed 20261122:
+   - each must equal one worked out in the test from a fresh `sixmax.answer` (same spot,
+     class, standard profile, 40,000 deals, seed 0) by DECISIONS 55's rule;
+   - the grade, best action and tier must match, and the bb lost to 1e-9.
+3. **Real hands:** Pluribus's decisions in the 10,000 Pluribus hands (phh-dataset,
+   DECISIONS 25, pinned there), standard profile:
+   - at least 99% of hands parse, with failures counted;
+   - every hand with Pluribus is graded or skipped under a named cause. Graded plus
+     skipped equals hands with Pluribus;
+   - at least 2,000 decisions are graded;
+   - the report's counts by tier and grade, its bb lost (in all and on clear spots), and
+     each leak's count and bb equal the sums over the decisions, the bb to 1e-9.
+
+**Reported, not gated:**
+- the skips by cause;
+- the grades by tier;
+- the run time;
+- Pluribus's top 3 "leaks". Pluribus is a strong bot, so they mostly show the engine's
+  limits.
+
+**Not a gate bar:** the plan's check on Ian's own hands. That means coverage, and reviewing
+5 hands per leak to say whether it is real. It waits until he has a file from an allowed
+source.
+
+**The order:**
+1. This entry and SCOPE A17, committed and pushed.
+2. The fixture and its labels, committed.
+3. The analyzer change, the classifier, the report, the CLI and the tests.
+4. Gate W scored once and recorded. A failing bar gets one reproduce-and-fix, for a bug
+   only.
+
+**Decided without Ian,** each the reversible option:
+- leaks group review grades only: a marginal answer wins somewhere in the band, so it is
+  not a leak;
+- the order of the skip causes, and the 60 to 150 bb window;
+- answers cached per class, equal to a fresh answer;
+- the gate's letter, W.
+
+**Rules out:**
+- reading hands during a session, or watching a folder;
+- any ClubWPT file not exported by the site;
+- committing any real hand history, Pluribus's included;
+- the Poker Now parser;
+- grading raise sizes;
+- a profile per table or per player;
+- other table sizes.
