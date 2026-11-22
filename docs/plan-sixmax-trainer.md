@@ -27,8 +27,16 @@ Ian chose (2026-11-22) to keep bar 3 as a documented limit. He also chose to add
 | 1 | The spot engine as a CLI | built; Gate M FAIL, bar 3 only |
 | 1b | The "standard" profile | built; Gate M2 FAIL, bar 3 only |
 | 2 | A drill trainer on the engine | built, `showdown sixmax drill`; Gate K PASS |
-| 2b | R 0.75 out of position (DECISIONS 56, in the code) and standard's limpers from loose-passive | next session: one entry, one re-gate |
-| 3 | Six-max hand review by spot | later |
+| 2b | R 0.75 out of position and standard's limpers from loose-passive | built (DECISIONS 57); Gate M4 FAIL, bar 3 only (7 stable classes at UTG, minimum 10) |
+| 3 | Six-max hand review by spot | built, `showdown sixmax review` (DECISIONS 58); Gate W PASS |
+
+**Steps 2b and 3 (2026-11-22).**
+- **Gate M4.** With both fixes, the SB opens 78 classes instead of 169. Every hand stable
+  across the band agrees with PokerStrategy at the HJ, CO and SB. UTG has only 7 stable
+  hands. The record is in GATES.md.
+- **Hand review** reads PHH and PokerStars text. Gate W ran it on the fixture and on
+  Pluribus's 10,000 hands. The check on Ian's own hands waits for a file from an allowed
+  source: a Poker Now log needs Phase 11's parser first.
 
 ---
 

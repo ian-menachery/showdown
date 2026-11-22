@@ -1533,3 +1533,54 @@ at R 0.90 and at 0.75.
 ```
 .venv\Scripts\python -m pytest tests/test_gate_m.py tests/test_gate_m2.py tests/test_gate_m4.py tests/test_gate_m4_slow.py -m "slow or not slow" -s -rx
 ```
+
+## Gate W: six-max hand review by spot: PASS (2026-11-22)
+
+Evidence:
+- `tests/test_gate_w.py` (fast suite): bar 1, on the fixture `tests/fixtures/sixmax_review/`;
+- `tests/test_gate_w_slow.py` (`-m "slow or not slow"`): bars 2 and 3, on the fixture and
+  the 10,000 Pluribus hands (phh-dataset, DECISIONS 25);
+- the review at 5adbd88.
+
+The bars were pre-registered in DECISIONS 58 (commit d6e2d93) before any review code. The
+fixture and its labels were committed on their own at 00a0330, before the classifier
+existed. Gate W was scored once, at 5adbd88, in 221 s. Bar 1's test had also run once
+during development and passed. The classifier did not change after that.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Classification | 55 hands (52 PHH files, 3 hands in one PokerStars file), all match their labels. 33 graded: every seat, 0 to 3 limpers, both antes, every kind. 21 skipped: all 10 causes, and two hands where an earlier cause wins. One hand without Hero is not counted | every hand exact; coverage as listed | PASS |
+| 2. Grading | 33 fixture decisions and 300 Pluribus decisions (seed 20261122) against fresh `sixmax.answer`s: 0 mismatches in grade, best action or tier. Largest bb-lost gap 0 | all match; bb to 1e-9 | PASS |
+| 3. Real hands | 10,000 of 10,000 Pluribus hands parse. Pluribus is in all 10,000: 5,255 graded, 4,745 skipped (raised before you 4,482, no decision 165, the SB completed 98), none unexplained. The report's tier and grade counts, bb lost (in all and on clear spots) and each leak's count and bb equal the sums over the decisions | ≥ 99% parse; all accounted for; ≥ 2,000 graded; sums to 1e-9 | PASS |
+
+**Reported, not gated** (Pluribus, standard profile):
+- **Speed:** loading and reviewing the 10,000 hands took 46 s.
+- **Grades by tier:**
+
+  | Tier | Good | Marginal | Review |
+  |---|---|---|---|
+  | Clear | 469 | 0 | 16 |
+  | Close | 3,712 | 827 | 73 |
+  | Review | 151 | 0 | 7 |
+
+- **bb lost against the engine's best action:** 128.87 in all, 3.30 on clear spots.
+- **The top 3 "leaks"**, all in the small blind, unopened. They mostly show the engine's
+  limits:
+  1. **Limps where the best is a raise:** 18 hands, 22.45 bb. Pluribus sometimes limps
+     KK, QQ, AK and AQ from the SB. The engine treats every raise behind a limp as a fold,
+     so these limps look worse than they are: the five shown lose 1.7 to 6.8 bb each.
+  2. **Folds where the best is to complete:** 58 hands, 7.44 bb, about 0.19 bb each (Q4o,
+     Q3o). Under "standard" the BB raises only 11% of hands against a limp, which makes
+     completing cheap.
+  3. **Folds where the best is a raise:** 9 hands, 2.30 bb (K2o, K3o). All close spots.
+
+**After scoring** (display only, no gated number changes): the report now names each hand
+by its full source. File names alone repeat across Pluribus's folders (`29.phh`).
+
+**Not part of the gate:** the plan's check on Ian's own hands, which is coverage plus five
+hands reviewed per leak. It waits for a file from an allowed source (DECISIONS 58).
+
+**Rerun** (about 4 minutes; needs the Pluribus hands in `data/external/phh/`):
+```
+.venv\Scripts\python -m pytest tests/test_gate_w.py tests/test_gate_w_slow.py -m "slow or not slow" -s
+```

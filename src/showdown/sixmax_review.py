@@ -21,7 +21,6 @@ import math
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from pathlib import Path
 
 import numpy as np
 
@@ -250,7 +249,7 @@ def describe(parsed: ParseReport, summary: dict, player: str, profile: str) -> l
         for d in leak["hands"]:
             size = f" to {d.size:g}" if d.size is not None else ""
             lines.append(
-                f"     {Path(d.source).name}: {d.cards}, {_spot(d)}: you {d.kind}{size}; "
+                f"     {d.source}: {d.cards}, {_spot(d)}: you {d.kind}{size}; "
                 f"best {d.best} ({d.tier}); {d.bb_lost:.2f} bb"
             )
     return lines

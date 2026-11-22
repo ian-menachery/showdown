@@ -30,9 +30,9 @@ make them fold more, by the profile's slope.
 - **A pot that reaches the flop pays R × equity × pot.** Postflop is not played. R is 1.00
   for the raiser in position, 0.75 out of position, 0.85 in a limped pot in position, and
   0.75 out of position. The out-of-position raiser's R was 0.90 until DECISIONS 56. Gates
-  M, M2 and K were scored at 0.90. The re-gate at 0.75 is the next step (see the
-  roadmap). Equity is exact (the 169×169 matrix) when one opponent is left,
-  and comes from the deal's board when there are more.
+  M, M2 and K were scored at 0.90, Gate M4 at 0.75 (DECISIONS 57). Equity is exact (the
+  169×169 matrix) when one opponent is left, and comes from the deal's board when there
+  are more.
 - **Facing a re-raise, the hero stacks off or folds,** whichever its equity against the
   re-raise range says.
 - **Facing a raise after limping, the hero folds.** So the limp EV is a floor.
@@ -71,7 +71,8 @@ make them fold more, by the profile's slope.
   review. Of the close ones, 4 in 10 differ only in the raise size.
 
 **The "standard" profile (Gate M2, DECISIONS 54).** It is the default. It is the regular
-profile, except that players behind defend like a modern chart. The BB's defence by the
+profile, except that players behind defend like a modern chart, and, since DECISIONS 57,
+its limpers are the loose-passive profile's. The BB's defence by the
 raiser's seat is fitted to VIP-Grinders' "Big blind defense" table. The SB's and the
 other players' defence is assumed.
 - **Directions: PASS.**
@@ -81,6 +82,18 @@ other players' defence is assumed.
   - **BTN:** 81% agreement. The engine folds weak suited connectors and gappers that the
     chart opens to 2 bb.
   - **SB:** 59% agreement. The engine still opens every hand there.
+
+**Both fixes (Gate M4, DECISIONS 57).** R for an out-of-position raiser fell from 0.90
+to 0.75, and "standard" took its limpers from the loose-passive profile.
+- **Arithmetic and directions: PASS.**
+- **PokerStrategy: FAIL, at UTG only.**
+  - **UTG:** only 7 hands keep their kind of action across the band, under the minimum
+    of 10. All 7 agree with the chart.
+  - **HJ, CO and SB:** every stable hand agrees with the chart (13, 21 and 25 hands).
+  - **SB:** the engine now opens 78 hands, against the chart's 66, instead of all 169.
+  - **BTN:** unchanged and not scored. Neither fix can move it.
+  - Why UTG falls short: at R 0.65 out of position with 10 points more calls behind,
+    AQs, AJs, ATs, AQo and AJo fold, though each opens at the base point.
 
 ## Trust it for
 
@@ -98,16 +111,19 @@ other players' defence is assumed.
   often the blinds defend, before you decide.
 - **"Close" as a real flag.** The best action changes somewhere inside a modest
   assumption band, so either answer is defensible.
+- **Unopened hands under "standard"** from the HJ, CO and SB, where every hand stable
+  across the band agreed with PokerStrategy's opening ranges (Gate M4). From UTG, too few
+  hands are stable to say, though those that are agree.
 - **Unopened hands from UTG, CO and BTN** against regular players, where it agreed with
-  PokerStrategy's opening ranges on every clear hand. From the HJ and SB it opens wider
-  than a standard chart. Use the chart there unless your blinds really do fold three
-  times in four.
+  PokerStrategy's opening ranges on every clear hand. Against them, the HJ and SB open
+  wider than a standard chart. Use the chart there unless your blinds really do fold
+  three times in four.
 
 ## Do not trust it for
 
-- **Small-blind opens.** Under every profile the SB opens far wider than a standard chart
-  (all 169 hands under "standard"). R 0.90 for an out-of-position raiser is likely
-  generous. Open the SB from a chart until this is fixed.
+- **Small-blind opens against the fitted profiles.** Under "standard" at R 0.75 the SB
+  opens 78 hands, close to the chart's 66. Against the 2009 tight, regular and
+  loose-passive blinds it still opens all 169, because they fold so often.
 - **The exact size.** Sizes often trade places inside the band. When every band point
   picks a raise, the CLI says "only the size is close". Read that as: raise, any of the
   sizes.
@@ -127,10 +143,11 @@ other players' defence is assumed.
   limp range sits just below its open-raise range. So a limp-reraise holds hands like
   K8s, not the AA or KK a passive player sometimes limps. Facing a real limp-reraise,
   fold more than the engine assumes.
-- **The standard profile's limpers.** "standard" copies the regular profile's limpers.
-  2009 regulars limp only 2.9% of hands (44, K6s, A4o, K8o), nothing like a home
-  game's recreational limpers. For limped pots, the loose-passive profile is closer to
-  most live tables until this changes.
+- **The standard profile's limpers.** Since DECISIONS 57 they are loose-passive's: they
+  limp 31% of hands and fold 39% to an iso. Their limp range is the band just below
+  their top 17.5% by equity against a random hand: 22-44, weak suited kings and queens,
+  A2o-A7o, K2o-K9o and the like. It never holds AA or KK, and holds few suited
+  connectors.
 - **The tight profile's limpers.** Tight players in the data limp 0.8% of hands, so the
   engine's tight limper holds a thin band of medium hands. Real tight limpers more
   often hold small pairs and suited connectors.
@@ -144,8 +161,21 @@ other players' defence is assumed.
 - **Anything else:** other stack depths, straddles, pots that someone has already raised,
   3-bet pots, postflop play and ICM are not modelled.
 
-## Later steps
+## Drills and hand review
 
-A drill trainer (spots dealt at random, graded by tier) and six-max hand review (Ian's
-completed hands, graded spot by spot) build on this engine. Each needs its own DECISIONS
-entry and gate.
+Two tools build on this engine, and both grade the kind of action only:
+- **`showdown sixmax drill`** deals practice spots (DECISIONS 55, Gate K PASS).
+- **`showdown sixmax review PATHS --player NAME`** reads completed hands, as PHH or
+  PokerStars text (DECISIONS 58, Gate W PASS). It grades the player's first preflop
+  decision in each six-handed hand that fits a spot here:
+  - an unopened pot, or 1 to 3 limpers;
+  - an ante of 0 or 0.5 bb;
+  - an effective stack of 60 to 150 bb.
+
+  Every other hand is skipped and counted by cause. The report lists recurring leaks,
+  with the hands to look at.
+
+Read a review's leaks with this page's limits in mind. On Pluribus's 10,000 hands, the
+biggest "leak" was limping KK, QQ and AK from the small blind. That is the limp EV floor
+at work, not a mistake by Pluribus. Raised pots, which are 45% of Pluribus's hands, are not
+graded. There is no Poker Now log parser yet.
