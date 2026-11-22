@@ -1425,3 +1425,38 @@ xfail.
 ```
 .venv\Scripts\python -m pytest tests/test_gate_m.py tests/test_gate_m2.py tests/test_gate_m2_slow.py -m "slow or not slow" -s -rx
 ```
+
+## Gate K: the six-max drill trainer: PASS (2026-11-22)
+
+Evidence: `tests/test_gate_k_slow.py` (`-m "slow or not slow"`), with the trainer at
+80e0c4e. The bars were pre-registered in DECISIONS 55 (commit 26406c6) before any trainer
+code. Gate K was scored once, in 365 s. Two scripted sessions of 300 drills each used seed
+20261122, the standard profile and a random ante. Every drill was checked against a fresh
+`sixmax.answer`, worked out in 12 processes.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Grading | Session A (best kind every time): 300 of 300 good. Session B (a kind drawn uniformly, seed 7): 107 good, 40 marginal, 153 review, 0 mismatches. Every review's bb lost is exact (largest gap 0) | all match; review bb to 1e-9; ≥ 30 good, ≥ 10 marginal, ≥ 30 review | PASS |
+| 2. Speed | Start of a drill to its prompt, session A, first deals included: median 0.34 s, 95th percentile 0.72 s, max 1.50 s | median ≤ 2 s, p95 ≤ 5 s | PASS |
+| 3. The log | Each session's log has 300 lines, each with an answer. The summaries' counts and bb totals (0.000 and 344.107) equal the sums over the lines | exact; bb to 1e-9 | PASS |
+
+**Reported, not gated:**
+- 16 of the 300 drills had a clear fold as their best action, after the 1-in-5 thinning.
+- Session B's grades by tier:
+
+  | Tier | Good | Marginal | Review |
+  |---|---|---|---|
+  | Clear | 20 | 0 | 53 |
+  | Close | 76 | 40 | 76 |
+  | Review | 11 | 0 | 24 |
+
+  Marginal grades occur only in close spots, as the rule implies.
+
+**Why the grades equal a fresh answer.** The trainer deals each seat and limper count once
+per session; the ante changes no deal. It puts the deal's random state back before each
+hand, so the engine draws the same hero combos as `sixmax.answer` would.
+
+**Rerun:**
+```
+.venv\Scripts\python -m pytest tests/test_gate_k_slow.py -m "slow or not slow" -s
+```

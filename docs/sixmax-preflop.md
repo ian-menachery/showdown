@@ -125,6 +125,10 @@ other players' defence is assumed.
   limp range sits just below its open-raise range. So a limp-reraise holds hands like
   K8s, not the AA or KK a passive player sometimes limps. Facing a real limp-reraise,
   fold more than the engine assumes.
+- **The standard profile's limpers.** "standard" copies the regular profile's limpers.
+  2009 regulars limp only 2.9% of hands (44, K6s, A4o, K8o), nothing like a home
+  game's recreational limpers. For limped pots, the loose-passive profile is closer to
+  most live tables until this changes.
 - **The tight profile's limpers.** Tight players in the data limp 0.8% of hands, so the
   engine's tight limper holds a thin band of medium hands. Real tight limpers more
   often hold small pairs and suited connectors.

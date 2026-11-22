@@ -46,13 +46,16 @@ showdown play                                   # trainer and Leduc in your brow
 showdown analyze path/to/hands                  # PHH files, or PokerStars .txt exports
 showdown advise --hero AsKd --seat sb --stack 10   # live advisor V1: push/fold preflop, equity helper postflop
 showdown sixmax BTN A5s --limpers 2 --ante 0.5 --profile loose-passive   # six-max spot: ranges, EVs, tier
+showdown sixmax drill --count 20                # six-max practice spots, graded by kind of action
 ```
 
 `showdown sixmax` is a study tool for six-max cash spots at 100 bb: unopened
 pots and pots with 1 to 3 limpers, with or without a 0.5 bb ante from every
 player. It is an EV calculator against assumed opponent profiles, not a solver.
+`showdown sixmax drill` deals practice spots from it and grades the kind of
+action you pick (DECISIONS 55, Gate K).
 [`docs/sixmax-preflop.md`](docs/sixmax-preflop.md) says what it can and cannot be
-trusted for (DECISIONS 53, Gate M).
+trusted for (DECISIONS 53 and 54, Gates M and M2).
 
 `showdown analyze` prints, per player:
 - VPIP, PFR, 3-bet, WTSD and W$SD;
