@@ -746,11 +746,13 @@ def _sixmax(args: argparse.Namespace) -> int:
 
     if args.seat.lower() == "drill":
         return _drill(args)
+    if args.seat.lower() == "review":
+        return _review(args)
     try:
-        if args.hand is None:
+        if len(args.hand) != 1:
             raise ValueError("give a hand, like A5s or As5s")
         spot = S.Spot(args.seat.upper(), args.limpers, args.ante or 0.0)
-        hand = S.parse_hand(args.hand)
+        hand = S.parse_hand(args.hand[0])
     except ValueError as exc:
         raise SystemExit(str(exc)) from None
     p = S.load_profiles()[args.profile].for_seat(spot.seat)
@@ -768,6 +770,20 @@ def _drill(args: argparse.Namespace) -> int:
     profile = S.load_profiles()[args.profile]
     trainer = D.Trainer(profile, ante=args.ante, samples=args.samples, seed=args.seed)
     D.run(trainer, args.count, log_dir=D.LOG_DIR)
+    return 0
+
+
+def _review(args: argparse.Namespace) -> int:
+    from showdown import sixmax as S
+    from showdown import sixmax_review as V
+    from showdown.hh.parse import load
+
+    if not args.player or not args.hand:
+        raise SystemExit("give hand files or folders and --player NAME, the player to grade")
+    parsed = load(args.hand)
+    profile = S.load_profiles()[args.profile]
+    decisions = V.review(parsed.records, args.player, profile, samples=args.samples, seed=args.seed)
+    print("\n".join(V.describe(parsed, V.summarize(decisions), args.player, args.profile)))
     return 0
 
 
@@ -1007,10 +1023,17 @@ def build_parser() -> argparse.ArgumentParser:
     six = commands.add_parser(
         "sixmax",
         help="six-max preflop spot: ranges, EV of each action, tier (DECISIONS 53); "
-        "or `sixmax drill`, practice spots graded by kind of action (DECISIONS 55)",
+        "`sixmax drill`, practice spots graded by kind of action (DECISIONS 55); or "
+        "`sixmax review PATHS --player NAME`, completed hands graded by spot (DECISIONS 58)",
     )
-    six.add_argument("seat", help="UTG, HJ, CO, BTN, SB or BB; or drill")
-    six.add_argument("hand", nargs="?", help="a class like A5s, or two cards like As5s")
+    six.add_argument("seat", help="UTG, HJ, CO, BTN, SB or BB; or drill, or review")
+    six.add_argument(
+        "hand",
+        nargs="*",
+        help="a class like A5s, or two cards like As5s; for review, PHH or PokerStars "
+        ".txt files or folders",
+    )
+    six.add_argument("--player", help="review: the player whose decisions are graded")
     six.add_argument("--limpers", type=int, default=0, help="limpers ahead, 0 to 3")
     six.add_argument(
         "--ante", type=float, help="from every player, in bb (default 0; drills: 0 or 0.5)"

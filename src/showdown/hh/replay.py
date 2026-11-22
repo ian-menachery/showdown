@@ -79,6 +79,11 @@ class HandRecord:
     odd_chip: bool = False
     """Replayed stacks differ from the recorded ones only by an odd-chip split."""
     blind_posts: dict[int, float] = field(default_factory=dict)
+    antes: list[float] = field(default_factory=list)
+    """Each player's ante, in seat order (DECISIONS 58)."""
+    preflop: list[tuple[int, str, float]] = field(default_factory=list)
+    """Preflop actions in order: (player, fold/check/call/raise, the chips called or the
+    raise-to total), DECISIONS 58."""
 
 
 def card_id(card) -> int | None:
@@ -126,6 +131,7 @@ def replay(hh: HandHistory, source: str) -> HandRecord:
     seen = 0
     allin: AllIn | None = None
     posts: dict[int, float] = {}
+    actions: list[tuple[int, str, float]] = []
     state = None
     try:
         with warnings.catch_warnings():
@@ -148,7 +154,9 @@ def replay(hh: HandHistory, source: str) -> HandRecord:
                             p.folded_on = street
                         if street == PREFLOP:
                             spot = context is not None and context == (op.player_index, True)
-                            _preflop(p, op, spot)
+                            kind = _preflop(p, op, spot)
+                            amount = 0.0 if kind == "fold" else float(op.amount)
+                            actions.append((op.player_index, kind, amount))
                             if isinstance(op, CompletionBettingOrRaisingTo):
                                 raises_preflop += 1
                                 last_raiser = op.player_index
@@ -211,10 +219,12 @@ def replay(hh: HandHistory, source: str) -> HandRecord:
         allin=allin,
         odd_chip=odd_chip,
         blind_posts=posts,
+        antes=[float(a) for a in state.antes],
+        preflop=actions,
     )
 
 
-def _preflop(p: PlayerHand, op, three_bet_spot: bool) -> None:
+def _preflop(p: PlayerHand, op, three_bet_spot: bool) -> str:
     p.preflop_decisions += 1
     if three_bet_spot:
         p.three_bet_chance = True
@@ -232,3 +242,4 @@ def _preflop(p: PlayerHand, op, three_bet_spot: bool) -> None:
     if p.first_preflop is None:
         p.first_preflop = kind
         p.first_preflop_allin = kind in ("call", "raise") and p.preflop_committed >= p.starting
+    return kind
