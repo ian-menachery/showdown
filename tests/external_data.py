@@ -40,6 +40,24 @@ SHA256 = {
     "phh-zenodo/poker-hand-histories.zip": (
         "65d566e7a3387b4c3ec28213b5416a8a36a4f4f1cf822771b77f5232fbba3281"
     ),
+    # PokerStrategy's six-max opening ranges, saved 2026-11-22 for Gate M bar 3
+    # (DECISIONS 53): curl -sL -A "Mozilla/5.0" -o <this path>
+    # https://www.pokerstrategy.com/strategy/bss/<lesson>/
+    "pokerstrategy/bss-2253.html": (
+        "d1a323c47fc26b1cf058463204cb93a8ad643de259479350953d20af4a49ac42"
+    ),
+    "pokerstrategy/bss-2254.html": (
+        "4cc23c645ce6f0a21a94a0a1669ace8440f9fb4438eadac0199e98b2087e7a4b"
+    ),
+    "pokerstrategy/bss-2255.html": (
+        "58fc8ec282fbaecef5e22d4474fe075d0e4bbce9a5410e531563a2364c6cf83f"
+    ),
+    "pokerstrategy/bss-2256.html": (
+        "fbb9c26a785beff323d03b429a2bc89a4cfbe0e940f7831a9e254a3511665006"
+    ),
+    "pokerstrategy/bss-2257.html": (
+        "f1ac3ea6d3e1e57731d737028c771a929662aab2fda8f4c266325dea585c37c8"
+    ),
 }
 
 

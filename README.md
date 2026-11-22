@@ -45,7 +45,14 @@ showdown pushfold chart 10                      # SB jam and BB call charts at 1
 showdown play                                   # trainer and Leduc in your browser, 127.0.0.1 only
 showdown analyze path/to/hands                  # PHH files, or PokerStars .txt exports
 showdown advise --hero AsKd --seat sb --stack 10   # live advisor V1: push/fold preflop, equity helper postflop
+showdown sixmax BTN A5s --limpers 2 --ante 0.5 --profile loose-passive   # six-max spot: ranges, EVs, tier
 ```
+
+`showdown sixmax` is a study tool for six-max cash spots at 100 bb: unopened
+pots and pots with 1 to 3 limpers, with or without a 0.5 bb ante from every
+player. It is an EV calculator against assumed opponent profiles, not a solver.
+[`docs/sixmax-preflop.md`](docs/sixmax-preflop.md) says what it can and cannot be
+trusted for (DECISIONS 53, Gate M).
 
 `showdown analyze` prints, per player:
 - VPIP, PFR, 3-bet, WTSD and W$SD;
@@ -105,6 +112,7 @@ src/showdown/
   cfr/         compiled tree, CFR and CFR+, best response, exploitability
   equity/      cards and classes, ranges, exact, Monte Carlo, 169x169 matrix, multiway pots
   pushfold.py  push/fold solve, charts, closed forms, Gate D comparison
+  sixmax.py    six-max preflop spots against assumed profiles (DECISIONS 53)
   engine/      pokerkit adapter: one heads-up push/fold hand
   bot/         strategies and grading, play sessions, the 127.0.0.1 server and page
   hh/          replay through pokerkit, stats, all-in EV, push/fold grading
@@ -151,6 +159,7 @@ fails without them; it never skips.
 | [HoldemResources.net](https://www.holdemresources.net/hune) heads-up push/fold raw data | none stated | Gate D reference |
 | [b-inary/poker-cfr](https://github.com/b-inary/poker-cfr) exact preflop equity table | BSD-2-Clause | checks every cell of the exact matrix |
 | [phh-dataset](https://github.com/uoftcprg/phh-dataset) Pluribus hands (10,000, commit e47fbd5) | MIT | Gate F parse rate; Done 4 |
+| [PokerStrategy.com](https://www.pokerstrategy.com/strategy/bss/no-limit-6-max-preflop-ranges/) six-max opening ranges (5 lesson pages) | none stated | Gate M bar 3 |
 
 ## Known limits
 
