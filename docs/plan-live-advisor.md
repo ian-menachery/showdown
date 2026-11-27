@@ -1,5 +1,10 @@
 # Plan: a live advisor for disclosed play-money games (Phases 8 to 11)
 
+**Parked (2026-11-26, DECISIONS 59, SCOPE A18).** Ian moved the product to an exploit
+trainer and a leak finder ([`plan-sixmax-trainer.md`](plan-sixmax-trainer.md)). Phase 10's
+loop stays in the code; spike S1, Gate H, the live goal and Phase 11 are off the roadmap.
+This plan is kept as the record.
+
 Written 2026-11-15 from Ian's scope ("Poker Solver: Scope"), reconciled with
 what showdown already has. Ian's answers to the open questions on 2026-11-15
 are recorded in SCOPE A6 and DECISIONS 29. This plan sets direction. Each phase

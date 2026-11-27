@@ -4111,3 +4111,67 @@ source.
 - grading raise sizes;
 - a profile per table or per player;
 - other table sizes.
+
+---
+
+### 59. The pivot: an exploit trainer and a leak finder; the live Poker Now path is parked (2026-11-26)
+
+**Decided.** Ian, 2026-11-26, in plan mode, then approving the plan
+(`~/.claude/plans/as-it-stands-i-logical-cupcake.md`):
+- live play is out unless it can run on sites that allow it;
+- the product becomes an exploit trainer and a leak finder now, with a bot later.
+
+The trainer works like GTO Wizard's: you are dealt a spot, pick an action, and get a
+grade. Exploit, not GTO: each spot names the opponents' player types and their traits, and
+the best action is the best one against those types. Every grade explains why, and leaks
+found in your hands point to lessons.
+
+**The product, first release** (Ian's answers of 2026-11-26):
+- **Grades:** GTO Wizard's scale (Best, Correct, Inaccuracy, Wrong, Blunder), by EV lost as
+  a % of the pot. An answer that wins somewhere in the engine's assumption band never grades
+  below Correct.
+- **Player types,** named and set by role: one type for the limpers, another for the players
+  behind and the blinds. Each type has a trait card.
+- **Spots:**
+  - unopened and limped six-max pots;
+  - pots facing one open raise;
+  - heads-up push/fold with types, as tournament study (no ICM; ICM is a later item).
+- **Teaching:** a "why" line on every grade; leaks point to lesson cards.
+- **Hand files:** PokerStars-format exports, read after the session.
+
+**The live Poker Now path is parked.**
+- Phase 10's loop (`live/screen.py`, DECISIONS 52) stays in the code and its tests stay in
+  the gate. Nothing is deleted.
+- Spike S1 (DECISIONS 51), Gate H and the live goal of `docs/plan-live-advisor.md` leave the
+  roadmap. Phase 11's Poker Now log parser leaves it too, unless Ian has a downloaded Poker
+  Now log to review.
+- Picking any of them back up needs its own entry.
+
+**SCOPE A13 is amended (SCOPE A18).** Post-session review of hand files from sites whose
+terms let you download them is in scope.
+- Never live, never during a hand, never a folder watched during a session.
+- ClubWPT stays under DECISIONS 13: only a file the site itself exports.
+- Hand histories are never committed.
+
+**Automatic play comes later (SCOPE A19),** only on venues that allow bots, such as
+bot-vs-bot APIs or a self-hosted play-money table. Real-money sites ban bots in their
+terms. It gets its own entry when its turn comes; until then no code plays by itself
+anywhere.
+
+**The roadmap** is `docs/plan-sixmax-trainer.md`, rewritten as the product roadmap. Steps,
+each pre-registered with its own entry and gate before its code:
+1. grades and player types in the engine and the CLI drill, plus push/fold with types;
+2. pots facing one open raise, as an engine extension;
+3. the trainer page in `showdown play`;
+4. the leak finder on PokerStars exports, with opponent typing, a report tab and lesson
+   cards.
+
+**Up-front decisions (2026-11-26).** Ian approved 12 new ones in this session, all as
+recommended. The same list went to the master session. Each is fixed in the entry of the
+step it belongs to.
+
+**Rules out:**
+- live advice, screen reading or any play during a hand, on any site;
+- automatic play anywhere before its own entry;
+- ClubWPT code (DECISIONS 13, 29);
+- committing hand histories, drill logs or `data/external/`.

@@ -1,4 +1,85 @@
-# Plan: a six-max preflop trainer
+# Product roadmap: an exploit trainer and a leak finder
+
+**Since 2026-11-26 (DECISIONS 59, SCOPE A18, A19)** this is showdown's product roadmap.
+Live play is out unless it can run on sites that allow it.
+
+**The product:**
+1. **A trainer like GTO Wizard's.** You're dealt a spot, pick an action, and get a grade on
+   GTO Wizard's scale: Best, Correct, Inaccuracy, Wrong, Blunder, by EV lost as a % of the
+   pot. An answer that wins somewhere in the engine's assumption band never grades below
+   Correct.
+2. **Exploit, not GTO.** Each spot names the opponents' player types (one for the limpers,
+   one for the table) with trait cards. The best action is the best one against those types.
+3. **Educational.** Every grade explains why, from the engine's numbers. Leaks found in your
+   hands point to lesson cards in [`lessons/`](lessons/).
+4. **A leak finder** for completed hands from PokerStars-format exports, read after the
+   session.
+5. **Later:** a bot that plays by itself, only where bots are allowed (SCOPE A19).
+
+Study only: never during a hand, never screen reading, nothing for ClubWPT except a file the
+site exports (DECISIONS 13), hand histories never committed.
+
+| Step | What | Entry | State |
+|---|---|---|---|
+| 0 | Record the pivot | DECISIONS 59 | done |
+| 1 | Grades and player types (engine, CLI drill), push/fold with types | DECISIONS 60 | |
+| 2 | Pots facing one open raise | DECISIONS 61 | |
+| 3 | The trainer page in `showdown play` | DECISIONS 62 | |
+| 4 | The leak finder: opponent typing, a Review tab, lesson cards | DECISIONS 63 | |
+
+**Waiting on Ian (acceptance, not gate bars):**
+- 50 drills across the families feel right, or a named bad answer becomes a test;
+- on his own PokerStars export, he agrees with 5 hands per top leak;
+- each external lesson link, approved one by one before it is added.
+
+**Later, each its own entry:**
+- ICM for tournament push/fold;
+- the limp floor fix (a raise behind a limp counts as a fold, so premium limps look like
+  leaks);
+- 3-bet pots, and postflop exploit spots through the heads-up postflop bridge with node
+  locks (Gate X showed the locks work);
+- a static public demo on Vercel;
+- automatic play, only on venues that allow it.
+
+### Up-front decisions (Ian, 2026-11-26, all as recommended)
+
+1. **Table types scale "standard".** The players behind and the blinds keep standard's
+   modern defence, times how the type's 2009 PHH rates differ from the 2009 average
+   (DECISIONS 50's label ratios). Limper types use their own fitted rates.
+2. **Type cut-offs,** PHH players with 500+ hands. Aggressive (PFR at least half of VPIP):
+   Nit VPIP under 16%, TAG 16–28%, LAG 28–40%, Maniac 40%+. Passive: Weak-tight rec under
+   24%, Calling station 24%+. "Standard" stays the default.
+3. **Push/fold types:** a jam or call width is Nash's times the type's ratio; the band is
+   that width ±10 points of hands. Nash is shown beside.
+4. **Random types per drill,** unless fixed by a flag or a filter.
+5. **Opener ranges** by seat: UTG 15, HJ 19, CO 27, BTN 45, SB 40% (assumed), times the
+   type's open ratio. Opens of 2.5 or 3 bb.
+6. **Facing an open:** fold, call, 3-bet to 3× or 4× the open, or jam.
+7. **The opener facing a 3-bet:** fold 55, call 33, 4-bet 12% of its open range under
+   standard (assumed), scaled per type by a new PHH count. A 4-bet means stack off or fold.
+8. **Players behind** act as the table type: squeeze or overcall after a call; cold 4-bet
+   only their top 2% after a 3-bet. The chart bar uses PokerStrategy's vs-open ranges from
+   the pages already saved under DECISIONS 53.
+9. **The Review tab's file picker:** the export goes only to 127.0.0.1, read in memory, never
+   saved. The hero comes from the "Dealt to" lines, with a name box to override.
+10. **Opponent typing:** the nearest of the 6 types over VPIP, PFR, limp % and fold to iso,
+    in percentage points; under 30 hands, standard.
+11. **Leaks** group Inaccuracy, Wrong and Blunder grades by family, seat, opponent type and
+    the answer's kind against the best kind, at least 3 hands.
+12. **About 8 lesson cards** in our own text; external links only once Ian approves each.
+
+### Decided without Ian (2026-11-26), each reversible
+
+- The trainer is a local web page in `showdown play`; the CLI drill stays.
+- The band floor stays with GTO Wizard's scale.
+- Draft cut-offs: Correct at most 3% of the pot lost, Inaccuracy 10%, Wrong 25%, Blunder
+  above that.
+- The "why" lines are built from the engine's numbers, with no LLM.
+- The order is 1 → 2 → 3 → 4, in one session, because every step builds on step 1.
+
+---
+
+# History: the six-max preflop trainer plan (2026-11-22)
 
 **Goal.** A practical study tool for Ian's six-max cash games: tables with several
 limpers, and sometimes an ante of the small blind from every player. It shows the
