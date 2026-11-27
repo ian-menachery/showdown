@@ -14,6 +14,13 @@ ANTES = (0.0, 0.5)
 SAMPLES = 2_000
 
 
+@pytest.fixture(autouse=True)
+def gated(monkeypatch) -> None:
+    """Gate Z was scored on DECISIONS 61's model: the size slope, R 1.00 (DECISIONS 64)."""
+    monkeypatch.setattr(S, "OPENER_SLOPE", S.GATED_OPENER_SLOPE)
+    monkeypatch.setitem(S.R, "threebet_ip", S.GATED_THREEBET_IP)
+
+
 @pytest.fixture(scope="module")
 def silent() -> S.Profile:
     """Every rate 0: players behind fold to anything."""

@@ -24,13 +24,28 @@ CUTS = ((3.0, "Correct"), (10.0, "Inaccuracy"), (25.0, "Wrong"))
 
 @pytest.fixture(scope="module")
 def fixture_review() -> tuple:
-    parsed = load([FIXTURE])
-    decisions, players = V.review_typed(parsed.records, "Hero")
-    return parsed, decisions, players, V.summarize_typed(decisions, players, "Hero")
+    mp = pytest.MonkeyPatch()
+    mp.setattr(S, "OPENER_SLOPE", S.GATED_OPENER_SLOPE)  # Gate W2's model (DECISIONS 64)
+    mp.setitem(S.R, "threebet_ip", S.GATED_THREEBET_IP)
+    try:
+        parsed = load([FIXTURE])
+        decisions, players = V.review_typed(parsed.records, "Hero")
+        return parsed, decisions, players, V.summarize_typed(decisions, players, "Hero")
+    finally:
+        mp.undo()
+
+
+@pytest.fixture
+def gated(monkeypatch) -> None:
+    monkeypatch.setattr(S, "OPENER_SLOPE", S.GATED_OPENER_SLOPE)
+    monkeypatch.setitem(S.R, "threebet_ip", S.GATED_THREEBET_IP)
 
 
 def _expected(d: V.Decision) -> tuple:
-    """DECISIONS 60's rule from a fresh answer: (label, bb lost, best, tier)."""
+    """DECISIONS 60's rule from a fresh answer: (label, bb lost, best, tier). Runs in a
+    worker, so it pins Gate W2's model there (DECISIONS 64)."""
+    S.OPENER_SLOPE = S.GATED_OPENER_SLOPE
+    S.R["threebet_ip"] = S.GATED_THREEBET_IP
     if d.family == "open":
         spot = S.OpenSpot(d.seat, S.opener(d.opener, d.opener_type), d.open, d.ante)
         profile = S.compose("standard", d.table_type)
@@ -95,7 +110,7 @@ def test_bar3_the_report_sums(fixture_review) -> None:
     )
 
 
-def test_reported_pluribus() -> None:
+def test_reported_pluribus(gated) -> None:
     start = time.perf_counter()
     parsed = load([require_pluribus()])
     decisions, players = V.review_typed(parsed.records, "Pluribus")

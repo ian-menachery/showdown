@@ -41,6 +41,16 @@ def _post(srv, path: str, body: dict) -> dict:
 
 @pytest.fixture(scope="module")
 def run(tmp_path_factory) -> dict:
+    mp = pytest.MonkeyPatch()
+    mp.setattr(S, "OPENER_SLOPE", S.GATED_OPENER_SLOPE)  # Gate U's model (DECISIONS 64)
+    mp.setitem(S.R, "threebet_ip", S.GATED_THREEBET_IP)
+    try:
+        return _run(tmp_path_factory)
+    finally:
+        mp.undo()
+
+
+def _run(tmp_path_factory) -> dict:
     strategy = PushFoldStrategy.load()
     app = App(strategy, LeducStrategy.load(), log_dir=tmp_path_factory.mktemp("logs"))
     srv = PlayServer(app, 0)
@@ -75,7 +85,10 @@ def run(tmp_path_factory) -> dict:
 
 
 def _expected(row: dict) -> tuple[str, float, float]:
-    """DECISIONS 60's rule from a fresh answer: (label, bb lost, % lost)."""
+    """DECISIONS 60's rule from a fresh answer: (label, bb lost, % lost). Runs in a worker, so
+    it pins Gate U's model there (DECISIONS 64)."""
+    S.OPENER_SLOPE = S.GATED_OPENER_SLOPE
+    S.R["threebet_ip"] = S.GATED_THREEBET_IP
     cls = class_index(row["class"])
     if row["family"] == "pushfold":
         strategy = PushFoldStrategy.load()

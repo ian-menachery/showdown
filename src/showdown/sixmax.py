@@ -52,9 +52,23 @@ POSTFLOP = {"SB": 0, "BB": 1, "UTG": 2, "HJ": 3, "CO": 4, "BTN": 5}
 MAX_LIMPERS = {"UTG": 0, "HJ": 1, "CO": 2, "BTN": 3, "SB": 3, "BB": 3}
 STACK = 100.0
 BLINDS = {"SB": 0.5, "BB": 1.0}
-R = {"raise_ip": 1.00, "raise_oop": 0.75, "limp_ip": 0.85, "limp_oop": 0.75}
-"""raise_oop was 0.90 until DECISIONS 56; Gates M, M2 and K were scored at 0.90."""
+R = {
+    "raise_ip": 1.00,
+    "raise_oop": 0.75,
+    "limp_ip": 0.85,
+    "limp_oop": 0.75,
+    "threebet_ip": 0.85,
+    "threebet_oop": 0.75,
+}
+"""raise_oop was 0.90 until DECISIONS 56; Gates M, M2 and K were scored at 0.90. A called
+3-bet facing an open realises 0.85 in position since DECISIONS 64 (1.00 before)."""
 GATED_RAISE_OOP = 0.90
+GATED_THREEBET_IP = 1.00
+"""Gates Z, U and W2 were scored with a called 3-bet in position at R 1.00 (DECISIONS 64)."""
+OPENER_SLOPE = False
+"""DECISIONS 64: the opener's call share against a 3-bet is flat across sizes."""
+GATED_OPENER_SLOPE = True
+"""Gates Z, U and W2 were scored with it falling at standard's players-behind slope."""
 GATED_STANDARD_LIMPERS = "regular"
 """Gates M2 and K were scored with the standard profile's limpers from regular (DECISIONS 57)."""
 R_BAND = (-0.1, 0.0, 0.1)
@@ -458,7 +472,7 @@ def opener(
     four_bet = min(1.0, OPENER_4BET * ratio.get("opener_4bet", 1.0))
     call = min(1.0 - four_bet, OPENER_CALL * ratio.get("opener_call", 1.0))
     width = min(1.0, OPEN_WIDTH[seat] * ratio.get("open_raise", 1.0))
-    slope = (profiles or load_profiles())["standard"].behind_slope
+    slope = (profiles or load_profiles())["standard"].behind_slope if OPENER_SLOPE else 0.0
     return Opener(seat, kind, width, four_bet, call, slope)
 
 
@@ -804,7 +818,7 @@ def open_raise_outcome(d: Deal, x: float | None, delta: float, ranges: list) -> 
         pot=pot,
         allin_pot=np.where(rr, allin_pot, 0.0),
         callers=callers,
-        r=_r(d, callers, "raise"),
+        r=_r(d, callers, "threebet"),
         rr_ranges=ranges,
         allin=x is None,
     )
@@ -1303,9 +1317,9 @@ def describe_open(spot: OpenSpot, p: Profile, hand: str, opener_name: str) -> li
         f"({OPEN_WIDTH[op.seat]:.0%} assumed for {op.seat}, times its type's open ratio): "
         f"{range_text(class_mass(open_w) / CLASS_SIZES)}",
         f"    facing your 3-bet to {3 * spot.size:g}: 4-bets {op.four_bet:.0%} of its range "
-        f"({range_text(top(open_w, op.four_bet))}), calls {op.call:.0%} (less "
-        f"{op.slope:.3f} per bb above that size), folds the rest; it calls a jam with its "
-        "4-bet range",
+        f"({range_text(top(open_w, op.four_bet))}), calls {op.call:.0%}"
+        + (f" (less {op.slope:.3f} per bb above that size)" if op.slope else " at either size")
+        + ", folds the rest; it calls a jam with its 4-bet range",
     ]
     for kind_, seat in spot.opponents()[:-1]:
         t, c = _behind(p, kind_)

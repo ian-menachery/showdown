@@ -35,8 +35,16 @@ CHART = {
 }
 
 
+def gate_model() -> None:
+    """Gate Z was scored on DECISIONS 61's model: the size slope, R 1.00 (DECISIONS 64)."""
+    S.OPENER_SLOPE = S.GATED_OPENER_SLOPE
+    S.R["threebet_ip"] = S.GATED_THREEBET_IP
+
+
 def _chart(job: tuple) -> tuple:
-    """(job, per class (best kind, kind stable)), call its own kind."""
+    """(job, per class (best kind, kind stable)), call its own kind. Runs in a worker, so it
+    pins the model there."""
+    gate_model()
     hero, seat, size, ante, kind = job
     spot = S.OpenSpot(hero, S.opener(seat, kind), size, ante)
     rows = []
