@@ -171,7 +171,7 @@ def build(spec, names: list[str], rng: random.Random, fold_after: bool = False):
     everyone folds after Hero (the PokerStars hands)."""
     kind, hero_seat, _, ante, details, hero_action = spec
     hero = SEATS.index(hero_seat)
-    t = Table(names, ante, rng)
+    t = Table(names, 1 if ante else 0, rng)  # the 0.5 bb ante is 1 chip
     script: dict[int, tuple[str, int]] = {}
     label: dict = {"seat": hero_seat, "ante": 0.5 if ante else 0.0}
     if kind in ("open", "threebet", "called", "size"):
@@ -401,7 +401,8 @@ def main() -> int:
             label = {"cause": label["cause"]}
         if n <= len(SCENARIOS):
             key = f"w{n:02d}"
-            (HERE / f"{key}.phh").write_text(phh(names, cards, spec[3], actions), encoding="utf-8")
+            chips = 1 if spec[3] else 0  # the 0.5 bb ante is 1 chip
+            (HERE / f"{key}.phh").write_text(phh(names, cards, chips, actions), encoding="utf-8")
         else:
             k = n - len(SCENARIOS)
             key = f"session#{k}"

@@ -1,6 +1,6 @@
 variant = 'NT'
 ante_trimming_status = true
-antes = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+antes = [1, 1, 1, 1, 1, 1]
 blinds_or_straddles = [1, 2, 0, 0, 0, 0]
 min_bet = 2
 starting_stacks = [200, 200, 200, 200, 200, 200]
