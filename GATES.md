@@ -1584,3 +1584,8 @@ hands reviewed per leak. It waits for a file from an allowed source (DECISIONS 5
 ```
 .venv\Scripts\python -m pytest tests/test_gate_w.py tests/test_gate_w_slow.py -m "slow or not slow" -s
 ```
+
+## Trainer step 0: the pivot recorded: PASS (2026-11-27)
+
+DECISIONS 59 and SCOPE A18 and A19, at 2204521. Docs only; no code or bar changed.
+`py gate.py`, run by the worktree recipe, printed `GATE PASS` in 2 min 25 s.

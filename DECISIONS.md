@@ -4175,3 +4175,154 @@ step it belongs to.
 - automatic play anywhere before its own entry;
 - ClubWPT code (DECISIONS 13, 29);
 - committing hand histories, drill logs or `data/external/`.
+
+---
+
+### 60. Trainer step 1: GTO Wizard's grade scale, player types by role, and push/fold with types; Gate Y pre-registered (2026-11-27)
+
+**Decided.** Step 1 of the roadmap (DECISIONS 59). Ian's answers of 2026-11-26 set the
+scale and the types. His 12 up-front decisions, approved in the session that day, set the
+type rules (decisions 1 to 4). SCOPE A20. Study only, as A13 and A18.
+
+**The grade:** `sixmax.grade(answer, action, pot)`. Here lost = EV(best) − EV(action) at the
+base point, in bb, and pct = 100 × lost / pot. The pot is everything in before the hero
+acts: antes, blinds and limps (`Spot.pot`).
+- **Best:** lost ≤ 1e-9; or the tier is close, every band winner is of the best action's
+  kind ("only the size is close"), and the action is of that kind.
+- **The band floor:** otherwise, an action that wins at some band point is **Correct**.
+- **Otherwise by pct:** Correct ≤ 3; Inaccuracy ≤ 10; Wrong ≤ 25; Blunder above 25.
+- The cut-offs change only by a dated amendment.
+
+**Player types.** Seven keys: standard, nit, tag, lag, maniac, weak-tight, station, shown
+as Standard, Nit, TAG, LAG, Maniac, Weak-tight rec and Calling station.
+- **The fit** is a spike, `spikes/2026-11-27-phh-sixmax-types.py`. It reads DECISIONS 39's
+  zip, pinned by SHA-256, with DECISIONS 53's filters and counts 1 to 6 unchanged, plus one
+  count for step 2:
+  - **7. The opener facing one 3-bet:** a player whose first raise opened a pot with no
+    limpers, at its next action with exactly two raises in: fold, call, 4-bet.
+- **The groups,** over players with at least 500 such hands, by their own VPIP and PFR:
+  - aggressive, PFR ≥ VPIP / 2: Nit VPIP < 16%; TAG 16% to < 28%; LAG 28% to < 40%;
+    Maniac 40% or more;
+  - passive, PFR < VPIP / 2: Weak-tight rec VPIP < 24%; Calling station 24% or more;
+  - **all:** every such player, pooled, for the ratios.
+- **Rates:** DECISIONS 53's rules for each of the 17 rates, plus count 7's three shares,
+  pooled within the group.
+  - A rate with fewer than 1,000 chances in a group, or a slope with fewer than three
+    buckets of 1,000, takes the "all" group's value. It is labelled "pooled".
+- **Output:** `data/sixmax_types.json` and `docs/sixmax-types.md`, aggregates only,
+  credited to the dataset (CC BY 4.0). The spike runs once on AC. A crash or a wrong count
+  gets one fix, then it stops.
+- **The trait card** shows the group's fitted numbers: VPIP, PFR, limp % (limp first in),
+  fold to iso (to the 4+k iso), 3-bet % (a non-blind player behind, facing an open) and BB
+  defence (call plus 3-bet facing a 3 bb open). They are labelled as 2009 online groups.
+
+**A spot's profile is composed** from a limper type and a table type:
+`sixmax.compose(limpers, table)`.
+- **Limper rates** (open-raise, limp, fold to iso, limp-reraise, its size slope): the limper
+  type's own fitted rates. For "standard", they are standard's (loose-passive, DECISIONS 57).
+- **Table rates** (the 12 others):
+  - standard's value, its per-seat defence included, times the table type's ratio, the
+    type's rate over the "all" rate. "standard" has every ratio 1;
+  - clipped so that a 3-bet share t ≤ 1 and a call share c ≤ 1 − t, and likewise for the
+    responses to a limp (raise x ≤ 1, overlimp or complete ≤ 1 − x, BB raise ≤ 1).
+- **compose("standard", "standard")** is the standard profile itself, so every old answer
+  is unchanged.
+- **Deal seeds.** A composed profile's deals are seeded by its limper type: by "standard"
+  when the limpers are standard, so they equal the standard profile's deals. The deal does
+  not depend on the table type. `Profile` gains a `deal_name`; when it is empty, the name
+  is used, as now.
+- The old profiles (standard, tight, regular, loose-passive) stay selectable.
+
+**The CLI:**
+- `showdown sixmax SEAT HAND --limpers-type T --table-type T` composes the profile, prints
+  both trait cards, and otherwise prints as now. `--profile` keeps its meaning when no type
+  is given.
+- **The drill,** `showdown sixmax drill [--limpers-type T] [--table-type T]`:
+  - each drill draws the limper type and the table type uniformly from the seven, unless
+    fixed;
+  - the answer is an action with its size: f, l (or c), or a raise size typed as a number;
+  - it is graded on the new scale;
+  - the log adds the action, the label, the % lost and both types.
+- **After each answer,** a deterministic "why" built from the engine's numbers:
+  - for a raise: how often everyone folds, how often it is called and the hero's equity
+    against the callers, how often it is re-raised, and the risk against the pot (the fold
+    share a pure bluff needs);
+  - for a limp: how often someone raises behind (the floor), and the equity at the flop;
+  - then the chosen action's EV and its loss in bb and % of the pot;
+  - then "Against a standard player you'd …": the best action under compose("standard",
+    "standard"), with its EV.
+- **Gate K's kind-only drill** stays, as `run(..., sizes=False)` with no types, and Gate K's
+  slow test uses it.
+
+**Push/fold with types,** labelled "tournament-style, no ICM":
+- **A type's width:** the villain SB jams, or the villain BB calls, the top w% of hands by
+  equity against a random hand (DECISIONS 37's read). Here w = min(100, 100 × Nash's share
+  × the type's ratio). For jams the ratio is the open-raise ratio; for calls it is the BB
+  defence ratio (call plus 3-bet). "standard" has ratio 1: Nash's width.
+- **The answer** is DECISIONS 37's exact best response, with Nash's action shown beside it.
+- **The band** is w − 10, w and w + 10 points of hands, clipped to 1 to 100. An action that
+  is best at one of them is never below Correct.
+- **The pot before acting** is 1.5 bb for the SB and S + 1 for the BB facing a jam.
+- **The CLI:** `showdown pushfold exploit S --villain-type T --hero sb|bb`.
+
+**Gate Y,** recorded before the spike, the grade or the types exist. It passes when bars 1
+to 5 pass. "Kind-stable" is DECISIONS 54's definition.
+1. **The grade rule.** A scripted drill session:
+   - 300 drills, seed 20261127, random types, random ante;
+   - the answer drawn uniformly from the spot's actions, sizes included (seed 7);
+   - each drill's label, bb lost (to 1e-9) and % lost equal ones worked out in the test
+     from a fresh `sixmax.answer` under `compose` for the same spot and class, by the rule
+     above, coded separately in the test;
+   - each of the five labels occurs at least 5 times;
+   - unit tests also hit each branch and the cut-offs at exactly 3, 10 and 25%.
+2. **The band floor.** In that session, every answer that wins at some band point is Best
+   or Correct. At least 10 such answers are not the base point's best.
+3. **Type directions,** kind-stable classes only:
+   - **steals:** unopened CO, BTN and SB, both antes, standard limpers:
+     - every class whose best is a raise against a LAG table is a raise against a Nit table;
+     - every class whose best is a raise against a Calling-station table is a raise against
+       a Weak-tight rec table;
+     - each of the two pairs has at least 50 classes compared in all, and the Nit (and
+       Weak-tight rec) table raises at least as many classes;
+   - **isos, against limpers who fold less:** for each of the six fitted limper types, at
+     CO with 1 limper and BTN with 1 and 2, both antes, standard table. Lowering only the
+     limpers' fold to an iso by 10 points (clipped at 0) adds no offsuit class whose best is
+     an iso. At least 50 classes compared in all.
+4. **Push/fold.** For each of the seven types, at 5, 10, 15 and 20 bb, with the hero as SB
+   and as BB:
+   - the best response's EV and Nash's EV against the type's read equal
+     `cfr.best_response` and `cfr.policy_value` on the compiled tree, to 1e-9;
+   - the chart equals the tree's best response wherever the choice is not a tie.
+5. **Old gates unchanged.**
+   - The slow tests of Gates M, M2, M4, K and W are re-run once and pass. Gate K is pinned
+     to the kind-only drill, as above. Their profiles and R stay pinned as before.
+   - compose("standard", "standard") equals `load_profiles()["standard"]` in every rate,
+     source and per-seat value, and its deal equals the standard profile's.
+
+**Reported, not gated:**
+- the groups' sizes and trait cards;
+- the drill's speed with types (median and 95th percentile);
+- how many classes steal or isolate per type;
+- the session's labels by tier.
+
+**The order:**
+1. This entry and SCOPE A20, committed and pushed.
+2. The spike, run once.
+3. The grade, the composition, the CLI, the drill, push/fold with types, and the tests.
+4. Gate Y scored once and recorded in GATES.md. A failing bar gets one reproduce-and-fix,
+   for a bug only, then the result stands.
+
+**Decided without Ian (2026-11-27),** each the reversible option:
+- a tie with the best (within 1e-9) is Best;
+- the type keys, and the fallback to the pooled rate where a group is thin;
+- the trait card's numbers are the group's fitted 2009 rates;
+- the steal and iso directions above, and the gate's letter, Y;
+- push/fold is taught on the trainer page in step 3; the CLI gets `--villain-type` on
+  `pushfold exploit`;
+- the "why" line's contents.
+
+**Rules out:**
+- calling any answer GTO;
+- per-seat open widths for the limper types (step 2 handles openers);
+- tuning a type or a cut-off after results are seen, except by a dated amendment;
+- committing the PHH hands or drill logs.
