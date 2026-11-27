@@ -1809,6 +1809,9 @@ Evidence:
 xfail, as Gates M's and Z's are. Ian was told through the master session. A further fix
 (R by hand playability, or a lower opener fold to 3-bets) needs its own entry.
 
+**Ian's answer (2026-11-27): a documented limit** (DECISIONS 64). No Z3 and no more tuning
+towards the bar. The fix stays, and the page keeps its note on near-ties facing an open.
+
 **Rerun** (about 5 minutes):
 ```
 .venv\Scripts\python -m pytest tests/test_gate_z2.py tests/test_gate_z2_slow.py -m "slow or not slow" -s

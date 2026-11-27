@@ -4742,3 +4742,11 @@ spots; editing Gate Z's record.
   the pins.
 - What follows is Ian's choice: a further fix (R by hand playability, or the opener's fold
   rate), or the documented limit, which stays in force meanwhile.
+
+**Ian's answer (2026-11-27, through the master session): the documented limit.**
+- Bar 3 stays a documented limit, as Gates M's and M4's did. There is no Z3, and no more
+  tuning towards the bar.
+- The fix stays: 72o folds, and the flat call share and R 0.85 for a called 3-bet in
+  position remain the model.
+- The trainer page keeps its note on near-ties facing an open: read a close 3-bet with a
+  weak hand as a fold.

@@ -24,24 +24,22 @@ site exports (DECISIONS 13), hand histories never committed.
 | 0 | Record the pivot | DECISIONS 59 | done |
 | 1 | Grades and player types (engine, CLI drill), push/fold with types | DECISIONS 60 | built; Gate Y PASS |
 | 2 | Pots facing one open raise | DECISIONS 61 | built; Gate Z FAIL, bar 3 only (3-bet bluffs overrated) |
-| 2b | The fix Ian chose: a flat opener call share, R 0.85 for a called 3-bet | DECISIONS 64 | built; Gate Z2 FAIL, bar 3's count only (70 stable hands of 100 needed, 90% agree) |
+| 2b | The fix Ian chose: a flat opener call share, R 0.85 for a called 3-bet | DECISIONS 64 | built; Gate Z2 FAIL, bar 3's count only (70 stable hands of 100 needed, 90% agree), kept as a documented limit |
 | 3 | The trainer page in `showdown play` (`/trainer`), with the lesson cards | DECISIONS 62 | built; Gate U PASS |
 | 4 | The leak finder: opponent typing, a Review tab | DECISIONS 63 | built; Gate W2 PASS |
 
-**All four steps are built (2026-11-27).** Gates Y, U and W2 PASS; Gate Z FAILs on its chart
-bar only (3-bet bluffs overrated facing an open). Use it:
+**All four steps are built (2026-11-27).** Gates Y, U and W2 PASS. Facing an open, Gates Z
+and Z2 FAIL on their chart bar only, which Ian kept as a documented limit: the engine leans
+towards 3-betting, mostly by small margins, and the page says so. Use it:
 - `showdown play`, then open `/trainer`: drills in the Trainer tab, your PokerStars export
   in the Review tab;
 - `showdown sixmax drill` and `showdown sixmax review FILES --player NAME` on the command
   line.
 
-The next steps are Ian's: the Gate Z choice, the acceptance checks below, and approving
-lesson links.
+The next steps are Ian's: the acceptance checks below, and approving lesson links.
 
-**Waiting on Ian (a decision):** after Gate Z2 (DECISIONS 64), the engine still leans
-towards 3-betting facing an open, mostly by small margins. Either a further fix entry (R by
-hand playability, or a lower opener fold to 3-bets) or a documented limit. The limit is in
-force until he answers.
+**Gate Z2 (Ian, 2026-11-27):** a documented limit (DECISIONS 64). No Z3 and no more tuning
+towards the bar; the fix stays.
 
 **Waiting on Ian (acceptance, not gate bars):**
 - 50 drills across the families feel right, or a named bad answer becomes a test;

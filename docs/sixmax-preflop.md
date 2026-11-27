@@ -213,8 +213,8 @@ jam, against an opener of a named type and a table type behind.
       small margins.
     - Read a close 3-bet with a weak hand as a fold. Trust value 3-bets, folds, and calls
       with pairs and suited hands.
-    - A further fix (R by hand playability, or the opener's fold rate) needs its own entry.
-      Ian decides.
+    - **A documented limit (Ian, 2026-11-27).** There is no further fix and no more tuning
+      towards the bar. The fix stays, and the page keeps its note on near-ties.
 
 ## Drills and hand review
 
