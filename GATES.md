@@ -1589,3 +1589,39 @@ hands reviewed per leak. It waits for a file from an allowed source (DECISIONS 5
 
 DECISIONS 59 and SCOPE A18 and A19, at 2204521. Docs only; no code or bar changed.
 `py gate.py`, run by the worktree recipe, printed `GATE PASS` in 2 min 25 s.
+
+## Gate Y: grades on GTO Wizard's scale, player types, push/fold with types: PASS (2026-11-27)
+
+Evidence:
+- `tests/test_gate_y.py` (fast suite): bar 4 and the grade's branches;
+- `tests/test_gate_y_slow.py` (`-m "slow or not slow"`): bars 1 to 3;
+- the code at 6afc847.
+
+The bars were pre-registered in DECISIONS 60 at be08937, before the type fit, the grade or
+any code. The type fit, `spikes/2026-11-27-phh-sixmax-types.py`, ran once on AC in 572 s
+(`docs/sixmax-types.md`). Gate Y was scored once, at 6afc847; the slow file took 311 s.
+`py gate.py` printed `GATE PASS` in 194 s.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. The grade rule | 300 drills (seed 20261127, random types and ante, answers uniform over the spot's actions, seed 7): 0 mismatches against labels worked from fresh answers; bb and % gaps 0. Best 86, Correct 50, Inaccuracy 31, Wrong 41, Blunder 92 | all match; bb to 1e-9; each label ≥ 5 | PASS |
+| 2. The band floor | 54 answers win at a band point, all 54 not the base best; none graded below Correct | none below Correct; ≥ 10 not the base best | PASS |
+| 3. Type directions | Steals, kind-stable: Nit table vs LAG 384 compared, raises 384 vs 267, 0 violations; Weak-tight rec vs Calling station 478 compared, 478 vs 334, 0 violations. Isos with limpers' fold to an iso 10 points lower: 1,668 offsuit compared, 0 new isos | no violation; ≥ 50 compared; the tighter table raises at least as many | PASS |
+| 4. Push/fold | 7 types × 5, 10, 15, 20 bb × both seats: best-response and Nash EVs equal `cfr.best_response` and `policy_value` to 1e-9; charts equal the tree's best response off ties | to 1e-9 | PASS |
+| 5. Old gates | Re-run once: Gate K (pinned to the kind-only drill) 107 good, 40 marginal, 153 review, 344.107 bb, as recorded; Gates M, M2, M4 and W: 51 passed, 3 xfailed (the recorded bar 3 FAILs), every printed number as recorded. compose("standard", "standard") is the standard profile | unchanged | PASS |
+
+**Reported, not gated:**
+- **The groups** (players with 500+ hands): Nit 1,095; TAG 8,535; LAG 2,042; Maniac 627;
+  Weak-tight rec 985; Calling station 6,463; all 19,747. The trait cards are in
+  `docs/sixmax-types.md`.
+- **Drill speed with types:** median 0.12 s, 95th percentile 0.40 s, max 0.78 s.
+- **Labels by tier:** clear 22 / 4 / 13 / 16 / 57 (Best to Blunder); close 60 / 45 / 17 / 23 /
+  28; review 4 / 1 / 1 / 2 / 7.
+- **Classes isolated**, standard table, no ante: at the CO with one limper, 26 against Nit
+  limpers up to 69 against Maniacs. The 0.5 ante roughly triples it. The full list is in the
+  test's output.
+
+**Rerun** (about 8 minutes on 12 processes):
+```
+.venv\Scripts\python -m pytest tests/test_gate_y.py tests/test_gate_y_slow.py tests/test_gate_k_slow.py -m "slow or not slow" -s
+```

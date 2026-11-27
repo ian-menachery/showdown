@@ -22,8 +22,8 @@ site exports (DECISIONS 13), hand histories never committed.
 | Step | What | Entry | State |
 |---|---|---|---|
 | 0 | Record the pivot | DECISIONS 59 | done |
-| 1 | Grades and player types (engine, CLI drill), push/fold with types | DECISIONS 60 | |
-| 2 | Pots facing one open raise | DECISIONS 61 | |
+| 1 | Grades and player types (engine, CLI drill), push/fold with types | DECISIONS 60 | built; Gate Y PASS |
+| 2 | Pots facing one open raise | DECISIONS 61 | pre-registered, Gate Z |
 | 3 | The trainer page in `showdown play` | DECISIONS 62 | |
 | 4 | The leak finder: opponent typing, a Review tab, lesson cards | DECISIONS 63 | |
 

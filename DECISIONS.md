@@ -4326,3 +4326,141 @@ to 5 pass. "Kind-stable" is DECISIONS 54's definition.
 - per-seat open widths for the limper types (step 2 handles openers);
 - tuning a type or a cut-off after results are seen, except by a dated amendment;
 - committing the PHH hands or drill logs.
+
+---
+
+### 61. Trainer step 2: pots facing one open raise; Gate Z pre-registered (2026-11-27)
+
+**Decided.** Step 2 of the roadmap (DECISIONS 59), an extension of the six-max engine.
+Ian's up-front decisions 5 to 8 of 2026-11-26 fix the opener's ranges, the hero's sizes, the
+opener's answer to a 3-bet and the players behind. SCOPE A21. Study only, as A13 and A18.
+Gate Y passed at 6afc847, so the grade and the types are DECISIONS 60's.
+
+**The spot.**
+- The opener's seat (UTG, HJ, CO, BTN or SB) and the open: 2.5 or 3 bb.
+- The hero is any seat after the opener; everyone between them folded; there are no
+  limpers. Stacks are 100 bb, blinds 0.5/1, and the ante is 0 or 0.5 from everyone.
+- **The opener's type** and **the table type** (everyone behind the hero), each one of
+  DECISIONS 60's seven.
+- **The pot before acting:** 6 × ante + 1.5 + the open, less 0.5 when the SB opened.
+
+**The opener's range** is the top w of hands by strength (DECISIONS 53's order):
+- w = min(100%, base × the type's open-raise ratio);
+- base, assumed, labelled so: UTG 15%, HJ 19%, CO 27%, BTN 45%, SB 40%.
+
+**The hero's actions:**
+- fold (the BB can fold too);
+- call;
+- 3-bet to 3× the open or to 4× the open;
+- jam (100 − ante in all).
+
+**What the others do:**
+- **Players behind** use the table type's composed profile (`compose("standard", table)`),
+  with the rates it has against an open from the opener's seat (its per-seat defence for
+  that seat).
+  - After the hero's call, each one in seat order squeezes with its top t (its 3-bet share
+    against an open), overcalls with the next c = c_ref − slope × (open − 3) − δ, and folds
+    the rest. The first squeeze is the re-raise the hero faces; the opener and everyone
+    else then fold.
+  - After the hero's 3-bet or jam, each one cold 4-bets (or calls the jam) with its top 2%
+    and folds the rest.
+- **The opener:**
+  - after a call, it is in the pot;
+  - after the hero's 3-bet to X (and players behind fold), it 4-bets with the top f of its
+    open range, calls with the next c(X) = max(0, c − s × (X − 3 × open) − δ), clipped to at
+    most 1 − f, and folds the rest;
+    - under standard, f = 12% and c = 33% (assumed, decision 7);
+    - a type's f and c are standard's times its fitted opener_4bet and opener_call ratios
+      (DECISIONS 60's count 7);
+    - s is standard's players-behind slope, 0.049 per bb, for every type;
+  - facing the jam, it calls with its top f and folds the rest.
+- **A 4-bet is all-in.** The hero stacks off or folds, whichever its exact equity against
+  the 4-bet range says is worth more, as now.
+
+**Payoffs,** in bb against folding, as DECISIONS 53:
+- everyone folds: the hero wins the pot;
+- to the flop: R × share × pot − the chips the hero added;
+  - R after the hero's 3-bet is called: raised in position 1.00, out of position 0.75;
+  - **R after the hero's call** is the limped pot's: 0.85 in position, 0.75 out. The hero
+    has no initiative either way;
+- a re-raise: stack off or fold;
+- the jam called: M[hero, the caller's class] × the all-in pot − the hero's chips.
+
+**The band and the tier** are DECISIONS 53's: R ± 0.1 × δ = −0.10, 0, +0.10, where δ moves the
+overcalls of players behind and the opener's calls against a 3-bet. The jam cannot fold to
+a re-raise, so its no-stack-off value is its own.
+
+**The grade** is DECISIONS 60's, on the pot above. Calling is its own kind; both 3-bets and
+the jam are of the raise kind.
+
+**The engine change.**
+- A spot type for facing an open, its deal and outcomes, and `kind` for "call" and "jam".
+- An outcome may carry its own re-raise ranges and an all-in flag.
+- None of this changes an unopened or limped answer.
+
+**The CLI:** `showdown sixmax SEAT HAND --opener SEAT [--open 2.5|3] [--opener-type T]
+[--table-type T] [--ante A]`.
+
+**Gate Z,** recorded before any code for this step. It passes when bars 1 to 3 pass.
+"Kind-stable" is DECISIONS 54's definition, with call as its own kind.
+1. **Closed forms,** worked by hand in the test from the matrix, to 1e-9, on AA, KK, A5s and
+   72o, both antes, both open sizes:
+   - **everyone folds:** the opener folds every hand to a 3-bet and to a jam, and nobody
+     behind continues. Each 3-bet's EV and the jam's EV equal the pot before acting, for
+     the hero on the BTN against a CO open and in the BB against an SB open;
+   - **a call heads-up:** the hero in the BB calls an SB open from a range of KK.
+     EV = 0.85 × M[hero, KK] × (6 × ante + 2 × open) − (open − 1);
+   - **a 3-bet called:** the hero on the BTN 3-bets a CO opener whose range is QQ and who
+     always calls; the blinds fold. EV = 1.00 × M[hero, QQ] × (6 × ante + 1.5 + 2X) − X;
+   - **a 4-bet:** the same, but the opener's range is AA and it always 4-bets. KK folds
+     (EV = −X); AA stacks off: EV = M[AA, AA] × (2 × (100 − ante) + 6 × ante + 1.5) − (100 − ante);
+   - **the jam called:** the hero on the BTN jams into a CO opener whose range is AA and who
+     always calls. EV = M[hero, AA] × (2 × (100 − ante) + 6 × ante + 1.5) − (100 − ante).
+2. **Directions,** kind-stable classes only. Table standard, open 2.5, both antes, at five
+   spots: CO opens and the hero is on the BTN or in the BB; the BTN opens and the hero is in
+   the SB or the BB; UTG opens and the hero is in the BB.
+   - **Fold more against a Nit:** every class that continues (best not fold) against a Nit
+     opener also continues against a LAG opener, and against a Maniac opener.
+   - **3-bet less against a Nit, wider for value against a LAG or a Maniac:** the classes
+     whose best is a 3-bet or the jam number no more against a Nit opener than against a LAG
+     opener, and no more than against a Maniac opener.
+   - At least 100 classes compared for each pair.
+3. **The chart.** PokerStrategy's vs-open ranges, already saved under DECISIONS 53 (lessons
+   2256 and 2257; never committed).
+   - **Spots:** the hero on the BTN against UTG, HJ (their MP) and CO opens; the hero in the
+     SB against UTG, HJ, CO and BTN opens. A 3 bb open, no ante, standard opener and table.
+   - **The chart's action for a class** is the one covering most of its combos: fold when
+     most are outside the defending range, else call or 3-bet. Classes split evenly are
+     left out. Each list's combo count must equal the page's "#N".
+   - **The bar:** on classes kind-stable in our chart, pooled over the 7 spots, at least 85%
+     agree on continue vs fold, with at least 100 compared.
+   - Every disagreement is listed. The three-way agreement (fold, call, 3-bet) and each
+     spot's agreement are reported.
+
+**Reported, not gated:**
+- each opener type's range width by seat;
+- how many classes 3-bet against each opener type;
+- the time to answer one spot.
+
+**Old gates:** the change cannot move an unopened or limped answer. Gate Y's slow test and
+Gates M4 and W are re-run once and must pass unchanged.
+
+**The order:**
+1. This entry and SCOPE A21, committed and pushed.
+2. The engine extension, the CLI and the tests.
+3. Gate Z scored once and recorded in GATES.md. A failing bar gets one reproduce-and-fix,
+   for a bug only, then the result stands.
+4. `docs/sixmax-preflop.md`: what facing an open can be trusted for.
+
+**Decided without Ian (2026-11-27),** each the reversible option:
+- R after a call is the limped pot's;
+- the opener's call share falls with the 3-bet's size at standard's slope, for every type;
+- the opener calls a jam with its 4-bet range only;
+- the hero may fold in the BB;
+- the gate's spots and minimum counts, and the letter Z.
+
+**Rules out:**
+- 3-bet pots where the hero opened and faces a 3-bet, and squeezes over a caller;
+- limped-then-raised pots (an iso facing the hero);
+- calling any answer GTO;
+- committing the PokerStrategy pages.
