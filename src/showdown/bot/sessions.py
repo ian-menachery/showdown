@@ -308,7 +308,7 @@ FAMILY_NAMES = {
 }
 PUSHFOLD_DEPTHS = (2, 20)
 GATE_Z_NOTE = (
-    "Facing an open, the engine still leans towards 3-betting (Gates Z and Z2 FAIL, bar 3): "
+    "Facing an open, the engine still leans towards 3-betting (Gate Z and Gate Z2 FAIL, bar 3): "
     "trust folds, calls and value 3-bets; read a close 3-bet with a weak hand as a fold."
 )
 

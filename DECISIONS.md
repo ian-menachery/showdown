@@ -4731,3 +4731,14 @@ cards' numbers for facing an open and `docs/sixmax-preflop.md` are updated.
 
 **Rules out:** tuning either number after results are seen; changing unopened or limped
 spots; editing Gate Z's record.
+
+**Result (2026-11-27): Gate Z2 FAIL, bar 3's count only** (GATES.md).
+- Bars 1 and 2 pass.
+- Bar 3: the 70 kind-stable classes agree 90.0%, but 100 are needed. Most weak hands are now
+  close calls between fold and 3-bet.
+- 72o folds now, and 3× beats 4× for value. At the base point the engine still 3-bets most
+  hands facing an open.
+- The result stands, and bar 3's test is a strict xfail. Gates Z, U and W2 reproduce under
+  the pins.
+- What follows is Ian's choice: a further fix (R by hand playability, or the opener's fold
+  rate), or the documented limit, which stays in force meanwhile.

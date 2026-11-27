@@ -13,7 +13,9 @@ from showdown.equity.cards import class_index
 
 
 def test_the_new_r() -> None:
-    assert S.R == {"raise_ip": 1.00, "raise_oop": 0.75, "limp_ip": 0.85, "limp_oop": 0.75}
+    # DECISIONS 64 added the called-3-bet values facing an open; these four are unchanged.
+    four = {k: S.R[k] for k in ("raise_ip", "raise_oop", "limp_ip", "limp_oop")}
+    assert four == {"raise_ip": 1.00, "raise_oop": 0.75, "limp_ip": 0.85, "limp_oop": 0.75}
 
 
 @pytest.mark.parametrize("ante", [0.0, 0.5])

@@ -1765,6 +1765,55 @@ Evidence:
 **Waiting on Ian, not a bar:** his own PokerStars export, with coverage by cause and 5 hands
 per top leak checked by him.
 
+## Gate Z2: the facing-an-open fix: FAIL, bar 3's count only (2026-11-27)
+
+Evidence:
+- `tests/test_gate_z2.py` (fast suite): bar 1, and unopened and limped answers unchanged;
+- `tests/test_gate_z2_slow.py` (`-m "slow or not slow"`): bars 2 and 3;
+- the code at a8daf5e.
+
+**History:**
+- Ian chose the fix and a re-gate on 2026-11-27 (option A).
+- The bars were pre-registered in DECISIONS 64 at 83e8004, before the fix was coded.
+- Gate Z2 was scored once, at a8daf5e: 5 min 21 s.
+- **Under the pins, the old records reproduce.** With the scored model pinned
+  (`GATED_OPENER_SLOPE`, `GATED_THREEBET_IP`), Gates Z, U and W2 were re-run once: Gate Z
+  again gets 79.9% of 134, a strict xfail; Gate U and Gate W2 (and its Pluribus run) give
+  every recorded number. 15 passed, 1 xfailed.
+- **Two fast tests I had not run before committing, fixed afterwards.** `py gate.py` at
+  9cb4f22 failed on them:
+  - Gate M4's check compared the whole R table, so the two new entries broke it. It now
+    compares only its four values, which are unchanged;
+  - Gate U's test looks for "Gate Z" in the page's note, which my new wording had changed.
+    The note was reworded back.
+  - Neither touches Gate Z2's bars. The re-run gate is recorded in the next commit's line
+    below.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Closed forms | Gate Z bar 1's checks at the new model, the 3-bet called at R 0.85: AA, KK, A5s, 72o, both antes, both opens, to 1e-9. The opener's call share is identical at both 3-bet sizes | to 1e-9 | PASS |
+| 2. Directions | Nit vs LAG opener: 889 compared, no violation; Nit vs Maniac: 839, none. 3-bets or jams: equal counts | as Gate Z | PASS |
+| 3. The chart | 70 kind-stable classes over the 7 spots, 63 agree on continue vs fold (90.0%). Per spot: BTN vs UTG 4/4, HJ 6/6, CO 9/9; SB vs UTG 8/8, HJ 9/10, CO 12/12, BTN 15/21. Three-way 28.6%. Disagreements (ours 3-bet, theirs fold): SB vs HJ AJs; SB vs BTN A8s, A7s, A6s, A9o, A8o, A7o | ≥ 85% of **≥ 100** | **FAIL** (count) |
+
+**What the fix did:**
+- 72o on the BTN against a CO open to 3 bb now folds: the 3-bet to 9 is −0.27 bb and the
+  3-bet to 12 is −1.19 (before: +0.01 and +0.40).
+- The smaller 3-bet is now the better value size.
+- But at the base point the engine still 3-bets most hands. Over the 5 spots × 2 antes it
+  3-bets or jams 1,593 of 1,690 class-spots against a Nit opener, 1,600 against a LAG and
+  1,290 against a Maniac. Most of those are close calls between fold and 3-bet, so fewer
+  classes are kind-stable (70, against 134 before), and bar 3's minimum of 100 is missed.
+- The agreement on those 70 classes passes the 85% share.
+
+**After the FAIL:** the result stands, and the bar is unchanged. Bar 3's test is a strict
+xfail, as Gates M's and Z's are. Ian was told through the master session. A further fix
+(R by hand playability, or a lower opener fold to 3-bets) needs its own entry.
+
+**Rerun** (about 5 minutes):
+```
+.venv\Scripts\python -m pytest tests/test_gate_z2.py tests/test_gate_z2_slow.py -m "slow or not slow" -s
+```
+
 **Rerun** (about 18 minutes, most of it Pluribus):
 ```
 .venv\Scripts\python -m pytest tests/test_gate_w2.py tests/test_gate_w2_slow.py -m "slow or not slow" -s
