@@ -758,6 +758,8 @@ def _sixmax(args: argparse.Namespace) -> int:
         return _drill(args)
     if args.seat.lower() == "review":
         return _review(args)
+    if args.opener:
+        return _sixmax_open(args)
     try:
         if len(args.hand) != 1:
             raise ValueError("give a hand, like A5s or As5s")
@@ -777,6 +779,30 @@ def _sixmax(args: argparse.Namespace) -> int:
         p = S.load_profiles()[args.profile or "standard"].for_seat(spot.seat)
     a = S.answer(spot, p, hand, samples=args.samples, seed=args.seed)
     print("\n".join(S.describe_spot(spot, p, a.hand) + cards))
+    print()
+    print("\n".join(S.describe_answer(a, args.samples, args.seed)))
+    return 0
+
+
+def _sixmax_open(args: argparse.Namespace) -> int:
+    """`showdown sixmax SEAT HAND --opener SEAT`: facing one open raise (DECISIONS 61)."""
+    from showdown import sixmax as S
+
+    types = S.load_types()
+    try:
+        if len(args.hand) != 1:
+            raise ValueError("give a hand, like A5s or As5s")
+        op = S.opener(args.opener.upper(), args.opener_type or "standard", types=types)
+        spot = S.OpenSpot(args.seat.upper(), op, args.open, args.ante or 0.0)
+        hand = S.parse_hand(args.hand[0])
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
+    table = args.table_type or "standard"
+    p = S.compose("standard", table, types=types)
+    a = S.answer(spot, p, hand, samples=args.samples, seed=args.seed)
+    lines = S.describe_open(spot, p.for_seat(op.seat), a.hand, types[op.kind].name)
+    lines += ["Opener: " + S.type_card(types[op.kind]), "Table: " + S.type_card(types[table])]
+    print("\n".join(lines))
     print()
     print("\n".join(S.describe_answer(a, args.samples, args.seed)))
     return 0
@@ -1086,11 +1112,15 @@ def build_parser() -> argparse.ArgumentParser:
         "chart, limpers are loose-passive (DECISIONS 54, 57); the others are fitted to 2009 "
         "online hands. Drills without it draw player types",
     )
-    for role in ("limpers", "table"):
+    six.add_argument(
+        "--opener", help="facing one open raise from this seat (DECISIONS 61): UTG, HJ, CO, BTN, SB"
+    )
+    six.add_argument("--open", type=float, default=2.5, choices=[2.5, 3.0], help="the open, bb")
+    for role in ("limpers", "table", "opener"):
         six.add_argument(
             f"--{role}-type",
             choices=["standard", "nit", "tag", "lag", "maniac", "weak-tight", "station"],
-            help=f"the {role}' player type (DECISIONS 60); drills draw one at random if unset",
+            help=f"player type for the {role} (DECISIONS 60); drills draw one at random if unset",
         )
     six.add_argument("--samples", type=int, default=40_000)
     six.add_argument("--seed", type=int, default=0)

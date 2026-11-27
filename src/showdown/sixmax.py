@@ -405,6 +405,118 @@ class Spot:
         verb = "open" if self.limpers == 0 else ("raise" if self.seat == "BB" else "iso")
         return names + [f"{verb} to {x:g}" for x in self.sizes]
 
+    @property
+    def defence_seat(self) -> str:
+        """The raiser's seat that players behind defend against: the hero's."""
+        return self.seat
+
+    @property
+    def key_extra(self) -> tuple[int, ...]:
+        return ()
+
+
+# --- facing one open raise (DECISIONS 61) ---------------------------------------------
+
+OPEN_WIDTH = {"UTG": 0.15, "HJ": 0.19, "CO": 0.27, "BTN": 0.45, "SB": 0.40}
+"""Assumed modern 100 bb open widths by seat, times the opener type's open-raise ratio."""
+OPEN_SIZES = (2.5, 3.0)
+OPENER_4BET, OPENER_CALL = 0.12, 0.33
+"""Standard's opener facing a 3-bet, as shares of its open range (assumed)."""
+COLD_4BET = 0.02
+"""Players behind 4-bet a 3-bet, or call a jam, with their top 2% and fold the rest."""
+
+
+@dataclass(frozen=True)
+class Opener:
+    seat: str
+    kind: str
+    """The player type's key."""
+    width: float
+    four_bet: float
+    call: float
+    slope: float
+    """The fall in its call share per bb of 3-bet above 3× the open."""
+    fixed: str | None = None
+    """A fixed open range in place of the top `width` (tests)."""
+
+    def weights(self) -> np.ndarray:
+        if self.fixed is not None:
+            return from_text(self.fixed)
+        return from_classes(top(ALL_HANDS, self.width))
+
+
+def opener(
+    seat: str,
+    kind: str = "standard",
+    *,
+    profiles: dict[str, Profile] | None = None,
+    types: dict[str, PlayerType] | None = None,
+) -> Opener:
+    if seat not in OPEN_WIDTH:
+        raise ValueError(f"the opener is one of {', '.join(OPEN_WIDTH)}")
+    ratio = {} if kind == "standard" else (types or load_types())[kind].ratio
+    four_bet = min(1.0, OPENER_4BET * ratio.get("opener_4bet", 1.0))
+    call = min(1.0 - four_bet, OPENER_CALL * ratio.get("opener_call", 1.0))
+    width = min(1.0, OPEN_WIDTH[seat] * ratio.get("open_raise", 1.0))
+    slope = (profiles or load_profiles())["standard"].behind_slope
+    return Opener(seat, kind, width, four_bet, call, slope)
+
+
+@dataclass(frozen=True)
+class OpenSpot:
+    """The hero facing one open raise; everyone between folded, no limpers."""
+
+    seat: str
+    opener: Opener
+    size: float = 2.5
+    ante: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.seat not in SEATS or SEATS.index(self.seat) <= SEATS.index(self.opener.seat):
+            raise ValueError(f"the hero sits after the opener ({self.opener.seat})")
+        if self.size not in OPEN_SIZES:
+            raise ValueError("the open is 2.5 or 3 bb")
+        if self.ante < 0:
+            raise ValueError("the ante must be at least 0")
+
+    limpers = 0
+
+    @property
+    def posted(self) -> float:
+        return BLINDS.get(self.seat, 0.0)
+
+    @property
+    def sizes(self) -> tuple[float, ...]:
+        """The 3-bets: 3× and 4× the open."""
+        return (3 * self.size, 4 * self.size)
+
+    @property
+    def pot(self) -> float:
+        return 6 * self.ante + 1.5 + self.size - (0.5 if self.opener.seat == "SB" else 0.0)
+
+    @property
+    def dead(self) -> float:
+        """Antes, and the SB's blind when it folded before a BB hero."""
+        sb_folded = self.seat == "BB" and self.opener.seat != "SB"
+        return 6 * self.ante + (0.5 if sb_folded else 0.0)
+
+    @property
+    def defence_seat(self) -> str:
+        return self.opener.seat
+
+    @property
+    def key_extra(self) -> tuple[int, ...]:
+        return (10 + SEATS.index(self.opener.seat), zlib.crc32(self.opener.kind.encode()))
+
+    def opponents(self) -> list[tuple[str, str]]:
+        """Players behind in seat order, then the opener: the order they act after the hero."""
+        hero = SEATS.index(self.seat)
+        behind = [(s if s in BLINDS else "behind", s) for s in SEATS[hero + 1 :]]
+        return behind + [("opener", self.opener.seat)]
+
+    def action_names(self) -> list[str]:
+        return ["fold", "call", *(f"3-bet to {x:g}" for x in self.sizes), "jam"]
+
 
 @dataclass
 class Deal:
@@ -436,14 +548,17 @@ def _deal_hands(weights: list[np.ndarray], n: int, rng: np.random.Generator) -> 
     return out
 
 
-def deal(spot: Spot, profile: Profile, *, samples: int = SAMPLES, seed: int = 0) -> Deal:
-    profile = profile.for_seat(spot.seat)
+def deal(spot: Spot | OpenSpot, profile: Profile, *, samples: int = SAMPLES, seed: int = 0) -> Deal:
+    profile = profile.for_seat(spot.defence_seat)
     name = profile.deal_name or profile.name
     key = [seed, SEATS.index(spot.seat), spot.limpers, zlib.crc32(name.encode())]
-    rng = np.random.default_rng(key)
+    rng = np.random.default_rng(key + list(spot.key_extra))
     kinds, seats = zip(*spot.opponents(), strict=True)
     limp_w = profile.limp_weights()
-    weights = [limp_w if k == "limper" else ALL_HANDS for k in kinds]
+    special = {"limper": limp_w}
+    if isinstance(spot, OpenSpot):
+        special["opener"] = spot.opener.weights()
+    weights = [special.get(k, ALL_HANDS) for k in kinds]
     combos = _deal_hands(weights, samples, rng)
     m = len(kinds)
     q = np.empty((samples, m))
@@ -481,6 +596,11 @@ class Outcome:
     allin_pot: np.ndarray  # (n,) pot if the hero stacks off against the re-raise
     callers: np.ndarray  # (n, m) still in at the flop
     r: np.ndarray  # (n,) the hero's R at the flop
+    rr_ranges: list | None = None
+    """Per opponent, the class weights it re-raises (or calls an all-in) with here, when they
+    differ from `reraise_equities`' (facing an open, DECISIONS 61)."""
+    allin: bool = False
+    """The hero is all-in: there is no folding to a re-raise."""
     # Filled by `_finish` from the fields above:
     went_on: np.ndarray = None  # (n,) reached the flop with at least one opponent
     won: np.ndarray = None  # (n,) everyone folded to the hero
@@ -595,9 +715,128 @@ def _r(d: Deal, callers: np.ndarray, pot: str) -> np.ndarray:
     return np.where(oop, R[f"{pot}_oop"], R[f"{pot}_ip"])
 
 
+def _behind(p: Profile, kind: str) -> tuple[float, float]:
+    """A player behind's (3-bet, call) shares against an open, by its kind."""
+    return {
+        "behind": (p.behind_3bet, p.behind_call),
+        "SB": (p.sb_3bet, p.sb_call),
+        "BB": (p.bb_3bet, p.bb_call),
+    }[kind]
+
+
+def _first(reraise: np.ndarray) -> np.ndarray:
+    return np.where(reraise.any(axis=1), reraise.argmax(axis=1), -1)
+
+
+def _open_prior(d: Deal) -> np.ndarray:
+    """Chips each opponent has in before the hero acts: the blinds' posts, the open."""
+    return np.array([d.spot.size if k == "opener" else _prior(k) for k in d.kinds])
+
+
+def open_call_outcome(d: Deal, delta: float, squeeze: list) -> Outcome:
+    """The hero calls: players behind squeeze, overcall or fold; the opener stays in."""
+    spot, p = d.spot, d.profile
+    n, m = d.q.shape
+    size = spot.size
+    reraise = np.zeros((n, m), dtype=bool)
+    call = np.zeros((n, m), dtype=bool)
+    for o, kind in enumerate(d.kinds):
+        if kind == "opener":
+            call[:, o] = True
+            continue
+        t, c = _behind(p, kind)
+        c = min(1.0 - t, max(0.0, c - p.behind_slope * (size - 3.0) - delta))
+        reraise[:, o] = d.q[:, o] >= 1.0 - t
+        call[:, o] = (d.q[:, o] >= 1.0 - t - c) & ~reraise[:, o]
+    first = _first(reraise)
+    prior = _open_prior(d)
+    before = np.arange(m)[None, :] < first[:, None]
+    dead = np.where(call & before, size, prior[None, :])
+    rr = first >= 0
+    dead_total = dead.sum(axis=1) - np.where(rr, prior[np.maximum(first, 0)], 0.0)
+    callers = call & ~rr[:, None]
+    pot = spot.dead + size + np.where(callers, size, prior[None, :]).sum(axis=1)
+    outcome = Outcome(
+        name="",
+        cost=size - spot.posted,
+        reraiser=first,
+        raised_behind=np.zeros(n, dtype=bool),
+        pot=pot,
+        allin_pot=2 * (STACK - spot.ante) + spot.dead + dead_total,
+        callers=callers,
+        r=_r(d, callers, "limp"),
+        rr_ranges=squeeze,
+    )
+    return _finish(d, outcome)
+
+
+def open_raise_outcome(d: Deal, x: float | None, delta: float, ranges: list) -> Outcome:
+    """The hero 3-bets to x, or jams (x None). Players behind cold 4-bet (or call the jam)
+    with their top 2%; then the opener 4-bets, calls or folds (it calls a jam with its
+    4-bet range)."""
+    spot, op = d.spot, d.spot.opener
+    n, m = d.q.shape
+    reraise = np.zeros((n, m), dtype=bool)
+    opener_calls = np.zeros(n, dtype=bool)
+    for o, kind in enumerate(d.kinds):
+        q = d.q[:, o]
+        if kind != "opener":
+            reraise[:, o] = q >= 1.0 - COLD_4BET
+            continue
+        reraise[:, o] = q >= 1.0 - op.four_bet
+        if x is not None:
+            c = min(1.0 - op.four_bet, max(0.0, op.call - op.slope * (x - 3 * spot.size) - delta))
+            opener_calls = (q >= 1.0 - op.four_bet - c) & ~reraise[:, o]
+    first = _first(reraise)
+    rr = first >= 0
+    prior = _open_prior(d)
+    opener = d.kinds.index("opener")
+    callers = np.zeros((n, m), dtype=bool)
+    callers[:, opener] = opener_calls & ~rr
+    allin_pot = 2 * (STACK - spot.ante) + spot.dead + prior.sum() - prior[np.maximum(first, 0)]
+    to = STACK - spot.ante if x is None else x
+    pot = spot.dead + to + np.where(callers, to, prior[None, :]).sum(axis=1)
+    outcome = Outcome(
+        name="",
+        cost=to - spot.posted,
+        reraiser=first,
+        raised_behind=np.zeros(n, dtype=bool),
+        pot=pot,
+        allin_pot=np.where(rr, allin_pot, 0.0),
+        callers=callers,
+        r=_r(d, callers, "raise"),
+        rr_ranges=ranges,
+        allin=x is None,
+    )
+    return _finish(d, outcome)
+
+
+def open_outcome_table(d: Deal) -> dict[float, list[Outcome]]:
+    spot, p = d.spot, d.profile
+    op = spot.opener
+    open_w = op.weights()
+    squeeze = [None if k == "opener" else top(ALL_HANDS, _behind(p, k)[0]) for k in d.kinds]
+    over = [
+        top(open_w, op.four_bet) if k == "opener" else top(ALL_HANDS, COLD_4BET) for k in d.kinds
+    ]
+    jam = open_raise_outcome(d, None, 0.0, over)
+    table = {}
+    for delta in FOLD_BAND:
+        table[delta] = [
+            open_call_outcome(d, delta, squeeze),
+            *(open_raise_outcome(d, x, delta, over) for x in spot.sizes),
+            jam,
+        ]
+        for o, name in zip(table[delta], spot.action_names()[1:], strict=True):
+            o.name = name
+    return table
+
+
 def outcome_table(d: Deal) -> dict[float, list[Outcome]]:
     """Per fold shift, every action but fold, in `Spot.action_names` order. The limp is
     the same object at every shift: no fold rate applies to it."""
+    if isinstance(d.spot, OpenSpot):
+        return open_outcome_table(d)
     names = d.spot.action_names()
     if names[0] == "fold":
         names = names[1:]
@@ -685,7 +924,7 @@ def payoffs(d: Deal, hero: Hero, o: Outcome, rr_eq: np.ndarray) -> Payoffs:
         call = rr_eq[np.maximum(o.reraiser, 0)] * o.allin_pot - stack_cost > -o.cost
         called = matrix().equity[hero.cls, o.rr_villain] * o.allin_pot - stack_cost
         base = np.where(rr, np.where(call, called, -o.cost), base)
-        no_stackoff = np.where(rr, -o.cost, base)
+        no_stackoff = base if o.allin else np.where(rr, -o.cost, base)
     return Payoffs(base, flop_value, no_stackoff)
 
 
@@ -721,14 +960,28 @@ def evaluate(d: Deal, hand: int | Combo, table: dict[float, list[Outcome]]) -> A
     w = hero.weight
     if w.sum() == 0:
         raise ValueError("no deal leaves this hand possible")
-    rr_eq = reraise_equities(d, hero)
     names = d.spot.action_names()
     has_fold = names[0] == "fold"
     done: dict[int, Payoffs] = {}
+    rr_eqs: dict[int, np.ndarray] = {}
+
+    def rr_for(o: Outcome) -> np.ndarray:
+        key = id(o.rr_ranges)
+        if key not in rr_eqs:
+            if o.rr_ranges is None:
+                rr_eqs[key] = reraise_equities(d, hero)
+            else:
+                rr_eqs[key] = np.array(
+                    [
+                        0.0 if w is None or w.sum() == 0 else jam_equity(hero.combo, w, matrix())
+                        for w in o.rr_ranges
+                    ]
+                )
+        return rr_eqs[key]
 
     def pay(o: Outcome) -> Payoffs:
         if id(o) not in done:
-            done[id(o)] = payoffs(d, hero, o, rr_eq)
+            done[id(o)] = payoffs(d, hero, o, rr_for(o))
         return done[id(o)]
 
     per_shift = {delta: [pay(o) for o in table[delta]] for delta in table}
@@ -869,8 +1122,19 @@ def why(d: Deal, table: dict[float, list[Outcome]], hand: int | Combo, a: Answer
             lines.append(f"{head}: folding gives up nothing more.")
             continue
         s = action_stats(d, hand, outcomes[name])
-        if kind(name) == "raise":
-            cost = outcomes[name].cost
+        cost = outcomes[name].cost
+        if name == "jam":
+            lines.append(
+                f"{head}: everyone folds {s['fold_all']:.0%} (you take the {pot:g} bb pot); "
+                f"called {s['reraised']:.0%}, all in for {cost:g} bb."
+            )
+        elif name == "call":
+            lines.append(
+                f"{head}: you pay {cost:g} bb into {pot:g} ({cost / (cost + pot):.0%} of the "
+                f"pot after you call); squeezed {s['reraised']:.0%} (you stack off or fold); "
+                f"otherwise you see a flop with {s['equity']:.0%} equity."
+            )
+        elif kind(name) == "raise":
             lines.append(
                 f"{head}: everyone folds {s['fold_all']:.0%} (you take the {pot:g} bb pot); "
                 f"called {s['went_on']:.0%}, with {s['equity']:.0%} equity against the "
@@ -935,8 +1199,11 @@ def share_of_hands(class_weights: np.ndarray) -> float:
 
 
 def kind(action: str) -> str:
-    """fold, limp (limp, overlimp, complete, check) or raise."""
-    return "fold" if action == "fold" else ("raise" if " to " in action else "limp")
+    """fold, limp (limp, overlimp, complete, check), call (facing an open) or raise (any
+    raise, the jam included)."""
+    if action in ("fold", "call"):
+        return action
+    return "raise" if " to " in action or action == "jam" else "limp"
 
 
 def describe_spot(spot: Spot, p: Profile, hand: str) -> list[str]:
@@ -1016,6 +1283,38 @@ def describe_spot(spot: Spot, p: Profile, hand: str) -> list[str]:
         f"  Sizes move fold rates by {p.iso_slope:+.3f} (limpers) and {p.behind_slope:+.3f} "
         "(players behind) per bb away from the middle size."
     )
+    return lines
+
+
+def describe_open(spot: OpenSpot, p: Profile, hand: str, opener_name: str) -> list[str]:
+    """The spot facing an open, the opener's range and answers, and the players behind.
+    `p` is the table's profile, already `for_seat` the opener's seat."""
+    op = spot.opener
+    ante = f"ante {spot.ante:g} from everyone" if spot.ante else "no ante"
+    open_w = op.weights()
+    lines = [
+        f"{spot.seat} with {hand}: {op.seat} opens to {spot.size:g} bb; 100 bb, blinds 0.5/1, "
+        f"{ante} ({spot.pot:g} bb in)",
+        f"Opener: {opener_name}. Players behind: {p.name}. Assumed, not measured on your "
+        "players (DECISIONS 61).",
+        "",
+        "Assumed ranges",
+        f"  The opener: {share_of_hands(class_mass(open_w) / CLASS_SIZES):.1%} of hands "
+        f"({OPEN_WIDTH[op.seat]:.0%} assumed for {op.seat}, times its type's open ratio): "
+        f"{range_text(class_mass(open_w) / CLASS_SIZES)}",
+        f"    facing your 3-bet to {3 * spot.size:g}: 4-bets {op.four_bet:.0%} of its range "
+        f"({range_text(top(open_w, op.four_bet))}), calls {op.call:.0%} (less "
+        f"{op.slope:.3f} per bb above that size), folds the rest; it calls a jam with its "
+        "4-bet range",
+    ]
+    for kind_, seat in spot.opponents()[:-1]:
+        t, c = _behind(p, kind_)
+        c = min(1.0 - t, max(0.0, c - p.behind_slope * (spot.size - 3.0)))
+        lines.append(
+            f"  {seat}, if you call: squeezes {t:.0%} "
+            f"({range_text(top(ALL_HANDS, t))}), overcalls {c:.0%}; facing your 3-bet or jam, "
+            f"continues with its top {COLD_4BET:.0%} only"
+        )
     return lines
 
 
