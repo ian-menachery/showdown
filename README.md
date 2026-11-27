@@ -46,17 +46,29 @@ showdown play                                   # trainer and Leduc in your brow
 showdown analyze path/to/hands                  # PHH files, or PokerStars .txt exports
 showdown advise --hero AsKd --seat sb --stack 10   # live advisor V1: push/fold preflop, equity helper postflop
 showdown sixmax BTN A5s --limpers 2 --ante 0.5 --profile loose-passive   # six-max spot: ranges, EVs, tier
-showdown sixmax drill --count 20                # six-max practice spots, graded by kind of action
+showdown sixmax BTN KJo --limpers 1 --limpers-type station --table-type nit   # against player types
+showdown sixmax drill --count 20                # practice spots against player types, Best to Blunder
 showdown sixmax review path/to/hands --player NAME   # completed six-max hands, graded by spot
+showdown pushfold exploit 10 --villain-type lag --hero bb   # tournament-style push/fold, no ICM
 ```
+
+**The product is now an exploit trainer and a leak finder** (DECISIONS 59; roadmap in
+[`docs/plan-sixmax-trainer.md`](docs/plan-sixmax-trainer.md)). It is study only: nothing
+runs during a hand.
 
 `showdown sixmax` is a study tool for six-max cash spots at 100 bb: unopened
 pots and pots with 1 to 3 limpers, with or without a 0.5 bb ante from every
-player. It is an EV calculator against assumed opponent profiles, not a solver.
-`showdown sixmax drill` deals practice spots from it and grades the kind of
-action you pick (DECISIONS 55, Gate K). `showdown sixmax review` grades a
-player's first preflop decision in completed six-handed hands the same way, and
-lists recurring leaks (DECISIONS 58, Gate W).
+player. It is an EV calculator against assumed opponents, not a solver. The
+opponents are player types (Nit, TAG, LAG, Maniac, Weak-tight rec, Calling
+station, standard), one for the limpers and one for the table, fitted to 2009
+online hands ([`docs/sixmax-types.md`](docs/sixmax-types.md), DECISIONS 60).
+`showdown sixmax drill` deals practice spots from it, asks for the action and its
+size, and grades it on GTO Wizard's scale (Best, Correct, Inaccuracy, Wrong,
+Blunder) by EV lost as a % of the pot, with a "why" from the engine's numbers.
+An answer that wins somewhere in the engine's assumption band is never below
+Correct. `showdown sixmax review` grades a
+player's first preflop decision in completed six-handed hands by kind of action,
+and lists recurring leaks (DECISIONS 58, Gate W).
 [`docs/sixmax-preflop.md`](docs/sixmax-preflop.md) says what it can and cannot be
 trusted for (DECISIONS 53, 54 and 57, Gates M, M2 and M4).
 

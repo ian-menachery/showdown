@@ -52,7 +52,7 @@ def test_a_session_logs_and_sums(tmp_path) -> None:
             reply = "r"  # the BB has no fold
         return reply
 
-    summary = D.run(trainer, 10, log_dir=tmp_path, ask=ask, show=shown.append)
+    summary = D.run(trainer, 10, log_dir=tmp_path, ask=ask, show=shown.append, sizes=False)
     text = "\n".join(shown)
     assert "Answer" in text and "Drill 4 of 10" in text and "Session: 3 drills" in text
     with open(summary["log"], encoding="utf-8") as f:
@@ -65,12 +65,55 @@ def test_a_session_logs_and_sums(tmp_path) -> None:
         assert r["grade"] == "good" or r["bb_lost"] >= 0
 
 
+def test_a_sized_session_with_types(tmp_path) -> None:
+    """DECISIONS 60: sizes asked, the new scale, both types logged, the why shown."""
+    trainer = D.Trainer(
+        S.load_profiles()["standard"], samples=1_500, seed=3, types=True, table_type="nit"
+    )
+    shown = []
+
+    def ask(prompt: str) -> str:
+        a = trainer.last.answer
+        raises = [n for n in a.actions if " to " in n]
+        return "r" + raises[-1].split(" to ")[1] if len(shown) % 2 else "l"
+
+    summary = D.run(trainer, 4, log_dir=tmp_path, ask=ask, show=shown.append)
+    text = "\n".join(shown)
+    assert "Table: Nit (" in text and "bb:" in text and "Session: 4 drills" in text
+    with open(summary["log"], encoding="utf-8") as f:
+        rows = [json.loads(line) for line in f]
+    assert len(rows) == 4 and all(r["table_type"] == "nit" for r in rows)
+    assert all(r["grade"] in S.LABELS and r["action"] in r["ev"] for r in rows)
+    assert sum(summary["grades"].values()) == 4
+    assert summary["bb_lost"] == pytest.approx(sum(r["bb_lost"] for r in rows))
+    p = S.compose(rows[0]["limpers_type"], "nit")
+    a = S.answer(
+        S.Spot(rows[0]["seat"], rows[0]["limpers"], rows[0]["ante"]),
+        p,
+        S.parse_hand(rows[0]["class"]),
+        samples=1_500,
+    )
+    assert (
+        S.grade(
+            a, rows[0]["action"], S.Spot(rows[0]["seat"], rows[0]["limpers"], rows[0]["ante"]).pot
+        ).label
+        == rows[0]["grade"]
+    )
+    assert D._prompt_sizes(_answer([]))[1] == {
+        "f": "fold",
+        "l": "limp",
+        "c": "limp",
+        "2.5": "open to 2.5",
+        "3": "open to 3",
+    }
+
+
 def test_the_command(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.setattr(D, "LOG_DIR", tmp_path)
-    monkeypatch.setattr("builtins.input", lambda prompt: "r")
+    monkeypatch.setattr("builtins.input", lambda prompt: "l")
     assert main(["sixmax", "drill", "--count", "2", "--samples", "1500", "--seed", "5"]) == 0
     out = capsys.readouterr().out
-    assert "Drill 2 of 2" in out and "Session: 2 drills" in out
+    assert "Drill 2 of 2" in out and "Session: 2 drills" in out and "Table: " in out
     assert len(list(tmp_path.glob("*.jsonl"))) == 1
     with pytest.raises(SystemExit, match="give a hand"):
         main(["sixmax", "BTN"])

@@ -40,7 +40,9 @@ def _session(tmp_path, name: str, choose) -> tuple[list[dict], dict]:
     def ask(prompt: str) -> str:
         return KEY[choose(trainer.last.answer)]
 
-    summary = D.run(trainer, DRILLS, log_dir=tmp_path / name, ask=ask, show=lambda s: None)
+    summary = D.run(
+        trainer, DRILLS, log_dir=tmp_path / name, ask=ask, show=lambda s: None, sizes=False
+    )  # Gate K was scored on DECISIONS 55's kind-only drill (DECISIONS 60 keeps it)
     with open(summary["log"], encoding="utf-8") as f:
         rows = [json.loads(line) for line in f]
     return rows, summary

@@ -226,6 +226,16 @@ def _pushfold_exploit(args: argparse.Namespace) -> int:
 
     solution = pushfold.PushFoldSolution.load(args.file)
     matrix = preflop_matrix.PreflopMatrix.load(solution.matrix_path)
+    if args.villain_type:
+        from showdown.exploit import type_exploit
+        from showdown.sixmax import load_types, type_card
+
+        kind = load_types()[args.villain_type]
+        e = type_exploit(solution, matrix, args.stack, args.hero, kind)
+        print("Tournament-style push/fold, no ICM (DECISIONS 60).")
+        print("Villain: " + type_card(kind))
+        print(report(e))
+        return 0
     try:
         e = exploit(
             solution,
@@ -755,9 +765,18 @@ def _sixmax(args: argparse.Namespace) -> int:
         hand = S.parse_hand(args.hand[0])
     except ValueError as exc:
         raise SystemExit(str(exc)) from None
-    p = S.load_profiles()[args.profile].for_seat(spot.seat)
+    cards = []
+    if args.limpers_type or args.table_type:
+        lt, tt = args.limpers_type or "standard", args.table_type or "standard"
+        types = S.load_types()
+        p = S.compose(lt, tt, types=types).for_seat(spot.seat)
+        if spot.limpers:
+            cards.append("Limpers: " + S.type_card(types[lt]))
+        cards.append("Table: " + S.type_card(types[tt]))
+    else:
+        p = S.load_profiles()[args.profile or "standard"].for_seat(spot.seat)
     a = S.answer(spot, p, hand, samples=args.samples, seed=args.seed)
-    print("\n".join(S.describe_spot(spot, p, a.hand)))
+    print("\n".join(S.describe_spot(spot, p, a.hand) + cards))
     print()
     print("\n".join(S.describe_answer(a, args.samples, args.seed)))
     return 0
@@ -767,8 +786,21 @@ def _drill(args: argparse.Namespace) -> int:
     from showdown import sixmax as S
     from showdown import sixmax_drill as D
 
-    profile = S.load_profiles()[args.profile]
-    trainer = D.Trainer(profile, ante=args.ante, samples=args.samples, seed=args.seed)
+    profiles = S.load_profiles()
+    if args.profile:  # one profile for the whole table, no player types
+        trainer = D.Trainer(
+            profiles[args.profile], ante=args.ante, samples=args.samples, seed=args.seed
+        )
+    else:
+        trainer = D.Trainer(
+            profiles["standard"],
+            ante=args.ante,
+            samples=args.samples,
+            seed=args.seed,
+            types=True,
+            limpers_type=args.limpers_type,
+            table_type=args.table_type,
+        )
     D.run(trainer, args.count, log_dir=D.LOG_DIR)
     return 0
 
@@ -781,9 +813,9 @@ def _review(args: argparse.Namespace) -> int:
     if not args.player or not args.hand:
         raise SystemExit("give hand files or folders and --player NAME, the player to grade")
     parsed = load(args.hand)
-    profile = S.load_profiles()[args.profile]
+    profile = S.load_profiles()[args.profile or "standard"]
     decisions = V.review(parsed.records, args.player, profile, samples=args.samples, seed=args.seed)
-    print("\n".join(V.describe(parsed, V.summarize(decisions), args.player, args.profile)))
+    print("\n".join(V.describe(parsed, V.summarize(decisions), args.player, profile.name)))
     return 0
 
 
@@ -854,6 +886,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     read.add_argument(
         "--villain-jams", type=float, metavar="N", help="you are the BB; the SB jams the top N%%"
+    )
+    read.add_argument(
+        "--villain-type",
+        choices=["standard", "nit", "tag", "lag", "maniac", "weak-tight", "station"],
+        help="a player type's width (DECISIONS 60); tournament-style, no ICM",
+    )
+    pf_exploit.add_argument(
+        "--hero", choices=["sb", "bb"], default="sb", help="with --villain-type: your seat"
     )
     pf_exploit.add_argument("--file", default=pushfold.DEFAULT_SOLUTION)
     pf_exploit.set_defaults(handler=_pushfold_exploit)
@@ -1042,10 +1082,16 @@ def build_parser() -> argparse.ArgumentParser:
     six.add_argument(
         "--profile",
         choices=["standard", "tight", "regular", "loose-passive"],
-        default="standard",
-        help="standard: blinds defend like a modern chart, limpers are loose-passive "
-        "(DECISIONS 54, 57); the others are fitted to 2009 online hands",
+        help="one profile for the whole table (default standard): blinds defend like a modern "
+        "chart, limpers are loose-passive (DECISIONS 54, 57); the others are fitted to 2009 "
+        "online hands. Drills without it draw player types",
     )
+    for role in ("limpers", "table"):
+        six.add_argument(
+            f"--{role}-type",
+            choices=["standard", "nit", "tag", "lag", "maniac", "weak-tight", "station"],
+            help=f"the {role}' player type (DECISIONS 60); drills draw one at random if unset",
+        )
     six.add_argument("--samples", type=int, default=40_000)
     six.add_argument("--seed", type=int, default=0)
     six.set_defaults(handler=_sixmax)

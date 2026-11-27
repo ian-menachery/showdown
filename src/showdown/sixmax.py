@@ -159,6 +159,8 @@ class Profile:
     """A fixed limp range in place of the band below the open-raise range (tests)."""
     by_seat: dict = field(default_factory=dict, compare=False)
     """Hero seat -> rates that replace the profile's when the hero sits there (DECISIONS 54)."""
+    deal_name: str = ""
+    """Seeds the deals in place of the name (DECISIONS 60: composed profiles, by limper type)."""
 
     def limp_weights(self) -> np.ndarray:
         if self.limp_range is not None:
@@ -244,6 +246,108 @@ def load_profiles(
     }
     out["standard"] = standard(out["regular"], out[standard_limpers])
     return out
+
+
+# --- player types (DECISIONS 60) ------------------------------------------------
+
+TYPES_PATH = ROOT / "data" / "sixmax_types.json"
+TYPE_KEYS = ("standard", "nit", "tag", "lag", "maniac", "weak-tight", "station")
+TABLE_RATES = tuple(r for r in RATES if r not in LIMPER_RATES)
+CAPS = (  # (raise share, the share that continues without raising)
+    ("behind_3bet", "behind_call"),
+    ("sb_3bet", "sb_call"),
+    ("bb_3bet", "bb_call"),
+    ("limp_raise", "overlimp"),
+    ("sb_limp_raise", "sb_complete"),
+)
+
+
+@dataclass(frozen=True)
+class PlayerType:
+    key: str
+    name: str
+    rates: dict = field(default_factory=dict)
+    """The group's fitted 2009 rates (the pooled one where the group is thin)."""
+    source: dict = field(default_factory=dict)
+    ratio: dict = field(default_factory=dict)
+    """Rate -> the type's rate over the pooled "all" rate; empty (all 1) for standard."""
+    card: dict = field(default_factory=dict)
+    players: int = 0
+
+
+def load_types(path: str | Path = TYPES_PATH) -> dict[str, PlayerType]:
+    """ "standard" and the six fitted types, in `TYPE_KEYS` order."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))["types"]
+    pool = data["all"]["rates"]
+    out = {"standard": PlayerType("standard", "Standard")}
+    for key in TYPE_KEYS[1:]:
+        t = data[key]
+        rates = dict(t["rates"])
+        ratio = {r: rates[r] / pool[r] if pool[r] else 1.0 for r in pool}
+        pool_defend = pool["bb_call"] + pool["bb_3bet"]
+        ratio["bb_defend"] = (rates["bb_call"] + rates["bb_3bet"]) / pool_defend
+        out[key] = PlayerType(key, t["name"], rates, t["source"], ratio, t["card"], t["players"])
+    return out
+
+
+def _scale(rates: dict, ratio: dict) -> dict:
+    """Each rate times its ratio, clipped so that every action's shares stay valid."""
+    out = {r: v * ratio.get(r, 1.0) for r, v in rates.items()}
+    for t, c in CAPS:
+        if t in out:
+            out[t] = min(1.0, out[t])
+        if c in out:
+            out[c] = min(1.0 - out.get(t, 0.0), out[c])
+    if "bb_limp_raise" in out:
+        out["bb_limp_raise"] = min(1.0, out["bb_limp_raise"])
+    return out
+
+
+def compose(
+    limpers: str,
+    table: str,
+    *,
+    profiles: dict[str, Profile] | None = None,
+    types: dict[str, PlayerType] | None = None,
+) -> Profile:
+    """A spot's opponents: limper rates from the limper type, the others standard's times
+    the table type's ratios (DECISIONS 60). Standard and standard is the standard profile."""
+    std = (profiles or load_profiles())["standard"]
+    if limpers == table == "standard":
+        return std
+    types = types or load_types()
+    lim, tab = types[limpers], types[table]
+    rates = _scale({r: getattr(std, r) for r in TABLE_RATES}, tab.ratio)
+    by_seat = {seat: _scale(v, tab.ratio) for seat, v in std.by_seat.items()}
+    source = dict(std.source)
+    if table != "standard":
+        source |= {r: f"{std.source.get(r, 'fitted')} × {tab.name}" for r in TABLE_RATES}
+    if limpers != "standard":
+        rates |= {r: lim.rates[r] for r in LIMPER_RATES}
+        source |= {r: f"{lim.source.get(r, 'fitted')}, {lim.name}" for r in LIMPER_RATES}
+    return replace(
+        std,
+        name=f"{lim.name} limpers, {tab.name} table",
+        deal_name="standard" if limpers == "standard" else f"{limpers} limpers",
+        source=source,
+        by_seat=by_seat,
+        **rates,
+    )
+
+
+def type_card(t: PlayerType) -> str:
+    """The trait card: the group's fitted numbers (DECISIONS 60)."""
+    if t.key == "standard":
+        return (
+            "Standard: blinds defend like a modern 100 bb chart; limpers are loose-passive "
+            "(DECISIONS 54, 57)"
+        )
+    c = {k: "-" if v is None else f"{v:.0%}" for k, v in t.card.items()}
+    return (
+        f"{t.name} ({t.players:,} players, 2009 online): VPIP {c['vpip']}, PFR {c['pfr']}, "
+        f"limps {c['limp']}, folds to an iso {c['iso_fold']}, 3-bets {c['three_bet']}, "
+        f"BB defends {c['bb_defence']}"
+    )
 
 
 # --- spots and deals ------------------------------------------------------------
@@ -334,7 +438,8 @@ def _deal_hands(weights: list[np.ndarray], n: int, rng: np.random.Generator) -> 
 
 def deal(spot: Spot, profile: Profile, *, samples: int = SAMPLES, seed: int = 0) -> Deal:
     profile = profile.for_seat(spot.seat)
-    key = [seed, SEATS.index(spot.seat), spot.limpers, zlib.crc32(profile.name.encode())]
+    name = profile.deal_name or profile.name
+    key = [seed, SEATS.index(spot.seat), spot.limpers, zlib.crc32(name.encode())]
     rng = np.random.default_rng(key)
     kinds, seats = zip(*spot.opponents(), strict=True)
     limp_w = profile.limp_weights()
@@ -690,6 +795,97 @@ def answer(
     return evaluate(d, hand, outcome_table(d))
 
 
+# --- grades on GTO Wizard's scale (DECISIONS 60) ------------------------------------
+
+LABELS = ("Best", "Correct", "Inaccuracy", "Wrong", "Blunder")
+CUTS = ((3.0, "Correct"), (10.0, "Inaccuracy"), (25.0, "Wrong"))
+"""The most EV lost, in % of the pot before acting, for each label below Best."""
+
+
+@dataclass(frozen=True)
+class Grade:
+    label: str
+    lost: float
+    """bb behind the best action at the base point."""
+    pct: float
+    """`lost` as a % of the pot before acting."""
+
+
+def grade_ev(
+    ev: dict[str, float],
+    best: str,
+    action: str,
+    pot: float,
+    *,
+    band_winners: set[str] | frozenset = frozenset(),
+    size_only: bool = False,
+) -> Grade:
+    """Best: within TIE of the best, or of the best's kind when only the size is close.
+    An action that wins at some band point is at least Correct. Otherwise by `CUTS`."""
+    lost = float(ev[best] - ev[action])
+    pct = 100.0 * lost / pot
+    if lost <= TIE or (size_only and kind(action) == kind(best)):
+        label = "Best"
+    elif action in band_winners:
+        label = "Correct"
+    else:
+        label = next((name for cut, name in CUTS if pct <= cut), "Blunder")
+    return Grade(label, lost, pct)
+
+
+def grade(a: Answer, action: str, pot: float) -> Grade:
+    winners = {w for _, _, w in a.flips}
+    size_only = bool(winners) and all(kind(w) == kind(a.best) for w in winners)
+    ev = dict(zip(a.actions, (float(e) for e in a.ev), strict=True))
+    return grade_ev(ev, a.best, action, pot, band_winners=winners, size_only=size_only)
+
+
+def action_stats(d: Deal, hand: int | Combo, o: Outcome) -> dict[str, float]:
+    """For one action at the base point: how often everyone folds, the hand goes on, it is
+    re-raised or raised behind, and the hero's equity when it goes on. A private random
+    stream picks the hero's combos, so `d` is not touched."""
+    hero = hero_hand(replace(d, rng=np.random.default_rng(0)), hand)
+    w = hero.weight / hero.weight.sum()
+    went = (w * o.went_on).sum()
+    share = (w * o.went_on * _share(hero, o)).sum()
+    return {
+        "fold_all": float((w * o.won).sum()),
+        "went_on": float(went),
+        "equity": float(share / went) if went > 0 else 0.0,
+        "reraised": float((w * (o.reraiser >= 0)).sum()),
+        "raised_behind": float((w * o.raised_behind).sum()),
+    }
+
+
+def why(d: Deal, table: dict[float, list[Outcome]], hand: int | Combo, a: Answer, action: str):
+    """Deterministic lines from the engine's numbers: the best action, then the answer."""
+    ev = dict(zip(a.actions, a.ev, strict=True))
+    outcomes = {o.name: o for o in table[0.0]}
+    pot = d.spot.pot
+    lines = []
+    for name in dict.fromkeys([a.best, action]):
+        head = f"{name} {ev[name]:+.2f} bb"
+        if name == "fold":
+            lines.append(f"{head}: folding gives up nothing more.")
+            continue
+        s = action_stats(d, hand, outcomes[name])
+        if kind(name) == "raise":
+            cost = outcomes[name].cost
+            lines.append(
+                f"{head}: everyone folds {s['fold_all']:.0%} (you take the {pot:g} bb pot); "
+                f"called {s['went_on']:.0%}, with {s['equity']:.0%} equity against the "
+                f"callers; re-raised {s['reraised']:.0%}. You risk {cost:g} bb to win "
+                f"{pot:g}, so a pure bluff needs {cost / (cost + pot):.0%} folds."
+            )
+        else:
+            lines.append(
+                f"{head}: someone raises behind {s['raised_behind']:.0%} (you fold, so the "
+                f"limp EV is a floor); otherwise you see a flop with {s['equity']:.0%} "
+                "equity."
+            )
+    return lines
+
+
 # --- showing ranges ---------------------------------------------------------------
 
 
@@ -758,16 +954,25 @@ def describe_spot(spot: Spot, p: Profile, hand: str) -> list[str]:
         f"{spot.limpers} limper{'s' * (spot.limpers != 1)} ahead" if spot.limpers else "unopened"
     )
     ante = f"ante {spot.ante:g} from everyone" if spot.ante else "no ante"
-    origin = (
-        "the regular profile, with players behind defending like a modern 100 bb chart "
-        "and limpers from the loose-passive profile (DECISIONS 54, 57)"
-        if p.name == "standard"
-        else "fitted to 2009 online 6-max hands (docs/sixmax-profiles.md)"
-    )
+    if p.name == "standard":
+        who = (
+            "standard, one profile for the whole table: the regular profile, with players "
+            "behind defending like a modern 100 bb chart and limpers from the loose-passive "
+            "profile (DECISIONS 54, 57)"
+        )
+    elif p.name.endswith(" table"):
+        who = (
+            f"{p.name}: player types (DECISIONS 60). Limpers use their type's 2009 rates; "
+            "everyone else plays standard's rates scaled by the table type (docs/sixmax-types.md)"
+        )
+    else:
+        who = (
+            f"{p.name}, one profile for the whole table: fitted to 2009 online 6-max hands "
+            "(docs/sixmax-profiles.md)"
+        )
     lines = [
         f"{spot.seat} with {hand}: {limpers}, 100 bb, blinds 0.5/1, {ante} ({spot.pot:g} bb in)",
-        f"Opponents: {p.name}, one profile for the whole table: {origin}. "
-        "Assumed, not measured on your players.",
+        f"Opponents: {who}. Assumed, not measured on your players.",
         "",
         "Assumed ranges",
     ]
