@@ -1686,3 +1686,36 @@ master session on 2026-11-27.
 ```
 .venv\Scripts\python -m pytest tests/test_gate_z.py tests/test_gate_z_slow.py -m "slow or not slow" -s -rx
 ```
+
+## Gate U: the trainer page in `showdown play`: PASS (2026-11-27)
+
+Evidence:
+- `tests/test_gate_u.py` (fast suite);
+- `tests/test_gate_u_slow.py` (`-m "slow or not slow"`): bars 1 to 3;
+- bar 4 in the browser through the preview tools;
+- the code at db7aa21.
+
+The bars were pre-registered in DECISIONS 62 at 6a9b430, before the session, page or lesson
+code. The page was tried in the browser once before the commit. Gate U was scored once, at
+db7aa21. `py gate.py` printed `GATE PASS` in 266 s. Gates K and Y's slow tests were re-run
+once and printed every number as recorded.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Grades through the API | 300 drills over HTTP (seed 20261128, answers uniform, seed 7): facing an open 106, six-max 107, push/fold 87. 0 mismatches against fresh answers; the API's results equal the log's; bb and % gaps 0 | all match; each family ≥ 50 | PASS |
+| 2. Latency | `/api/hand` round trip, first deals included: median 0.11 s, 95th percentile 0.38 s, max 0.70 s | median ≤ 2 s, p95 ≤ 5 s | PASS |
+| 3. The log | 300 lines; summary Best 101, Correct 38, Inaccuracy 20, Wrong 50, Blunder 91, bb lost 346.772, equal to the lines' sums | exact; bb to 1e-9 | PASS |
+| 4. The browser | `showdown play` via `.claude/launch.json` (port 8766), `/trainer`. One drill per family, each with a graded result card: six-max (CO, A4o, unopened: open to 2.5, Best, "Steal from tight blinds"); facing an open (SB, 93o, UTG opens, ante 0.5: 3-bet to 7.5, Inaccuracy, 0.51 bb, 7.3% of the pot, with the Gate Z note); push/fold (BB, 11 bb, Q9s against a Maniac's jam: call, Best). No console errors. Screenshot taken | all three graded | PASS |
+
+**Reported, not gated:** labels by family:
+
+| Family | Best | Correct | Inaccuracy | Wrong | Blunder |
+|---|---|---|---|---|---|
+| Six-max | 36 | 12 | 12 | 17 | 30 |
+| Facing an open | 29 | 14 | 8 | 20 | 35 |
+| Push/fold | 36 | 12 | 0 | 13 | 26 |
+
+**Rerun** (about 2 minutes):
+```
+.venv\Scripts\python -m pytest tests/test_gate_u.py tests/test_gate_u_slow.py -m "slow or not slow" -s
+```

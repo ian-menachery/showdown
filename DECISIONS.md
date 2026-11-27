@@ -4561,3 +4561,122 @@ pass.
 - serving beyond 127.0.0.1;
 - any live use;
 - committing drill logs.
+
+---
+
+### 63. Trainer step 4: the leak finder on PokerStars exports, with opponent typing; Gate W2 pre-registered (2026-11-27)
+
+**Decided.** Step 4 of the roadmap (DECISIONS 59). It extends DECISIONS 58's review. Ian's
+up-front decisions 9 to 12 of 2026-11-26 set the Review tab, the typing and the leak groups.
+SCOPE A23. Study only, as A13 and A18:
+- completed hands from files a site lets you download;
+- never during a session, never a watched folder;
+- hand histories never committed.
+
+**Classification.** DECISIONS 58's classifier gains the pots facing one open raise
+(`opens=True`).
+- **Facing an open:** exactly one raise came before the player's first action, with no
+  limper before it, and nobody called it before the player. The opener (UTG to SB) is the
+  raiser.
+- **The open's size** in bb, from 2 to 3.5, maps to the nearer of 2.5 and 3; a tie goes to 3.
+- **Its skip causes** replace "raised before you" (cause 6) with three, in this order:
+  - "raised before you": two or more raises, or a raise after a limper;
+  - "open called before you";
+  - "open size": the open is outside 2 to 3.5 bb.
+- **The answer** is an engine action:
+  - a fold is fold;
+  - a call is call;
+  - a raise is the jam when it is all in or at least 40 bb, else the 3-bet to 3× when
+    raise-to ÷ open ≤ 3.5, else to 4×.
+- **In unopened and limped pots** a raise maps to the nearest of the spot's three sizes,
+  with a tie to the smaller. A limp or check is the spot's limp action.
+
+**Opponent typing,** over every hand in the files, per player name:
+- **The stats:**
+  - VPIP and PFR, as shares of the hands the player was dealt into;
+  - limp %: limps first in, over the chances to act first in (not a blind, everyone before
+    folded);
+  - fold to iso: folds, over the chances where the player limped and next faced exactly one
+    raise.
+- **The type:** with at least 30 hands, the nearest of the six fitted types (DECISIONS 60).
+  The distance is Euclidean, in percentage points, against the type cards' VPIP, PFR, limp
+  % and fold to iso. A stat with no chances is left out; ties go by `TYPE_KEYS` order. With
+  fewer than 30 hands, the type is standard.
+- **Per decision:**
+  - the limper type is the most common among that hand's limpers;
+  - the opener type is the opener's;
+  - the table type is the most common among the players to act after the player, or
+    standard when there are none;
+  - ties go to the earliest in seat order.
+
+**Grades:** DECISIONS 60's scale. The answer is graded against the composed profile, and the
+opener when facing an open. It is cached per spot, types and class, and equals a fresh
+answer.
+
+**The report** (`showdown sixmax review`, and the page's Review tab):
+- **coverage:** files, hands parsed and failed, hands with the player, decisions graded by
+  family, skips by cause;
+- labels in all and by family, and bb lost;
+- **opponents:** players typed, by type, and how many fell back to standard;
+- **leaks:** Inaccuracy, Wrong and Blunder decisions, grouped by family, seat, opponent type
+  (limped: the limpers'; unopened: the table's; facing an open: the opener's), and the
+  answer's kind against the best kind. A group needs at least 3 decisions. The top 5 by bb
+  lost each show their count, bb lost, labels, up to 5 hands (largest loss first) and their
+  lesson card (`lessons.lesson_for`).
+
+**The Review tab** (decision 9):
+- a file picker for a PokerStars export;
+- the text is posted to `/api/review` on 127.0.0.1 only, up to 20 MB for this route, parsed
+  in memory and never saved;
+- the player is the one with known hole cards in the most hands, unless a name is given.
+
+**Gate W2,** recorded before the fixture or any review code. It passes when bars 1 to 5 pass.
+1. **The fixture,** `tests/fixtures/sixmax_review_w2/`, written by a generator script before
+   any review code and committed in its own commit:
+   - fictional six-handed hands, as PHH plus one PokerStars file;
+   - at least 40 hands. Four opponents with designed tendencies play at least 30 of them;
+     two play fewer than 30;
+   - at least 15 facing-an-open decisions for Hero, graded and skipped (each new cause at
+     least once), plus unopened and limped ones;
+   - labels computed by the generator from its own construction, by its own counts: each
+     hand's family, spot, open bucket, engine action and class, or its skip cause; each
+     player's stats and type.
+
+   The bar: every hand's classification, every player's stats (to 1e-12) and every type
+   equal the labels.
+2. **Grades:** every graded fixture decision equals one worked out in the test from a fresh
+   answer under the composed profile (and opener), by DECISIONS 60's rule. The label, best
+   action and tier must match, and the bb lost to 1e-9.
+3. **The report:** the counts by label and family, the bb lost, and each leak's count and bb
+   equal the sums over the decisions, to 1e-9. Every leak names a lesson card that exists.
+4. **Gate W unchanged:** Gate W's fast and slow tests pass with the review pinned to
+   DECISIONS 58's kind scale and classifier (`scale="kind"`, `opens=False`).
+5. **The Review tab,** in the browser through the preview tools, reviews the fixture's
+   PokerStars file and shows the report. Recorded in GATES.md; not an automated test.
+
+**Reported, not gated:** the new review on Pluribus's 10,000 hands (coverage by cause,
+labels, top leaks, run time).
+
+**Waiting on Ian, not a bar:** his own export, with coverage by cause and 5 hands per top
+leak checked by him.
+
+**The order:**
+1. This entry and SCOPE A23, committed and pushed.
+2. The fixture generator, the fixture and its labels, committed on their own.
+3. The classifier, typing, grading, report, CLI, Review tab and tests.
+4. Gate W2 scored once and recorded. A failing bar gets one reproduce-and-fix, for a bug
+   only.
+
+**Decided without Ian (2026-11-27),** each the reversible option:
+- the open-size window and buckets, the 40 bb jam line, and the 3.5 ratio between the 3-bet
+  sizes;
+- the stats' definitions, ties, and the type per decision by majority;
+- a generated fixture, its labels counted by the generator;
+- the top 5 leaks; the gate's name, W2.
+
+**Rules out:**
+- watching a folder, or reading hands during a session;
+- any ClubWPT file the site does not itself export;
+- committing any real hand history;
+- 3-bet pots where the player opened and faces a 3-bet;
+- a profile per player beyond the type.
