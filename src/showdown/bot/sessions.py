@@ -7,12 +7,23 @@ is over.
 
 from __future__ import annotations
 
+import json
 import random
+import time
+from collections import Counter
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 
+import numpy as np
+
+from showdown import lessons
+from showdown import sixmax as S
+from showdown import sixmax_drill as D
 from showdown.bot.policy import Grade, LeducStrategy, PushFoldStrategy, act
 from showdown.engine.pokerkit_adapter import HandResult, PushFoldHand, deal_cards
-from showdown.equity.cards import CLASS_NAMES, card_str
+from showdown.equity.cards import ALL_COMBOS, CLASS_NAMES, card_str, cards_str, class_of
+from showdown.exploit import typed_spot
 from showdown.games.base import CHANCE, TERMINAL
 from showdown.games.leduc import CALL, DECK, FOLD, RAISE, LeducState, card_name
 
@@ -285,3 +296,334 @@ class LeducSession:
                 "folded": state.folded is not None,
             }
         return view
+
+
+# --- the trainer page (DECISIONS 62) ------------------------------------------------
+
+FAMILIES = ("sixmax", "open", "pushfold")
+FAMILY_NAMES = {
+    "sixmax": "Six-max, unopened or limped",
+    "open": "Six-max, facing an open",
+    "pushfold": "Push/fold, tournament-style (no ICM)",
+}
+PUSHFOLD_DEPTHS = (2, 20)
+GATE_Z_NOTE = (
+    "Facing an open, 3-bet bluffs are overrated here (Gate Z FAIL, bar 3): trust fold, call "
+    "and value 3-bets with strong hands; fold where it 3-bets trash."
+)
+
+
+@dataclass
+class _Drill:
+    family: str
+    combo: tuple
+    spot: object
+    """A sixmax `Spot` or `OpenSpot`, or an `exploit.TypedSpot`."""
+    drill: D.Drill | None = None
+    villain: str = ""
+    """The push/fold villain's type."""
+    seconds: float = 0.0
+
+
+@dataclass
+class SixmaxSession:
+    """Drills from the three families, graded on DECISIONS 60's scale. Every response is a
+    plain dict for the JSON API; each answered drill is one line in the log."""
+
+    pushfold: PushFoldStrategy
+    families: tuple[str, ...] = FAMILIES
+    seat: str | None = None
+    limpers: int | None = None
+    ante: float | None = None
+    kind: str | None = None
+    """One type for every opponent role, or None for random types."""
+    seed: int = 0
+    log_dir: Path = D.LOG_DIR
+    samples: int = S.SAMPLES
+    drills: int = 0
+    rows: list[dict] = field(default_factory=list)
+    _current: _Drill | None = None
+    _result: dict | None = None
+
+    def __post_init__(self) -> None:
+        if not self.families or any(f not in FAMILIES for f in self.families):
+            raise PlayError("family must be sixmax, open or pushfold")
+        if self.seat is not None and self.seat not in S.SEATS:
+            raise PlayError("seat must be UTG, HJ, CO, BTN, SB or BB")
+        if self.limpers is not None and not 0 <= self.limpers <= 3:
+            raise PlayError("limpers must be 0 to 3")
+        if self.ante is not None and self.ante not in D.ANTES:
+            raise PlayError("ante must be 0 or 0.5")
+        if self.kind is not None and self.kind not in S.TYPE_KEYS:
+            raise PlayError("type must be one of " + ", ".join(S.TYPE_KEYS))
+        shapes = tuple(
+            (s, k) for s, k in D.SHAPES if self.seat in (None, s) and self.limpers in (None, k)
+        )
+        pairs = tuple(p for p in D.OPEN_PAIRS if self.seat in (None, p[0]))
+        usable = {
+            "sixmax": bool(shapes),
+            "open": bool(pairs) and self.limpers in (None, 0),
+            "pushfold": self.seat in (None, "SB", "BB") and self.limpers in (None, 0),
+        }
+        self.families = tuple(f for f in self.families if usable[f])
+        if not self.families:
+            raise PlayError("no drill fits these filters")
+        k = self.kind
+        self.trainer = D.Trainer(
+            S.load_profiles()["standard"],
+            ante=self.ante,
+            samples=self.samples,
+            seed=self.seed,
+            types=True,
+            limpers_type=k,
+            table_type=k,
+            opener_type=k,
+            shapes=shapes or D.SHAPES,
+            pairs=pairs or D.OPEN_PAIRS,
+        )
+        self.types = self.trainer._types
+        self.rng = np.random.default_rng([self.seed, 62])
+        self.log_dir = Path(self.log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_path = self.log_dir / f"{datetime.now():%Y%m%d-%H%M%S-%f}-trainer.jsonl"
+
+    # --- drills ---------------------------------------------------------------------
+
+    def new_hand(self) -> dict:
+        if self._current is not None and self._result is None:
+            raise PlayError("answer the current drill first")
+        start = time.perf_counter()
+        family = self.families[self.rng.integers(len(self.families))]
+        if family == "sixmax":
+            drill = self.trainer.next()
+            current = _Drill(family, drill.combo, drill.spot, drill)
+        elif family == "open":
+            drill = self.trainer.next_open()
+            current = _Drill(family, drill.combo, drill.spot, drill)
+        else:
+            depth = int(self.rng.integers(PUSHFOLD_DEPTHS[0], PUSHFOLD_DEPTHS[1] + 1))
+            hero = self.seat.lower() if self.seat else ("sb", "bb")[self.rng.integers(2)]
+            villain = self.kind or S.TYPE_KEYS[self.rng.integers(len(S.TYPE_KEYS))]
+            combo = ALL_COMBOS[self.rng.integers(len(ALL_COMBOS))]
+            p = self.pushfold
+            spot = typed_spot(
+                p.solution, p.matrix, depth, hero, self.types[villain], class_of(combo)
+            )
+            current = _Drill(family, combo, spot, villain=villain)
+        current.seconds = time.perf_counter() - start
+        self._current, self._result = current, None
+        self.drills += 1
+        return self.view()
+
+    def _actions(self) -> list[str]:
+        c = self._current
+        return list(c.spot.ev) if c.family == "pushfold" else c.drill.answer.actions
+
+    def act(self, action: str) -> dict:
+        c = self._current
+        if c is None or self._result is not None:
+            raise PlayError("deal a drill first")
+        if action not in self._actions():
+            raise PlayError("actions: " + ", ".join(self._actions()))
+        cls = class_of(c.combo)
+        if c.family == "pushfold":
+            result = self._grade_pushfold(c, action)
+        else:
+            result = self._grade_sixmax(c, action, cls)
+        self._result = result
+        row = self._row(c, action, result)
+        with self.log_path.open("a", encoding="utf-8", newline="\n") as log:
+            log.write(json.dumps(row) + "\n")
+        self.rows.append(row)
+        return self.view()
+
+    def _grade_sixmax(self, c: _Drill, action: str, cls: int) -> dict:
+        a, spot, d = c.drill.answer, c.spot, c.drill
+        g = S.grade(a, action, spot.pot)
+        if c.family == "open":
+            std_spot = S.OpenSpot(
+                spot.seat, self.trainer.opener(spot.opener.seat, "standard"), spot.size, spot.ante
+            )
+            limpers = 0
+        else:
+            std_spot, limpers = spot, spot.limpers
+        std = self.trainer.answer(std_spot, self.trainer.compose("standard", "standard"), cls)
+        std_ev = float(std.ev[std.actions.index(std.best)])
+        lesson = lessons.lesson_for(c.family, spot.seat, limpers, S.kind(action), S.kind(a.best))
+        return {
+            "label": g.label,
+            "lost": g.lost,
+            "pct": g.pct,
+            "best": a.best,
+            "tier": a.tier,
+            "ev": [
+                {"action": n, "ev": float(e), "pct": 100 * float(e) / spot.pot}
+                for n, e in zip(a.actions, a.ev, strict=True)
+            ],
+            "why": S.why(d.deal, d.table, cls, a, action),
+            "standard": f"Against a standard player you'd {std.best} ({std_ev:+.2f} bb).",
+            "band": S.band_note(a),
+            "lesson": lessons.card(lesson),
+        }
+
+    def _grade_pushfold(self, c: _Drill, action: str) -> dict:
+        t = c.spot
+        g = t.grade(action)
+        p = self.pushfold
+        cls = class_of(c.combo)
+        std = typed_spot(p.solution, p.matrix, t.depth, t.hero, self.types["standard"], cls)
+        name = self.types[c.villain].name
+        verb = "calls" if t.hero == "sb" else "jams"
+        other = next(a for a in t.ev if a != t.best)
+        why = [
+            f"{name} {verb} the top {t.width:.0f}% of hands. {t.best} {t.ev[t.best]:+.2f} bb, "
+            f"{other} {t.ev[other]:+.2f} bb. Nash would {t.nash}."
+        ]
+        band = [
+            f"Band: the villain's width {max(1, t.width - 10):.0f}% to "
+            f"{min(100, t.width + 10):.0f}% of hands."
+        ]
+        if t.band_winners:
+            band.append("  " + ", ".join(sorted(t.band_winners)) + " wins somewhere in it.")
+        return {
+            "label": g.label,
+            "lost": g.lost,
+            "pct": g.pct,
+            "best": t.best,
+            "tier": "",
+            "ev": [{"action": n, "ev": e, "pct": 100 * e / t.pot} for n, e in t.ev.items()],
+            "why": why,
+            "standard": f"Against a standard player (Nash's width, {std.width:.0f}%) you'd "
+            f"{std.best} ({std.ev[std.best]:+.2f} bb).",
+            "band": band,
+            "lesson": lessons.card("pushfold-vs-types"),
+        }
+
+    def _row(self, c: _Drill, action: str, result: dict) -> dict:
+        row = {
+            "time": datetime.now().isoformat(timespec="seconds"),
+            "family": c.family,
+            "hand": cards_str(c.combo),
+            "class": CLASS_NAMES[class_of(c.combo)],
+            "action": action,
+            "grade": result["label"],
+            "bb_lost": result["lost"],
+            "pct_lost": result["pct"],
+            "best": result["best"],
+            "tier": result["tier"],
+            "ev": {e["action"]: e["ev"] for e in result["ev"]},
+            "seconds": c.seconds,
+        }
+        spot = c.spot
+        if c.family == "pushfold":
+            row |= {"seat": spot.hero.upper(), "depth": spot.depth, "villain_type": c.villain}
+        else:
+            row |= {"seat": spot.seat, "ante": spot.ante, "table_type": c.drill.table_type}
+            if c.family == "open":
+                row |= {
+                    "opener": spot.opener.seat,
+                    "open": spot.size,
+                    "opener_type": c.drill.opener_type,
+                }
+            else:
+                row |= {"limpers": spot.limpers, "limpers_type": c.drill.limpers_type}
+        return row
+
+    # --- views --------------------------------------------------------------------------
+
+    def summary(self) -> dict:
+        rows = self.rows
+        grades = Counter(r["grade"] for r in rows)
+        missed = [r for r in rows if r["grade"] != "Best"]
+        by_type = Counter(
+            r.get("villain_type") or r.get("opener_type") or r.get("table_type") for r in missed
+        )
+        return {
+            "game": "trainer",
+            "drills": len(rows),
+            "grades": {label: grades[label] for label in S.LABELS},
+            "accuracy": (grades["Best"] + grades["Correct"]) / len(rows) if rows else 0.0,
+            "bb_lost": sum(r["bb_lost"] for r in rows),
+            "misses_by_spot": dict(Counter(_spot_name(r) for r in missed).most_common()),
+            "misses_by_type": {self.types[k].name: n for k, n in by_type.most_common() if k},
+            "log": str(self.log_path),
+        }
+
+    def _seats(self) -> list[dict]:
+        c = self._current
+        roles: dict[str, tuple[str, str | None]] = {}
+        if c.family == "pushfold":
+            hero = c.spot.hero.upper()
+            villain = "BB" if hero == "SB" else "SB"
+            roles = {hero: ("you", None), villain: ("villain", c.villain)}
+        else:
+            spot, drill = c.spot, c.drill
+            roles[spot.seat] = ("you", None)
+            for kind, seat in spot.opponents():
+                if kind == "limper":
+                    roles[seat] = ("limper", drill.limpers_type)
+                elif kind == "opener":
+                    roles[seat] = ("opener", drill.opener_type)
+                else:
+                    roles[seat] = ("behind", drill.table_type)
+        out = []
+        for seat in S.SEATS:
+            role, kind = roles.get(seat, ("folded", None))
+            entry = {"seat": seat, "role": role}
+            if kind:
+                t = self.types[kind]
+                entry |= {"type": kind, "type_name": t.name, "card": S.type_card(t)}
+            out.append(entry)
+        return out
+
+    def view(self) -> dict:
+        c = self._current
+        if c is None:
+            return {"game": "trainer", "summary": self.summary()}
+        hand = CLASS_NAMES[class_of(c.combo)]
+        view: dict = {
+            "game": "trainer",
+            "drill": self.drills,
+            "family": c.family,
+            "family_name": FAMILY_NAMES[c.family],
+            "cards": [card_str(x) for x in c.combo],
+            "hand": hand,
+            "seats": self._seats(),
+            "actions": [{"action": a, "label": a[0].upper() + a[1:]} for a in self._actions()],
+            "your_turn": self._result is None,
+            "summary": self.summary(),
+        }
+        if c.family == "pushfold":
+            t = c.spot
+            role = "SB: jam or fold" if t.hero == "sb" else "BB: the SB jams; call or fold"
+            view |= {
+                "headline": f"{t.depth} bb heads-up, you are the {role}. Tournament-style, no ICM.",
+                "pot": t.pot,
+                "ranges": [
+                    f"Villain: {S.type_card(self.types[c.villain])}",
+                    f"It {'calls' if t.hero == 'sb' else 'jams'} the top {t.width:.0f}% of hands "
+                    "by equity: Nash's width times its type's ratio (DECISIONS 60).",
+                ],
+            }
+        else:
+            spot, drill = c.spot, c.drill
+            if c.family == "open":
+                lines = S.describe_open(
+                    spot, drill.profile, hand, self.types[drill.opener_type].name
+                )
+                view["note"] = GATE_Z_NOTE
+            else:
+                lines = S.describe_spot(spot, drill.profile, hand)
+            view |= {"headline": lines[0], "pot": spot.pot, "ranges": lines[1:]}
+        if self._result is not None:
+            view["result"] = self._result
+        return view
+
+
+def _spot_name(row: dict) -> str:
+    if row["family"] == "pushfold":
+        return f"push/fold {row['seat']}"
+    if row["family"] == "open":
+        return f"{row['seat']} vs {row['opener']} open"
+    k = row["limpers"]
+    return f"{row['seat']}, " + (f"{k} limper{'s' * (k != 1)}" if k else "unopened")

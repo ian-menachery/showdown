@@ -323,6 +323,7 @@ def _play(args: argparse.Namespace) -> int:
     app = App(PushFoldStrategy.load(args.pushfold), LeducStrategy.load(args.leduc))
     server = PlayServer(app, args.port)
     print(f"showdown play: {server.url}  (127.0.0.1 only; Ctrl+C to stop)")
+    print(f"six-max exploit trainer: {server.url}trainer")
     if not args.no_browser:
         webbrowser.open(server.url)
     try:
@@ -961,7 +962,9 @@ def build_parser() -> argparse.ArgumentParser:
     lib_status.add_argument("--spot", choices=spots)
     lib_status.set_defaults(handler=_library_status)
 
-    play = commands.add_parser("play", help="local browser page: push/fold trainer and Leduc")
+    play = commands.add_parser(
+        "play", help="local browser page: push/fold, Leduc and the six-max exploit trainer"
+    )
     play.add_argument("--port", type=int, default=0, help="default: any free port")
     play.add_argument("--no-browser", action="store_true", help="print the URL only")
     play.add_argument("--pushfold", default=pushfold.DEFAULT_SOLUTION)

@@ -9,13 +9,26 @@ import threading
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from showdown import lessons
 from showdown.bot.policy import LeducStrategy, PushFoldStrategy
-from showdown.bot.sessions import LeducSession, PlayError, PushFoldSession
+from showdown.bot.sessions import LeducSession, PlayError, PushFoldSession, SixmaxSession
+from showdown.sixmax_drill import LOG_DIR
 
 HOST = "127.0.0.1"
 MAX_BODY = 10_000
+
+
+def _any(value: object, cast=str):
+    """A filter value, or None for "any" or missing."""
+    if value in (None, "", "any"):
+        return None
+    try:
+        return cast(value)
+    except (TypeError, ValueError):
+        raise PlayError(f"bad filter value {value!r}") from None
 
 
 @dataclass
@@ -24,6 +37,8 @@ class App:
 
     pushfold: PushFoldStrategy
     leduc: LeducStrategy
+    log_dir: Path = LOG_DIR
+    """Where the trainer's drill logs go (DECISIONS 62)."""
     token: str = field(default_factory=lambda: secrets.token_urlsafe(24))
     sessions: dict[str, object] = field(default_factory=dict)
     locks: dict[str, threading.Lock] = field(default_factory=dict)
@@ -43,8 +58,20 @@ class App:
             )
         elif game == "leduc":
             session = LeducSession(self.leduc, seat=str(body.get("seat", "alternate")), rng=rng)
+        elif game == "trainer":
+            family = _any(body.get("family"))
+            session = SixmaxSession(
+                self.pushfold,
+                families=(family,) if family else ("sixmax", "open", "pushfold"),
+                seat=_any(body.get("seat")),
+                limpers=_any(body.get("limpers"), int),
+                ante=_any(body.get("ante"), float),
+                kind=_any(body.get("type")),
+                seed=seed if isinstance(seed, int) else secrets.randbits(32),
+                log_dir=self.log_dir,
+            )
         else:
-            raise PlayError("game must be pushfold or leduc")
+            raise PlayError("game must be pushfold, leduc or trainer")
         sid = secrets.token_urlsafe(12)
         with self._lock:
             self.sessions[sid] = session
@@ -80,9 +107,16 @@ def _int(value: object) -> int:
         raise PlayError("depth must be an integer") from None
 
 
-def page(token: str) -> bytes:
-    html = resources.files("showdown.bot").joinpath("static/index.html").read_text("utf-8")
+def page(token: str, name: str = "index.html") -> bytes:
+    html = resources.files("showdown.bot").joinpath(f"static/{name}").read_text("utf-8")
     return html.replace("{{TOKEN}}", token).encode("utf-8")
+
+
+def lesson(lesson_id: str | None) -> dict:
+    try:
+        return lessons.card(str(lesson_id))
+    except ValueError as error:
+        raise PlayError(str(error)) from None
 
 
 class PlayServer(ThreadingHTTPServer):
@@ -132,9 +166,14 @@ class Handler(BaseHTTPRequestHandler):
         app = self.server.app
         if url.path == "/":
             self._send(200, page(app.token), "text/html; charset=utf-8")
+        elif url.path == "/trainer":
+            self._send(200, page(app.token, "trainer.html"), "text/html; charset=utf-8")
         elif url.path == "/api/summary":
             sid = parse_qs(url.query).get("session", [None])[0]
             self._dispatch(lambda: app.summary(sid))
+        elif url.path == "/api/lesson":
+            lesson_id = parse_qs(url.query).get("id", [None])[0]
+            self._dispatch(lambda: lesson(lesson_id))
         else:
             self._json(404, {"error": "not found"})
 

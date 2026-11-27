@@ -1318,19 +1318,11 @@ def describe_open(spot: OpenSpot, p: Profile, hand: str, opener_name: str) -> li
     return lines
 
 
-def describe_answer(a: Answer, samples: int, seed: int) -> list[str]:
-    """Each action's EV, the verdict, and why."""
+def band_note(a: Answer) -> list[str]:
+    """The verdict, and where in the band another action wins."""
     lines = [
-        f"EV of each action, in bb against folding ({samples:,} deals, seed {seed})",
-        f"  {'':12s} {'EV':>7s}  {'SE':>4s}",
-    ]
-    for name, ev, se in zip(a.actions, a.ev, a.se, strict=True):
-        mark = "   best" if name == a.best else ""
-        lines.append(f"  {name:12s} {ev:+7.2f}  {se:4.2f}{mark}")
-    lines += [
-        "",
         f"Verdict: {a.tier.upper()}. Best: {a.best}. Runner-up: {a.runner_up} "
-        f"({a.gap_se:.1f} standard errors behind).",
+        f"({a.gap_se:.1f} standard errors behind)."
     ]
     if a.flips:
         winners = sorted({w for _, _, w in a.flips})
@@ -1343,6 +1335,19 @@ def describe_answer(a: Answer, samples: int, seed: int) -> list[str]:
         lines.append(
             f"  Folding to every re-raise instead of stacking off, the best is {a.no_stackoff_best}."
         )
+    return lines
+
+
+def describe_answer(a: Answer, samples: int, seed: int) -> list[str]:
+    """Each action's EV, the verdict, and why."""
+    lines = [
+        f"EV of each action, in bb against folding ({samples:,} deals, seed {seed})",
+        f"  {'':12s} {'EV':>7s}  {'SE':>4s}",
+    ]
+    for name, ev, se in zip(a.actions, a.ev, a.se, strict=True):
+        mark = "   best" if name == a.best else ""
+        lines.append(f"  {name:12s} {ev:+7.2f}  {se:4.2f}{mark}")
+    lines += ["", *band_note(a)]
     lines.append(
         "Band: every R moved 0.1 either way, fold-to-raise rates 10 points either way. "
         "The limp EV is a floor: a raise behind it is folded. Facing a re-raise, the hero "

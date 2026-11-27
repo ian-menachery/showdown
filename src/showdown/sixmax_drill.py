@@ -38,6 +38,10 @@ SHAPES = tuple(
     for seat, most in S.MAX_LIMPERS.items()
     for k in range(1 if seat == "BB" else 0, most + 1)
 )
+OPEN_PAIRS = tuple(
+    (hero, seat) for seat in S.OPEN_WIDTH for hero in S.SEATS[S.SEATS.index(seat) + 1 :]
+)
+"""(hero, opener) facing one open raise: 15 pairs (DECISIONS 61)."""
 ANTES = (0.0, 0.5)
 SHOW_CLEAR_FOLD = 0.2
 KEYS = {"f": "fold", "l": "limp", "c": "limp", "r": "raise"}
@@ -66,6 +70,7 @@ class Drill:
     table: dict | None = None
     limpers_type: str | None = None
     table_type: str | None = None
+    opener_type: str | None = None
 
 
 class Trainer:
@@ -81,6 +86,9 @@ class Trainer:
         types: bool = False,
         limpers_type: str | None = None,
         table_type: str | None = None,
+        opener_type: str | None = None,
+        shapes: tuple = SHAPES,
+        pairs: tuple = OPEN_PAIRS,
     ) -> None:
         self.profile = profile
         self.ante = ante
@@ -88,6 +96,8 @@ class Trainer:
         self.rng = np.random.default_rng(seed)
         self.types = types
         self.limpers_type, self.table_type = limpers_type, table_type
+        self.opener_type = opener_type
+        self.shapes, self.pairs = shapes, pairs
         self._deals: dict[tuple, tuple[S.Deal, dict]] = {}
         self._profiles: dict[tuple[str, str], S.Profile] = {}
         self.last: Drill | None = None
@@ -102,34 +112,50 @@ class Trainer:
             )
         return self._profiles[(limpers, table)]
 
-    def _deal(self, spot: S.Spot, profile: S.Profile | None = None) -> S.Deal:
+    def _deal(self, spot: S.Spot | S.OpenSpot, profile: S.Profile | None = None) -> S.Deal:
         profile = profile or self.profile
-        key = (spot.seat, spot.limpers, profile.deal_name or profile.name)
+        key = (spot.seat, spot.limpers, spot.key_extra, profile.deal_name or profile.name)
         if key not in self._deals:
             d = S.deal(spot, profile, samples=self.samples)
             self._deals[key] = (d, copy.deepcopy(d.rng.bit_generator.state))
         d, state = self._deals[key]
-        fresh = replace(
-            d, spot=spot, profile=profile.for_seat(spot.seat), rng=np.random.default_rng()
-        )
+        seat_profile = profile.for_seat(spot.defence_seat)
+        fresh = replace(d, spot=spot, profile=seat_profile, rng=np.random.default_rng())
         fresh.rng.bit_generator.state = copy.deepcopy(state)
         return fresh
 
-    def answer(self, spot: S.Spot, profile: S.Profile, hand: int | Combo) -> S.Answer:
+    def answer(self, spot: S.Spot | S.OpenSpot, profile: S.Profile, hand: int | Combo) -> S.Answer:
         """A fresh `sixmax.answer`, from the session's deals."""
         return S.evaluate(
             self._deal(spot, profile), hand, S.outcome_table(self._deal(spot, profile))
         )
 
+    def opener(self, seat: str, kind: str) -> S.Opener:
+        return S.opener(seat, kind, profiles=self._base, types=self._types)
+
+    def _draw_type(self, fixed: str | None) -> str:
+        return fixed or S.TYPE_KEYS[self.rng.integers(len(S.TYPE_KEYS))]
+
     def next(self) -> Drill:
-        seat, k = SHAPES[self.rng.integers(len(SHAPES))]
+        seat, k = self.shapes[self.rng.integers(len(self.shapes))]
         ante = self.ante if self.ante is not None else float(self.rng.choice(ANTES))
         spot = S.Spot(seat, k, ante)
         profile, lt, tt = self.profile, None, None
         if self.types:
-            lt = self.limpers_type or S.TYPE_KEYS[self.rng.integers(len(S.TYPE_KEYS))]
-            tt = self.table_type or S.TYPE_KEYS[self.rng.integers(len(S.TYPE_KEYS))]
+            lt, tt = self._draw_type(self.limpers_type), self._draw_type(self.table_type)
             profile = self.compose(lt, tt)
+        return self._hand(spot, profile, lt, tt)
+
+    def next_open(self) -> Drill:
+        """A drill facing one open raise (DECISIONS 61): needs `types`."""
+        hero, seat = self.pairs[self.rng.integers(len(self.pairs))]
+        size = S.OPEN_SIZES[self.rng.integers(len(S.OPEN_SIZES))]
+        ante = self.ante if self.ante is not None else float(self.rng.choice(ANTES))
+        ot, tt = self._draw_type(self.opener_type), self._draw_type(self.table_type)
+        spot = S.OpenSpot(hero, self.opener(seat, ot), size, ante)
+        return self._hand(spot, self.compose("standard", tt), None, tt, ot)
+
+    def _hand(self, spot, profile, lt, tt, ot=None) -> Drill:
         table = S.outcome_table(self._deal(spot, profile))
         while True:
             combo = ALL_COMBOS[self.rng.integers(len(ALL_COMBOS))]
@@ -137,7 +163,7 @@ class Trainer:
             a = S.evaluate(d, class_of(combo), table)
             clear_fold = a.best == "fold" and a.tier == "clear"
             if not clear_fold or self.rng.random() < SHOW_CLEAR_FOLD:
-                self.last = Drill(spot, combo, a, d.profile, d, table, lt, tt)
+                self.last = Drill(spot, combo, a, d.profile, d, table, lt, tt, ot)
                 return self.last
 
 

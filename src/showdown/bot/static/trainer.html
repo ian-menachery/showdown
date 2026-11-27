@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="showdown-token" content="{{TOKEN}}">
+<title>showdown trainer</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #dcdad4;
+    --accent: #1f6f5c; --accent-ink: #ffffff; --warn: #a2401f; --felt: #e8efe9;
+    --card: #ffffff; --red: #b3261e; --black: #1d1d1f;
+    --best: #1f6f5c; --correct: #2f6f9f; --inaccuracy: #9a7400; --wrong: #b35a14; --blunder: #b3261e;
+    --hero: #fff6d8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151618; --panel: #1f2023; --ink: #ececee; --muted: #9a9aa2; --line: #34353a;
+      --accent: #4fb596; --accent-ink: #0d1412; --warn: #f08a65; --felt: #1d2622;
+      --card: #f4f3ef; --red: #c0352b; --black: #1d1d1f;
+      --best: #4fb596; --correct: #6fa8dc; --inaccuracy: #e0b43a; --wrong: #f0975a; --blunder: #f07067;
+      --hero: #3a3420;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 14px; }
+  .sub a { color: var(--accent); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 14px 16px; margin-bottom: 14px; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+       margin: 0 0 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+           background: var(--bg); color: var(--ink); min-width: 110px; }
+  button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--accent);
+           background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs button { background: transparent; color: var(--ink); border-color: var(--line); }
+  .tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .table { background: var(--felt); border-radius: 10px; padding: 12px; }
+  .seats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 640px) { .seats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .seat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px;
+          min-height: 76px; font-size: 13px; }
+  .seat.you { background: var(--hero); border-color: var(--accent); }
+  .seat.folded { opacity: .55; }
+  .seat .name { font-weight: 650; }
+  .seat .role { color: var(--muted); }
+  .badge { display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: 10px;
+           border: 1px solid var(--line); font-size: 12px; cursor: pointer; background: var(--bg);
+           color: var(--ink); }
+  .trait { font-size: 13px; color: var(--muted); margin: 8px 0 0; min-height: 1.2em; }
+  .headline { font-weight: 600; margin: 10px 0 4px; }
+  .cards { display: flex; gap: 6px; align-items: center; margin: 6px 0; }
+  .card { width: 44px; height: 62px; border-radius: 6px; background: var(--card);
+          border: 1px solid #b9b7b0; display: flex; align-items: center; justify-content: center;
+          font-weight: 650; font-size: 18px; color: var(--black); }
+  .card.red { color: var(--red); }
+  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .note { color: var(--muted); font-size: 13px; }
+  .warn { color: var(--warn); font-size: 13px; margin-top: 6px; }
+  .label-chip { display: inline-block; padding: 2px 10px; border-radius: 6px; color: #fff;
+                font-weight: 700; letter-spacing: .02em; }
+  .Best { background: var(--best); } .Correct { background: var(--correct); }
+  .Inaccuracy { background: var(--inaccuracy); } .Wrong { background: var(--wrong); }
+  .Blunder { background: var(--blunder); }
+  @media (prefers-color-scheme: dark) { .label-chip { color: #111; } }
+  table.ev { border-collapse: collapse; margin: 8px 0; font-variant-numeric: tabular-nums; }
+  table.ev td, table.ev th { padding: 3px 12px 3px 0; text-align: left; font-size: 14px; }
+  table.ev th { color: var(--muted); font-weight: 500; }
+  tr.best td { font-weight: 650; } tr.mine td:first-child::after { content: "  ← you"; color: var(--muted); }
+  ul.lines { margin: 6px 0; padding-left: 18px; }
+  details { margin-top: 8px; } summary { cursor: pointer; color: var(--accent); }
+  pre { white-space: pre-wrap; font: 13px/1.4 ui-monospace, Consolas, monospace; margin: 6px 0; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .stat .v { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .error { color: var(--warn); min-height: 1.2em; margin: 6px 0 0; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>showdown trainer</h1>
+  <p class="sub">Exploit drills against player types, graded Best, Correct, Inaccuracy, Wrong or
+     Blunder by EV lost as a % of the pot. Study only; 127.0.0.1 only. <a href="/">Push/fold and Leduc</a></p>
+  <div class="tabs"><button id="tab-trainer" class="on">Trainer</button></div>
+
+  <div id="trainer-tab">
+  <section id="setup">
+    <h2>Filters</h2>
+    <div class="row">
+      <label>Spots<select id="family">
+        <option value="any">All three</option>
+        <option value="sixmax">Unopened and limped</option>
+        <option value="open">Facing an open</option>
+        <option value="pushfold">Push/fold (no ICM)</option>
+      </select></label>
+      <label>Your seat<select id="seat"><option value="any">Any</option>
+        <option>UTG</option><option>HJ</option><option>CO</option><option>BTN</option>
+        <option>SB</option><option>BB</option></select></label>
+      <label>Limpers<select id="limpers"><option value="any">Any</option>
+        <option>0</option><option>1</option><option>2</option><option>3</option></select></label>
+      <label>Ante<select id="ante"><option value="any">Any</option>
+        <option value="0">None</option><option value="0.5">0.5 bb</option></select></label>
+      <label>Opponents<select id="type"><option value="any">Random types</option>
+        <option value="standard">Standard</option><option value="nit">Nit</option>
+        <option value="tag">TAG</option><option value="lag">LAG</option>
+        <option value="maniac">Maniac</option><option value="weak-tight">Weak-tight rec</option>
+        <option value="station">Calling station</option></select></label>
+      <button id="start">Start</button>
+    </div>
+    <p class="error" id="error"></p>
+  </section>
+
+  <section id="drill" class="hidden">
+    <h2 id="family-name">Drill</h2>
+    <div class="table">
+      <div class="seats" id="seats"></div>
+      <p class="trait" id="trait">Click a type badge to see its trait card.</p>
+    </div>
+    <p class="headline" id="headline"></p>
+    <div class="cards" id="cards"></div>
+    <p class="warn hidden" id="note"></p>
+    <div class="actions" id="actions"></div>
+    <details><summary>Assumed ranges</summary><pre id="ranges"></pre></details>
+  </section>
+
+  <section id="result" class="hidden">
+    <h2>Result</h2>
+    <div><span class="label-chip" id="label"></span> <span id="lost"></span></div>
+    <table class="ev"><thead><tr><th>Action</th><th>EV (bb)</th><th>% of pot</th></tr></thead>
+      <tbody id="ev"></tbody></table>
+    <ul class="lines" id="why"></ul>
+    <p id="standard"></p>
+    <details><summary>Band and verdict</summary><pre id="band"></pre></details>
+    <details id="lesson-box"><summary id="lesson-title">Lesson</summary>
+      <p id="lesson-summary"></p><p class="note" id="lesson-path"></p><pre id="lesson-text"></pre></details>
+    <div class="actions"><button id="next">Next drill</button></div>
+  </section>
+
+  <section id="session" class="hidden">
+    <h2>Session</h2>
+    <div class="stats" id="stats"></div>
+    <p class="note" id="misses"></p>
+  </section>
+  </div>
+</main>
+<script>
+const TOKEN = document.querySelector('meta[name="showdown-token"]').content;
+const $ = (id) => document.getElementById(id);
+let session = null;
+
+async function api(path, body) {
+  const options = body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json", "X-Showdown-Token": TOKEN },
+    body: JSON.stringify(body) };
+  const response = await fetch(path, options);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || response.statusText);
+  return data;
+}
+
+async function guarded(fn) {
+  $("error").textContent = "";
+  try { render(await fn()); } catch (e) { $("error").textContent = e.message; }
+}
+
+function card(text) {
+  const el = document.createElement("div");
+  const suit = text.slice(-1);
+  el.className = "card" + ("hd".includes(suit) ? " red" : "");
+  el.textContent = text.slice(0, -1) + ({ s: "♠", h: "♥", d: "♦", c: "♣" }[suit] || suit);
+  return el;
+}
+
+function fmt(x, digits = 2) { return (x >= 0 ? "+" : "") + x.toFixed(digits); }
+
+function renderSeats(seats) {
+  const box = $("seats");
+  box.replaceChildren();
+  for (const s of seats) {
+    const el = document.createElement("div");
+    el.className = "seat " + (s.role === "you" ? "you" : s.role === "folded" ? "folded" : "");
+    el.innerHTML = `<div class="name"></div><div class="role"></div>`;
+    el.querySelector(".name").textContent = s.seat;
+    el.querySelector(".role").textContent = s.role;
+    if (s.type_name) {
+      const b = document.createElement("button");
+      b.className = "badge";
+      b.textContent = s.type_name;
+      b.title = s.card;
+      b.onclick = () => { $("trait").textContent = s.card; };
+      el.appendChild(b);
+    }
+    box.appendChild(el);
+  }
+}
+
+function renderResult(r, chosen) {
+  $("label").textContent = r.label;
+  $("label").className = "label-chip " + r.label;
+  $("lost").textContent = r.lost > 1e-9
+    ? `you chose ${chosen}: ${r.lost.toFixed(2)} bb (${r.pct.toFixed(1)}% of the pot) behind ${r.best}`
+    : `you chose ${chosen}, the best action`;
+  const body = $("ev");
+  body.replaceChildren();
+  for (const e of r.ev) {
+    const tr = document.createElement("tr");
+    if (e.action === r.best) tr.classList.add("best");
+    if (e.action === chosen) tr.classList.add("mine");
+    for (const v of [e.action, fmt(e.ev), fmt(e.pct, 1) + "%"]) {
+      const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  }
+  $("why").replaceChildren(...r.why.map((line) => {
+    const li = document.createElement("li"); li.textContent = line; return li; }));
+  $("standard").textContent = r.standard;
+  $("band").textContent = r.band.join("\n");
+  $("lesson-title").textContent = "Lesson: " + r.lesson.title;
+  $("lesson-summary").textContent = r.lesson.summary;
+  $("lesson-path").textContent = r.lesson.path;
+  $("lesson-text").textContent = r.lesson.text;
+}
+
+function renderSummary(s) {
+  const g = s.grades || {};
+  const items = [["Drills", s.drills], ["Accuracy", (100 * s.accuracy).toFixed(0) + "%"],
+                 ["bb lost", s.bb_lost.toFixed(2)]];
+  for (const label of ["Best", "Correct", "Inaccuracy", "Wrong", "Blunder"]) items.push([label, g[label] || 0]);
+  $("stats").replaceChildren(...items.map(([k, v]) => {
+    const el = document.createElement("div"); el.className = "stat";
+    el.innerHTML = `<div class="v"></div><div class="k"></div>`;
+    el.querySelector(".v").textContent = v; el.querySelector(".k").textContent = k; return el; }));
+  const spots = Object.entries(s.misses_by_spot || {}).map(([k, v]) => `${k} ${v}`).join("; ");
+  const types = Object.entries(s.misses_by_type || {}).map(([k, v]) => `${k} ${v}`).join("; ");
+  $("misses").textContent = (spots ? "Misses by spot: " + spots + ". " : "") +
+    (types ? "Misses by type: " + types + "." : "");
+  $("session").classList.remove("hidden");
+}
+
+let chosen = null;
+function render(v) {
+  if (v.session) session = v.session;
+  renderSummary(v.summary);
+  if (!v.family) return;
+  $("drill").classList.remove("hidden");
+  $("family-name").textContent = `Drill ${v.drill}: ${v.family_name}`;
+  renderSeats(v.seats);
+  $("trait").textContent = "Click a type badge to see its trait card.";
+  $("headline").textContent = v.headline + ` Pot ${v.pot} bb.`;
+  $("cards").replaceChildren(...v.cards.map(card));
+  $("note").textContent = v.note || "";
+  $("note").classList.toggle("hidden", !v.note);
+  $("ranges").textContent = v.ranges.join("\n");
+  $("actions").replaceChildren(...v.actions.map((a) => {
+    const b = document.createElement("button");
+    b.textContent = a.label;
+    b.disabled = !v.your_turn;
+    b.onclick = () => { chosen = a.action; guarded(() => api("/api/act", { session, action: a.action })); };
+    return b; }));
+  $("result").classList.toggle("hidden", !v.result);
+  if (v.result) renderResult(v.result, chosen);
+}
+
+$("start").onclick = () => guarded(async () => {
+  const body = { game: "trainer" };
+  for (const id of ["family", "seat", "limpers", "ante", "type"]) body[id] = $(id).value;
+  const created = await api("/api/session", body);
+  session = created.session;
+  return api("/api/hand", { session });
+});
+$("next").onclick = () => guarded(() => api("/api/hand", { session }));
+</script>
+</body>
+</html>
