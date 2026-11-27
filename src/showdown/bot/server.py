@@ -6,6 +6,7 @@ import json
 import random
 import secrets
 import threading
+from collections import Counter
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
@@ -19,6 +20,8 @@ from showdown.sixmax_drill import LOG_DIR
 
 HOST = "127.0.0.1"
 MAX_BODY = 10_000
+REVIEW_MAX_BODY = 20_000_000
+"""The Review tab posts a whole hand-history file (DECISIONS 63)."""
 
 
 def _any(value: object, cast=str):
@@ -98,6 +101,41 @@ class App:
         session, lock = self._get(sid)
         with lock:
             return session.summary()  # type: ignore[attr-defined]
+
+    def review(self, body: dict) -> dict:
+        """The leak finder on a PokerStars export posted from the page, read in memory and
+        never saved (DECISIONS 63)."""
+        from showdown import sixmax_review as V
+        from showdown.hh.parse import parse_pokerstars
+
+        text = body.get("text")
+        if not isinstance(text, str) or not text.strip():
+            raise PlayError("pick a PokerStars hand-history file")
+        name = str(body.get("name") or "upload.txt")
+        parsed = parse_pokerstars(text, name)
+        if not parsed.records:
+            raise PlayError("no hands could be read from this file")
+        player = str(body.get("player") or "").strip() or hero_of(parsed.records)
+        decisions, players = V.review_typed(parsed.records, player)
+        summary = V.summarize_typed(decisions, players, player)
+        report = V.describe_typed(parsed, summary, player)
+        leaks = [
+            leak
+            | {
+                "hands": [V.hand_line(d) for d in leak["hands"]],
+                "lesson": lessons.card(leak["lesson"]) | {"text": ""},
+            }
+            for leak in summary["leaks"]
+        ]
+        return {"player": player, "report": report, "summary": summary | {"leaks": leaks}}
+
+
+def hero_of(records) -> str:
+    """The player whose hole cards are known in the most hands."""
+    seen = Counter(p.name for r in records for p in r.players if p.hole is not None)
+    if not seen:
+        raise PlayError("no hole cards in this file; type the player's name")
+    return seen.most_common(1)[0][0]
 
 
 def _int(value: object) -> int:
@@ -182,13 +220,19 @@ class Handler(BaseHTTPRequestHandler):
         if not self._host_ok() or self.headers.get("X-Showdown-Token") != app.token:
             self._json(403, {"error": "forbidden"})
             return
-        routes = {"/api/session": app.create, "/api/hand": app.hand, "/api/act": app.act}
-        route = routes.get(urlparse(self.path).path)
+        routes = {
+            "/api/session": app.create,
+            "/api/hand": app.hand,
+            "/api/act": app.act,
+            "/api/review": app.review,
+        }
+        path = urlparse(self.path).path
+        route = routes.get(path)
         if route is None:
             self._json(404, {"error": "not found"})
             return
         length = int(self.headers.get("Content-Length") or 0)
-        if length > MAX_BODY:
+        if length > (REVIEW_MAX_BODY if path == "/api/review" else MAX_BODY):
             self._json(413, {"error": "request too large"})
             return
         try:

@@ -98,6 +98,7 @@ def test_the_report_and_the_cli(parsed, capsys) -> None:
     assert [(x["count"], x["bb_lost"], x["pot"]) for x in leaks] == [(3, 3.5, "limped")]
 
     argv = ["sixmax", "review", str(FIXTURE), "--player", "Hero", "--samples", "1500"]
+    argv.append("--kind-only")  # Gate W was scored on DECISIONS 58's review (DECISIONS 63)
     assert main(argv) == 0
     out = capsys.readouterr().out
     assert "Six-max hand review for Hero" in out and "55 hands, 55 parsed, 0 failed" in out

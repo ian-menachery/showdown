@@ -62,7 +62,12 @@ def load_phh(path: str | Path) -> ParseReport:
 
 def load_pokerstars(path: str | Path) -> ParseReport:
     """A PokerStars text export: many hands per file, separated by blank lines."""
-    text = Path(path).read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+    return parse_pokerstars(Path(path).read_text(encoding="utf-8-sig"), str(path))
+
+
+def parse_pokerstars(text: str, path: str) -> ParseReport:
+    """PokerStars text already in memory (the play page's Review tab, DECISIONS 63)."""
+    text = text.lstrip("﻿").replace("\r\n", "\n")
     report = ParseReport()
     parser = PokerStarsParser()
     histories = []

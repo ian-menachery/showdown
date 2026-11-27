@@ -840,9 +840,18 @@ def _review(args: argparse.Namespace) -> int:
     if not args.player or not args.hand:
         raise SystemExit("give hand files or folders and --player NAME, the player to grade")
     parsed = load(args.hand)
-    profile = S.load_profiles()[args.profile or "standard"]
-    decisions = V.review(parsed.records, args.player, profile, samples=args.samples, seed=args.seed)
-    print("\n".join(V.describe(parsed, V.summarize(decisions), args.player, profile.name)))
+    if args.kind_only:  # DECISIONS 58's review, as Gate W scored it
+        profile = S.load_profiles()[args.profile or "standard"]
+        decisions = V.review(
+            parsed.records, args.player, profile, samples=args.samples, seed=args.seed
+        )
+        print("\n".join(V.describe(parsed, V.summarize(decisions), args.player, profile.name)))
+        return 0
+    decisions, players = V.review_typed(
+        parsed.records, args.player, samples=args.samples, seed=args.seed
+    )
+    summary = V.summarize_typed(decisions, players, args.player)
+    print("\n".join(V.describe_typed(parsed, summary, args.player)))
     return 0
 
 
@@ -1103,6 +1112,11 @@ def build_parser() -> argparse.ArgumentParser:
         ".txt files or folders",
     )
     six.add_argument("--player", help="review: the player whose decisions are graded")
+    six.add_argument(
+        "--kind-only",
+        action="store_true",
+        help="review: DECISIONS 58's kind-only grades, one profile, no pots facing an open",
+    )
     six.add_argument("--limpers", type=int, default=0, help="limpers ahead, 0 to 3")
     six.add_argument(
         "--ante", type=float, help="from every player, in bb (default 0; drills: 0 or 0.5)"

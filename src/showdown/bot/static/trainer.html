@@ -92,7 +92,28 @@
   <h1>showdown trainer</h1>
   <p class="sub">Exploit drills against player types, graded Best, Correct, Inaccuracy, Wrong or
      Blunder by EV lost as a % of the pot. Study only; 127.0.0.1 only. <a href="/">Push/fold and Leduc</a></p>
-  <div class="tabs"><button id="tab-trainer" class="on">Trainer</button></div>
+  <div class="tabs"><button id="tab-trainer" class="on">Trainer</button>
+    <button id="tab-review">Review</button></div>
+
+  <div id="review-tab" class="hidden">
+  <section>
+    <h2>Leak finder</h2>
+    <p class="note">Pick a PokerStars hand-history export. It is sent only to this page's server on
+       127.0.0.1, read in memory and never saved. Study only: after the session, never during one.</p>
+    <div class="row">
+      <label>Hand history (.txt)<input type="file" id="review-file" accept=".txt"></label>
+      <label>Your name (blank: the player with known cards)<input id="review-player"></label>
+      <button id="review-go">Review</button>
+    </div>
+    <p class="note" id="review-status"></p>
+    <p class="error" id="review-error"></p>
+  </section>
+  <section id="review-out" class="hidden">
+    <h2>Report</h2>
+    <pre id="review-report"></pre>
+    <div id="review-leaks"></div>
+  </section>
+  </div>
 
   <div id="trainer-tab">
   <section id="setup">
@@ -280,6 +301,40 @@ $("start").onclick = () => guarded(async () => {
   return api("/api/hand", { session });
 });
 $("next").onclick = () => guarded(() => api("/api/hand", { session }));
+
+function showTab(name) {
+  for (const t of ["trainer", "review"]) {
+    $(t + "-tab").classList.toggle("hidden", t !== name);
+    $("tab-" + t).classList.toggle("on", t === name);
+  }
+}
+$("tab-trainer").onclick = () => showTab("trainer");
+$("tab-review").onclick = () => showTab("review");
+
+$("review-go").onclick = async () => {
+  $("review-error").textContent = "";
+  const file = $("review-file").files[0];
+  if (!file) { $("review-error").textContent = "Pick a file first."; return; }
+  $("review-status").textContent = `Reviewing ${file.name}…`;
+  try {
+    const text = await file.text();
+    const r = await api("/api/review", { text, name: file.name, player: $("review-player").value });
+    $("review-status").textContent = `Reviewed ${file.name} for ${r.player}.`;
+    $("review-report").textContent = r.report.join("\n");
+    $("review-leaks").replaceChildren(...r.summary.leaks.map((leak, n) => {
+      const box = document.createElement("details");
+      box.innerHTML = "<summary></summary><p></p><p class='note'></p>";
+      box.querySelector("summary").textContent =
+        `${n + 1}. Lesson: ${leak.lesson.title} (${leak.count} hands, ${leak.bb_lost.toFixed(2)} bb)`;
+      box.querySelector("p").textContent = leak.lesson.summary;
+      box.querySelector(".note").textContent = leak.lesson.path;
+      return box; }));
+    $("review-out").classList.remove("hidden");
+  } catch (e) {
+    $("review-status").textContent = "";
+    $("review-error").textContent = e.message;
+  }
+};
 </script>
 </body>
 </html>

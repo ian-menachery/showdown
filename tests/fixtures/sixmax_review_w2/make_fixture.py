@@ -208,8 +208,10 @@ def build(spec, names: list[str], rng: random.Random, fold_after: bool = False):
             "called": "open called before you",
             "size": "open size",
         }[kind]
-    actions = [f"p{i + 1} f" if k == "f" else f"p{i + 1} cc" if k == "cc" else f"p{i + 1} cbr {to}"
-               for i, k, to in t.actions]
+    actions = [
+        f"p{i + 1} f" if k == "f" else f"p{i + 1} cc" if k == "cc" else f"p{i + 1} cbr {to}"
+        for i, k, to in t.actions
+    ]
     return actions, label | {"_table": t}
 
 
@@ -259,8 +261,10 @@ def count(stats: dict, names: list[str], actions: list[tuple[int, str, int]]) ->
     vpip, pfr = set(), set()
     first_in_open = True
     for i, kind, _ in actions:
-        s = stats.setdefault(names[i], dict.fromkeys(
-            ("hands", "vpip", "pfr", "limp_n", "limp_x", "iso_n", "iso_x"), 0))
+        s = stats.setdefault(
+            names[i],
+            dict.fromkeys(("hands", "vpip", "pfr", "limp_n", "limp_x", "iso_n", "iso_x"), 0),
+        )
         if seen_raise == 0 and first_in_open and i >= 2 and i not in acted:
             s["limp_n"] += 1
             s["limp_x"] += kind == "cc"
@@ -281,8 +285,9 @@ def count(stats: dict, names: list[str], actions: list[tuple[int, str, int]]) ->
             seen_raise += 1
         acted.add(i)
     for i, name in enumerate(names):
-        s = stats.setdefault(name, dict.fromkeys(
-            ("hands", "vpip", "pfr", "limp_n", "limp_x", "iso_n", "iso_x"), 0))
+        s = stats.setdefault(
+            name, dict.fromkeys(("hands", "vpip", "pfr", "limp_n", "limp_x", "iso_n", "iso_x"), 0)
+        )
         s["hands"] += 1
         s["vpip"] += i in vpip
         s["pfr"] += i in pfr
@@ -320,11 +325,13 @@ def seat_names(n: int, spec) -> list[str]:
     if kind == "limped":
         fixed = list(details)
     elif kind in ("open", "threebet", "called", "size"):
-        fixed = [(details[0], details[1])] + ([(details[3], details[4])] if len(details) > 3 else [])
+        fixed = [(details[0], details[1])] + (
+            [(details[3], details[4])] if len(details) > 3 else []
+        )
     for seat, name in fixed:
         names[SEATS.index(seat)] = name
     rest = [p for p in (*OPPONENTS, sixth) if p not in names]
-    rest = rest[n % len(rest):] + rest[: n % len(rest)]
+    rest = rest[n % len(rest) :] + rest[: n % len(rest)]
     for k in range(6):
         if names[k] is None:
             names[k] = rest.pop(0)
@@ -359,8 +366,12 @@ def pokerstars(number: int, names, cards, actions) -> str:
         "Table 'Review' 6-max Seat #6 is the button",
     ]
     lines += [f"Seat {seat_of[k]}: {names[k]} ($2 in chips)" for k in range(6)]
-    lines += [f"{names[0]}: posts small blind $0.01", f"{names[1]}: posts big blind $0.02",
-              "*** HOLE CARDS ***", f"Dealt to Hero [{cards[names.index('Hero')][:2]} {cards[names.index('Hero')][2:]}]"]
+    lines += [
+        f"{names[0]}: posts small blind $0.01",
+        f"{names[1]}: posts big blind $0.02",
+        "*** HOLE CARDS ***",
+        f"Dealt to Hero [{cards[names.index('Hero')][:2]} {cards[names.index('Hero')][2:]}]",
+    ]
     level, contrib = 2, [1, 2, 0, 0, 0, 0]
     last = None
     for i, kind, to in actions:
@@ -374,16 +385,23 @@ def pokerstars(number: int, names, cards, actions) -> str:
             level, contrib[i], last = to, to, i
     second = max(c for k, c in enumerate(contrib) if k != last)
     pot = sum(contrib) - (level - second)
-    lines += [f"Uncalled bet (${(level - second) / 100:.2f}) returned to {names[last]}",
-              f"{names[last]} collected ${pot / 100:.2f} from pot", "*** SUMMARY ***",
-              f"Total pot ${pot / 100:.2f} | Rake $0"]
+    lines += [
+        f"Uncalled bet (${(level - second) / 100:.2f}) returned to {names[last]}",
+        f"{names[last]} collected ${pot / 100:.2f} from pot",
+        "*** SUMMARY ***",
+        f"Total pot ${pot / 100:.2f} | Rake $0",
+    ]
     return "\n".join(lines) + "\n\n\n\n"
 
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
-    cards_by_type = {k: v["card"] for k, v in json.loads(
-        (ROOT / "data" / "sixmax_types.json").read_text(encoding="utf-8"))["types"].items()}
+    cards_by_type = {
+        k: v["card"]
+        for k, v in json.loads((ROOT / "data" / "sixmax_types.json").read_text(encoding="utf-8"))[
+            "types"
+        ].items()
+    }
     rng = random.Random(20261127)
     stats: dict = {}
     hands: dict = {}
@@ -418,9 +436,12 @@ def main() -> int:
             entry["iso_fold"] = s["iso_x"] / s["iso_n"]
         entry["type"] = nearest(s, cards_by_type)
         players[name] = entry
-    out = ["# Gate W2 (DECISIONS 63): labels written by make_fixture.py from its own construction.",
-           "# Hands: Hero's family, seat, limpers, ante, opener, open bucket, engine action and",
-           "# class, or the skip cause. Players: DECISIONS 63's stats and type.", ""]
+    out = [
+        "# Gate W2 (DECISIONS 63): labels written by make_fixture.py from its own construction.",
+        "# Hands: Hero's family, seat, limpers, ante, opener, open bucket, engine action and",
+        "# class, or the skip cause. Players: DECISIONS 63's stats and type.",
+        "",
+    ]
     for key, label in hands.items():
         out.append(f'["{key}"]')
         out += [f"{k} = {json.dumps(v)}" for k, v in label.items()]
