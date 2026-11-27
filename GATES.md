@@ -1625,3 +1625,64 @@ any code. The type fit, `spikes/2026-11-27-phh-sixmax-types.py`, ran once on AC 
 ```
 .venv\Scripts\python -m pytest tests/test_gate_y.py tests/test_gate_y_slow.py tests/test_gate_k_slow.py -m "slow or not slow" -s
 ```
+
+## Gate Z: facing one open raise: FAIL, bar 3 only (2026-11-27)
+
+Evidence:
+- `tests/test_gate_z.py` (fast suite): bar 1;
+- `tests/test_gate_z_slow.py` (`-m "slow or not slow"`): bars 2 and 3;
+- the code at 39c50d3.
+
+The bars were pre-registered in DECISIONS 61 at fd3863c, before any code for this step. Gate
+Z was scored once, at 39c50d3: 37 charts in 62 s. `py gate.py` printed `GATE PASS` at
+39c50d3. The slow tests of Gates Y, M4 and W were re-run once and printed every number as
+recorded.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. Closed forms | Everyone folds (BTN vs CO, BB vs SB), a call heads-up, a 3-bet called, a 4-bet (KK folds, AA stacks off), the jam called: AA, KK, A5s, 72o, both antes, both opens, all to 1e-9 | to 1e-9 | PASS |
+| 2. Directions | Nit vs LAG opener: 915 compared, nothing that continues vs the Nit folds vs the LAG; 3-bets or jams 915 vs 915. Nit vs Maniac: 919 compared, none; 919 vs 919 | no violation; Nit ≤ the other; ≥ 100 compared | PASS |
+| 3. The chart | PokerStrategy's vs-open ranges (lessons 2256, 2257), 3 bb open, no ante, standard: 134 kind-stable classes over 7 spots; 107 agree on continue vs fold (79.9%). Per spot: BTN vs UTG 12/19, vs HJ 17/21, vs CO 26/32; SB vs UTG 10/10, vs HJ 9/10, vs CO 13/13, vs BTN 20/29. Three-way agreement 23.1% | ≥ 85% of ≥ 100 | **FAIL** |
+
+**Bar 3's 27 disagreements** are all ours 3-bet, theirs fold:
+- BTN vs UTG: KJs, KTs, QJs, QTs, AJo, KJo, QJo;
+- BTN vs HJ: QTs, 44, 33, 22;
+- BTN vs CO: A8s, A7s, A9o, 44, 33, 22;
+- SB vs HJ: AJs;
+- SB vs BTN: A8s, A7s, A6s, A9o, A8o, A7o, A6o, A5o, 55.
+
+**Not a bug.** One hand was worked by hand: 72o on the BTN, CO opens to 3 bb, standard.
+- Folds come 52.9% of the time; it is called 31.6%, with 30.4% equity in a 19.5 bb pot;
+  it is re-raised 15.5%.
+- That gives +0.014 bb for the 3-bet to 9, equal to the engine to 1e-15.
+
+The cause is the model, under DECISIONS 61's assumptions:
+- the opener folds 55% of its range to a 3× 3-bet;
+- its call share falls 0.049 per bb of extra size (decided without Ian), so a 4× 3-bet gets
+  67% folds;
+- a called 3-bet in position realises R 1.00, whatever the hand.
+
+Bar 2's "3-bet less against a Nit" holds only trivially, since every kind-stable class
+3-bets against all three opener types.
+
+**After the FAIL:** the result stands, and the bar is unchanged. Bar 3's test is a strict
+xfail, so a pass would show up. The limit is documented in `docs/sixmax-preflop.md`. The
+choice between a fix entry with a re-gate and a documented limit went to Ian through the
+master session on 2026-11-27.
+
+**Reported, not gated:** opener widths by type and seat, as fractions of hands:
+
+| Type | UTG | HJ | CO | BTN | SB |
+|---|---|---|---|---|---|
+| standard | 0.150 | 0.190 | 0.270 | 0.450 | 0.400 |
+| Nit | 0.100 | 0.127 | 0.181 | 0.301 | 0.268 |
+| TAG | 0.158 | 0.200 | 0.285 | 0.474 | 0.422 |
+| LAG | 0.217 | 0.274 | 0.390 | 0.650 | 0.578 |
+| Maniac | 0.281 | 0.356 | 0.506 | 0.844 | 0.750 |
+| Weak-tight rec | 0.066 | 0.084 | 0.119 | 0.198 | 0.176 |
+| Calling station | 0.106 | 0.134 | 0.191 | 0.318 | 0.282 |
+
+**Rerun** (about 2 minutes):
+```
+.venv\Scripts\python -m pytest tests/test_gate_z.py tests/test_gate_z_slow.py -m "slow or not slow" -s -rx
+```

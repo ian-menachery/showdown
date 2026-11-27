@@ -4464,3 +4464,100 @@ Gates M4 and W are re-run once and must pass unchanged.
 - limped-then-raised pots (an iso facing the hero);
 - calling any answer GTO;
 - committing the PokerStrategy pages.
+
+**Result (2026-11-27): Gate Z FAIL, bar 3 only** (GATES.md).
+- Bars 1 and 2 pass. Bar 3: 79.9% of 134 stable classes agree with PokerStrategy on
+  continue vs fold, under the 85% bar. Every miss is a 3-bet where the chart folds.
+- A hand-worked 72o matched the engine to 1e-15, so it is the model, not a bug: the
+  opener's 55% fold to a 3× 3-bet, its call share falling 0.049 per bb of extra size, and R
+  1.00 for any hand.
+- The result stands, and bar 3's test is a strict xfail. Ian chooses between a fix entry
+  (a flat call share across sizes and R by hand, re-gated as Z2) and a documented limit.
+  Until he answers, the documented limit is in force (the reversible option): the trainer
+  page labels facing-an-open answers with it.
+
+---
+
+### 62. Trainer step 3: the trainer page in `showdown play`; Gate U pre-registered (2026-11-27)
+
+**Decided.** Step 3 of the roadmap (DECISIONS 59). It is a local page, like the push/fold
+trainer (DECISIONS 12, 23), on 127.0.0.1 only. Study only, as A13 and A18. SCOPE A22.
+
+**The server.**
+- `App.create` takes `{"game": "trainer"}` with optional filters and a seed.
+- It reuses `/api/hand` (the next drill), `/api/act` (an answer) and `/api/summary`.
+- New routes:
+  - `GET /trainer`, the page, with the launch token as the index page has it;
+  - `GET /api/lesson?id=`, a lesson card's text.
+- The index page links to the trainer.
+
+**The session,** `SixmaxSession` in `bot/sessions.py`:
+- **Families,** drawn uniformly from those allowed:
+  - **six-max:** unopened and limped spots, dealt by the drill's `Trainer`;
+  - **facing an open:** by the same trainer, extended. The (hero, opener) pair is uniform
+    over the 15 allowed; the open is 2.5 or 3; the opener and table types are drawn;
+  - **push/fold:** a depth uniform from 2 to 20 bb, the hero SB or BB, a villain type,
+    graded by `exploit.typed_spot`.
+- **The hand:** the drill's rule, uniform over the 1,326 combos, with a clear fold shown one
+  time in five. Push/fold hands are uniform, with no such rule.
+- **Filters:** family, the hero's seat, limpers (0 to 3), ante (0 or 0.5), and one type that
+  then fixes every opponent role (limpers, table, opener, push/fold villain).
+- **The grade** is DECISIONS 60's, through `sixmax.grade` or `TypedSpot.grade`.
+- **The log:** one line per answered drill, in `data/drills/<start>-trainer.jsonl`
+  (gitignored).
+
+**The page,** `bot/static/trainer.html`:
+- the six seats with each one's role, its type badge and its trait card; your cards, the
+  limps, the open, the ante and the pot;
+- a button for every action and size;
+- **the result card:** the label in colour; every action's EV in bb and as a % of the pot;
+  the "why" lines; "against a standard player you'd …"; the band note; the assumed ranges;
+  and the lesson card for the spot;
+- **the session panel:** counts by label, accuracy (Best or Correct), bb lost, and misses by
+  spot and by type;
+- the filter bar;
+- facing-an-open answers carry Gate Z's limit: "3-bet bluffs are overrated here".
+
+**Lesson cards move into this step** from step 4, because the result card shows them.
+- About 8 cards in `docs/lessons/`, our own text: the concept, a rule of thumb, and the
+  engine's numbers for one example spot.
+- `showdown/lessons.py` picks a card from the family, the hero's seat, the limpers, and
+  the answer's kind against the best kind.
+- No external links until Ian approves each one (decision 12).
+
+**Gate U,** recorded before the session, page or lesson code. It passes when bars 1 to 4
+pass.
+1. **Grades through the API.** A scripted session over HTTP against an in-process server:
+   - 300 drills, seed 20261128, all three families, no filters;
+   - the answer drawn uniformly from the offered actions (seed 7);
+   - each response's label, bb lost (to 1e-9) and % lost equal ones worked out in the test
+     from a fresh `sixmax.answer` (or `exploit.typed_spot`) by DECISIONS 60's rule;
+   - each family occurs at least 50 times.
+2. **Latency.** Each `/api/hand` round trip, first deals included: median at most 2 s, 95th
+   percentile at most 5 s (Gate K's bars). No other heavy process runs meanwhile.
+3. **The log.** Exactly 300 lines, one per answered drill. The summary's counts by label and
+   its bb lost equal the sums over the lines, the bb to 1e-9.
+4. **The browser.** `showdown play` started through the preview tools (`.claude/launch.json`,
+   port 8766). One drill per family is played on the trainer page, the page's text is read,
+   and a screenshot is taken. All three must show a graded result card. Recorded in
+   GATES.md; not an automated test.
+
+**Reported, not gated:** labels by family; the round trip's maximum.
+
+**The order:**
+1. This entry and SCOPE A22, committed and pushed.
+2. The session, the server routes, the page, the lesson cards and `lessons.py`, and the
+   tests.
+3. Gate U scored once and recorded. A failing bar gets one reproduce-and-fix, for a bug only.
+
+**Decided without Ian (2026-11-27),** each the reversible option:
+- the lesson cards move into this step;
+- one type filter fixes every opponent role;
+- push/fold depths of 2 to 20 bb, no ante;
+- the page is a second static file, not a rewrite of `index.html`;
+- the gate's letter, U.
+
+**Rules out:**
+- serving beyond 127.0.0.1;
+- any live use;
+- committing drill logs.

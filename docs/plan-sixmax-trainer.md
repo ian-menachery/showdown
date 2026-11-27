@@ -23,9 +23,14 @@ site exports (DECISIONS 13), hand histories never committed.
 |---|---|---|---|
 | 0 | Record the pivot | DECISIONS 59 | done |
 | 1 | Grades and player types (engine, CLI drill), push/fold with types | DECISIONS 60 | built; Gate Y PASS |
-| 2 | Pots facing one open raise | DECISIONS 61 | pre-registered, Gate Z |
-| 3 | The trainer page in `showdown play` | DECISIONS 62 | |
+| 2 | Pots facing one open raise | DECISIONS 61 | built; Gate Z FAIL, bar 3 only (3-bet bluffs overrated; Ian to choose fix or limit) |
+| 3 | The trainer page in `showdown play` | DECISIONS 62 | pre-registered, Gate U |
 | 4 | The leak finder: opponent typing, a Review tab, lesson cards | DECISIONS 63 | |
+
+**Waiting on Ian (a decision):** Gate Z's bar 3 FAIL. Either a fix entry re-gated as Z2
+(recommended: a flat opener call share across 3-bet sizes, and R by hand playability or
+0.85 for a called 3-bet) or a documented limit. The limit is in force until he answers
+(decided without Ian, reversible).
 
 **Waiting on Ian (acceptance, not gate bars):**
 - 50 drills across the families feel right, or a named bad answer becomes a test;

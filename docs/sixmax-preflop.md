@@ -169,13 +169,50 @@ to 0.75, and "standard" took its limpers from the loose-passive profile.
 - **Hand strength.** Ranges are cut by equity against a random hand, which ranks high
   cards above small pairs and suited connectors. Ranges show the classes at least half
   in.
-- **Anything else:** other stack depths, straddles, pots that someone has already raised,
-  3-bet pots, postflop play and ICM are not modelled.
+- **Anything else:** other stack depths, straddles, pots where you opened and face a 3-bet,
+  postflop play and ICM are not modelled.
+
+## Player types and grades (DECISIONS 60, Gate Y PASS)
+
+- **Types.** Opponents are named types: one for the limpers, one for the table. They are
+  fitted to 2009 groups of players by VPIP and PFR ([`sixmax-types.md`](sixmax-types.md)).
+  A limper type uses its own fitted rates. A table type scales standard's modern defence by
+  how that group differs from the 2009 average.
+- **Trust the directions:** against Nit blinds you steal at least as wide as against LAG
+  blinds, and wider against Weak-tight recs than against Calling stations; limpers who fold
+  less get no new offsuit isos (Gate Y bar 3).
+- **Grades** are GTO Wizard's scale by EV lost as a % of the pot. An answer that wins
+  somewhere in the band is never below Correct. So read Inaccuracy, Wrong and Blunder as
+  "loses at every assumption tested", and Best or Correct on a close spot as "either is
+  defensible".
+
+## Facing one open raise (DECISIONS 61, Gate Z FAIL, bar 3 only)
+
+`showdown sixmax SEAT HAND --opener SEAT` answers fold, call, 3-bet (3× or 4× the open) or
+jam, against an opener of a named type and a table type behind.
+
+- **Trust:** the arithmetic (bar 1 closed forms to 1e-9), and continuing at least as often
+  against a LAG or a Maniac opener as against a Nit (bar 2).
+- **Do not trust its 3-bet bluffs.** It 3-bets nearly every hand against every opener type.
+  Against PokerStrategy's vs-open ranges it agrees on continue vs fold for 79.9% of 134
+  stable hands, under the 85% bar. Every miss is a 3-bet where the chart folds (KJo against
+  UTG, 22 to 44 against the HJ and CO, A5o to A9o in the SB against the BTN).
+  - **Why:** the opener folds 55% of its range to a 3× 3-bet (assumed, close to the 2009
+    pool's 55%). Its calls fall another 0.049 per bb of extra size, so a 4× 3-bet gets 67%
+    folds. And R 1.00 for a called 3-bettor in position treats 72o like AK. I checked 72o
+    on the BTN against a CO open by hand: it matches the engine exactly (+0.40 bb at 4×), so
+    it is the model, not a bug.
+  - **Use it for:** fold vs call vs value 3-bet with strong hands, and how the answer moves
+    between opener types. Fold where it 3-bets trash.
+  - A fix (a flat call share across 3-bet sizes, R by hand playability) needs its own entry
+    and a re-gate. Ian decides.
 
 ## Drills and hand review
 
-Two tools build on this engine, and both grade the kind of action only:
-- **`showdown sixmax drill`** deals practice spots (DECISIONS 55, Gate K PASS).
+Two tools build on this engine:
+- **`showdown sixmax drill`** deals practice spots. It grades the action and its size on
+  GTO Wizard's scale against player types (DECISIONS 60, Gate Y PASS). Gate K's kind-only
+  drill (DECISIONS 55) stays as its record.
 - **`showdown sixmax review PATHS --player NAME`** reads completed hands, as PHH or
   PokerStars text (DECISIONS 58, Gate W PASS). It grades the player's first preflop
   decision in each six-handed hand that fits a spot here:
