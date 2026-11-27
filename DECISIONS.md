@@ -4680,3 +4680,10 @@ leak checked by him.
 - committing any real hand history;
 - 3-bet pots where the player opened and faces a 3-bet;
 - a profile per player beyond the type.
+
+**Result (2026-11-27): Gate W2 PASS** (GATES.md).
+- A fixture bug was fixed before scoring, at 520515f: the 0.5 bb ante had been written as
+  0.5 chips in 9 hands.
+- Bar 3's per-leak sums held only vacuously on the fixture, which makes no leak group of 3.
+- On Pluribus, 8,947 of 10,000 hands are graded. The top leaks facing an open are Gate Z's
+  limit.

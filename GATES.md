@@ -1719,3 +1719,53 @@ once and printed every number as recorded.
 ```
 .venv\Scripts\python -m pytest tests/test_gate_u.py tests/test_gate_u_slow.py -m "slow or not slow" -s
 ```
+
+## Gate W2: the leak finder on PokerStars exports: PASS (2026-11-27)
+
+Evidence:
+- `tests/test_gate_w2.py` (fast suite): bar 1, on the fixture `tests/fixtures/sixmax_review_w2/`;
+- `tests/test_gate_w2_slow.py` (`-m "slow or not slow"`): bars 2 and 3, and the reported
+  Pluribus run;
+- Gate W's tests, for bar 4;
+- bar 5 in the browser;
+- the code at 9b75002.
+
+**History:**
+- The bars were pre-registered in DECISIONS 63 at 8264372.
+- The fixture's generator, hands and labels were committed on their own at 11b3389, before
+  any review code.
+- **A fixture bug, found before scoring.** A dry run of the new classifier skipped 9 hands
+  for "ante". The generator had written the 0.5 bb ante as 0.5 chips, while the labels say
+  0.5 bb. Fixed at 520515f: only those 9 files changed, labels.toml did not.
+- Gate W2 was scored once, at 9b75002. `py gate.py` printed `GATE PASS` in 493 s.
+
+| Bar | Measured | Bar | Result |
+|---|---|---|---|
+| 1. The fixture | 48 hands (45 PHH, 3 PokerStars), all classified as labelled: 21 facing an open, 24 unopened or limped, 3 skipped (raised before you, open called before you, open size). All 7 players' stats equal the labels to 1e-12, and their types: Ned Weak-tight rec, Sue Calling station, Mo Maniac, Tom TAG, Fay and Lou standard (20 and 28 hands), Hero Maniac | exact | PASS |
+| 2. Grades | 45 graded fixture decisions against fresh answers under the composed profile and opener: 0 mismatches in label, best action or tier; bb gap 0 | all match; bb to 1e-9 | PASS |
+| 3. The report | Labels (Best 22, Correct 10, Inaccuracy 4, Wrong 4, Blunder 5), by family (24 and 21) and bb lost (21.270) equal the sums. The fixture makes no leak group of 3 or more, so the per-leak sums held only vacuously here | exact | PASS |
+| 4. Gate W unchanged | Gate W's fast and slow tests, with the CLI pinned to `--kind-only`: 6 passed; 33 fixture and 300 Pluribus decisions match, 5,255 Pluribus decisions graded, as recorded | unchanged | PASS |
+| 5. The Review tab | `/trainer`'s Review tab, the fixture's `session.txt` picked: "Reviewed session.txt for Hero", 3 hands parsed, 3 graded (2 unopened or limped, 1 facing an open), all Best, 5 opponents standard (under 30 hands). Screenshot taken | the report shown | PASS |
+
+**Reported, not gated:** the new review on Pluribus's 10,000 hands, in 778 s.
+- **Coverage:** 8,947 graded (5,255 unopened or limped, 3,692 facing an open), against
+  5,255 before. Skipped: raised before you 432, open called before you 343, no decision 165,
+  the SB completed 98, open size 15.
+- **Labels:** Best 4,180, Correct 3,527, Inaccuracy 183, Wrong 592, Blunder 465;
+  1,989.07 bb lost.
+- **Opponents:** 13 typed: Weak-tight rec 5, LAG 4, TAG 4.
+- **The top 5 "leaks",** four of them Gate Z's limit (the engine overrates 3-bets facing an
+  open):
+  - BB vs LAG opener, calls where a 3-bet is best: 125 hands, 99.32 bb;
+  - BB vs TAG, the same: 82 hands, 77.91 bb;
+  - BTN vs LAG, the same: 52 hands, 67.09 bb;
+  - SB vs LAG, the same: 47 hands, 44.99 bb;
+  - UTG unopened vs a LAG table, opens where the best is a fold: 77 hands, 37.03 bb.
+
+**Waiting on Ian, not a bar:** his own PokerStars export, with coverage by cause and 5 hands
+per top leak checked by him.
+
+**Rerun** (about 18 minutes, most of it Pluribus):
+```
+.venv\Scripts\python -m pytest tests/test_gate_w2.py tests/test_gate_w2_slow.py -m "slow or not slow" -s
+```

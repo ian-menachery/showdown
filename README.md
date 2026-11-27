@@ -42,7 +42,7 @@ showdown equity AsKs QhQd --board Ts9s2dJc     # exact: 13 of 44 rivers win
 showdown equity "TT+,AK" "22-99"                # Monte Carlo, with a standard error
 showdown matrix show AKs QQ                     # exact, from data/preflop_169_exact.npz
 showdown pushfold chart 10                      # SB jam and BB call charts at 10 bb
-showdown play                                   # trainer and Leduc in your browser, 127.0.0.1 only
+showdown play                                   # push/fold, Leduc and /trainer (six-max drills, Review tab), 127.0.0.1 only
 showdown analyze path/to/hands                  # PHH files, or PokerStars .txt exports
 showdown advise --hero AsKd --seat sb --stack 10   # live advisor V1: push/fold preflop, equity helper postflop
 showdown sixmax BTN A5s --limpers 2 --ante 0.5 --profile loose-passive   # six-max spot: ranges, EVs, tier
@@ -66,9 +66,11 @@ online hands ([`docs/sixmax-types.md`](docs/sixmax-types.md), DECISIONS 60).
 size, and grades it on GTO Wizard's scale (Best, Correct, Inaccuracy, Wrong,
 Blunder) by EV lost as a % of the pot, with a "why" from the engine's numbers.
 An answer that wins somewhere in the engine's assumption band is never below
-Correct. `showdown sixmax review` grades a
-player's first preflop decision in completed six-handed hands by kind of action,
-and lists recurring leaks (DECISIONS 58, Gate W).
+Correct. `showdown sixmax review` is the leak finder: it grades a player's first
+preflop decision in completed six-handed hands (unopened, limped or facing one
+open), against each opponent's type as read from the file, and lists recurring
+leaks with lesson cards (DECISIONS 63, Gate W2; `--kind-only` for DECISIONS 58's
+review). The same runs in `showdown play`'s Review tab on a PokerStars export.
 [`docs/sixmax-preflop.md`](docs/sixmax-preflop.md) says what it can and cannot be
 trusted for (DECISIONS 53, 54 and 57, Gates M, M2 and M4).
 

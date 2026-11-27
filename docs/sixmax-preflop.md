@@ -223,6 +223,18 @@ Two tools build on this engine:
   Every other hand is skipped and counted by cause. The report lists recurring leaks,
   with the hands to look at.
 
+**The leak finder (DECISIONS 63, Gate W2 PASS).** By default, `showdown sixmax review` and
+the trainer page's Review tab:
+- also grade pots facing one open raise;
+- type every opponent from the file's own hands: the nearest of the six types by VPIP, PFR,
+  limp % and fold to iso, or standard under 30 hands;
+- grade on GTO Wizard's scale against those types;
+- report the top leaks by spot and opponent type, each with a lesson card.
+
+`--kind-only` gives the review above, as Gate W scored it. On Pluribus's hands, the top
+"leaks" facing an open are calls where the engine 3-bets. That is Gate Z's limit, not a
+leak.
+
 Read a review's leaks with this page's limits in mind. On Pluribus's 10,000 hands, the
 biggest "leak" was limping KK, QQ and AK from the small blind. That is the limp EV floor
 at work, not a mistake by Pluribus (see "Limping" above). Raised pots, which are 45% of Pluribus's hands, are not

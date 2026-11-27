@@ -25,7 +25,17 @@ site exports (DECISIONS 13), hand histories never committed.
 | 1 | Grades and player types (engine, CLI drill), push/fold with types | DECISIONS 60 | built; Gate Y PASS |
 | 2 | Pots facing one open raise | DECISIONS 61 | built; Gate Z FAIL, bar 3 only (3-bet bluffs overrated; Ian to choose fix or limit) |
 | 3 | The trainer page in `showdown play` (`/trainer`), with the lesson cards | DECISIONS 62 | built; Gate U PASS |
-| 4 | The leak finder: opponent typing, a Review tab | DECISIONS 63 | pre-registered, Gate W2 |
+| 4 | The leak finder: opponent typing, a Review tab | DECISIONS 63 | built; Gate W2 PASS |
+
+**All four steps are built (2026-11-27).** Gates Y, U and W2 PASS; Gate Z FAILs on its chart
+bar only (3-bet bluffs overrated facing an open). Use it:
+- `showdown play`, then open `/trainer`: drills in the Trainer tab, your PokerStars export
+  in the Review tab;
+- `showdown sixmax drill` and `showdown sixmax review FILES --player NAME` on the command
+  line.
+
+The next steps are Ian's: the Gate Z choice, the acceptance checks below, and approving
+lesson links.
 
 **Waiting on Ian (a decision):** Gate Z's bar 3 FAIL. Either a fix entry re-gated as Z2
 (recommended: a flat opener call share across 3-bet sizes, and R by hand playability or
