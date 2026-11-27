@@ -4687,3 +4687,47 @@ leak checked by him.
 - Bar 3's per-leak sums held only vacuously on the fixture, which makes no leak group of 3.
 - On Pluribus, 8,947 of 10,000 hands are graded. The top leaks facing an open are Gate Z's
   limit.
+
+---
+
+### 64. The facing-an-open fix: a flat opener call share and R 0.85 for a called 3-bet; Gate Z2 pre-registered (2026-11-27)
+
+**Decided.** Ian chose option A on Gate Z's bar 3 FAIL (DECISIONS 61's result), relayed by
+the master session on 2026-11-27: a fix entry and a re-gate, pre-registered before any
+code. Gate Z's FAIL stays on record. SCOPE A24.
+
+**The fix,** for pots facing one open raise only:
+1. **The size slope is dropped.** The opener's call share against a 3-bet no longer falls
+   with the 3-bet's size: c(X) = c − δ at both 3× and 4×, clipped as before.
+2. **R for a called 3-bet in position is 0.85,** down from 1.00. Out of position it stays
+   0.75. Unopened and limped pots keep DECISIONS 53's and 56's R values.
+
+**Decided without Ian:** of his two R options (by hand playability, or 0.85 for a called
+3-bet), the second, because it is one number, easy to gate and to undo.
+
+**What it cannot move:** any unopened or limped answer, so Gates M to W, K and Y. A fast test
+asserts that sample answers are unchanged.
+
+**Old gates keep reproducing.** Gates Z, U and W2 were scored on the old model. Their tests
+pin it through `GATED_OPENER_SLOPE` and `GATED_THREEBET_IP` (1.00), and are re-run once.
+
+**Gate Z2,** recorded before the fix is coded. It passes when bars 1 to 3 pass. Spots, types,
+counts and the chart rule are Gate Z's.
+1. **Closed forms,** to 1e-9:
+   - Gate Z bar 1's checks, with the 3-bet called at R 0.85:
+     EV = 0.85 × M[hero, QQ] × (6 × ante + 1.5 + 2X) − X;
+   - **the flat call share:** with an opener whose call share is 33% and 4-bet 12%, the share
+     of deals where it calls is the same at both 3-bet sizes.
+2. **Directions:** Gate Z bar 2 at the new model.
+3. **The chart:** Gate Z bar 3 at the new model: at least 85% of at least 100 kind-stable
+   classes agree with PokerStrategy on continue vs fold.
+
+**Reported, not gated:** the three-way agreement and each spot's; 72o on the BTN against a
+CO open (fold should now beat both 3-bets); how many classes 3-bet per opener type.
+
+**The order:** this entry and SCOPE A24, then the fix, the pins and the tests, then Gate Z2
+scored once. A failing bar gets one reproduce-and-fix, for a bug only. Then the lesson
+cards' numbers for facing an open and `docs/sixmax-preflop.md` are updated.
+
+**Rules out:** tuning either number after results are seen; changing unopened or limped
+spots; editing Gate Z's record.
