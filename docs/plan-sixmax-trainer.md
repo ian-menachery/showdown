@@ -23,7 +23,8 @@ site exports (DECISIONS 13), hand histories never committed.
 |---|---|---|---|
 | 0 | Record the pivot | DECISIONS 59 | done |
 | 1 | Grades and player types (engine, CLI drill), push/fold with types | DECISIONS 60 | built; Gate Y PASS |
-| 2 | Pots facing one open raise | DECISIONS 61 | built; Gate Z FAIL, bar 3 only (3-bet bluffs overrated; Ian to choose fix or limit) |
+| 2 | Pots facing one open raise | DECISIONS 61 | built; Gate Z FAIL, bar 3 only (3-bet bluffs overrated) |
+| 2b | The fix Ian chose: a flat opener call share, R 0.85 for a called 3-bet | DECISIONS 64 | built; Gate Z2 FAIL, bar 3's count only (70 stable hands of 100 needed, 90% agree) |
 | 3 | The trainer page in `showdown play` (`/trainer`), with the lesson cards | DECISIONS 62 | built; Gate U PASS |
 | 4 | The leak finder: opponent typing, a Review tab | DECISIONS 63 | built; Gate W2 PASS |
 
@@ -37,10 +38,10 @@ bar only (3-bet bluffs overrated facing an open). Use it:
 The next steps are Ian's: the Gate Z choice, the acceptance checks below, and approving
 lesson links.
 
-**Waiting on Ian (a decision):** Gate Z's bar 3 FAIL. Either a fix entry re-gated as Z2
-(recommended: a flat opener call share across 3-bet sizes, and R by hand playability or
-0.85 for a called 3-bet) or a documented limit. The limit is in force until he answers
-(decided without Ian, reversible).
+**Waiting on Ian (a decision):** after Gate Z2 (DECISIONS 64), the engine still leans
+towards 3-betting facing an open, mostly by small margins. Either a further fix entry (R by
+hand playability, or a lower opener fold to 3-bets) or a documented limit. The limit is in
+force until he answers.
 
 **Waiting on Ian (acceptance, not gate bars):**
 - 50 drills across the families feel right, or a named bad answer becomes a test;

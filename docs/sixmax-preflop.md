@@ -204,8 +204,17 @@ jam, against an opener of a named type and a table type behind.
     it is the model, not a bug.
   - **Use it for:** fold vs call vs value 3-bet with strong hands, and how the answer moves
     between opener types. Fold where it 3-bets trash.
-  - A fix (a flat call share across 3-bet sizes, R by hand playability) needs its own entry
-    and a re-gate. Ian decides.
+  - **The fix (DECISIONS 64, Gate Z2 FAIL, bar 3's count only).** Ian chose it: a flat
+    opener call share across 3-bet sizes, and R 0.85 for a called 3-bet in position.
+    - 72o now folds (−0.27 bb for the 3-bet to 9), and 3× beats 4× for value.
+    - The 70 hands that are stable agree with PokerStrategy 90% of the time. But that is
+      under the 100 hands the bar needs: most weak hands are now close calls between fold and
+      3-bet. Against a Nit opener, the base answer still 3-bets about 94% of hands, mostly by
+      small margins.
+    - Read a close 3-bet with a weak hand as a fold. Trust value 3-bets, folds, and calls
+      with pairs and suited hands.
+    - A further fix (R by hand playability, or the opener's fold rate) needs its own entry.
+      Ian decides.
 
 ## Drills and hand review
 

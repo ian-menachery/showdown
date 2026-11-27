@@ -19,19 +19,22 @@ blinds in and gives up the betting lead.
 
 BTN against a CO open to 2.5, standard players behind (EV in bb, against folding):
 
-| Hand | vs LAG: call / 3-bet to 7.5 / jam | vs Maniac: call / 3-bet to 10 |
+| Hand | vs LAG: call / 3-bet to 7.5 / jam | vs Maniac: call / 3-bet to 7.5 |
 |---|---|---|
-| AJo | +0.15 / +1.94 / −0.66 | +0.20 / +2.28 |
-| 99 | +1.08 / +1.94 / −1.60 | +1.18 / +2.30 |
-| KQo | −0.19 / +1.11 / −0.57 | −0.06 / +1.24 |
-| A5s | −0.28 / +1.05 / −1.34 | −0.17 / +1.17 |
+| AJo | +0.15 / +1.42 / −0.66 | +0.20 / +1.52 |
+| 99 | +1.08 / +1.36 / −1.60 | +1.18 / +1.51 |
+| KQo | −0.19 / +0.68 / −0.57 | −0.06 / +0.65 |
+| A5s | −0.28 / +0.66 / −1.34 | −0.17 / +0.70 |
+
+These are at DECISIONS 64's model: a flat call share across 3-bet sizes, and R 0.85 for a
+called 3-bet in position. The smaller 3-bet is now the better size.
 
 ## Limits
 
-**Gate Z failed on its chart bar.** Facing an open, the engine overrates 3-bet bluffs: it
-3-bets almost every hand, because the opener folds 55% to a 3× 3-bet and R 1.00 treats any
-hand alike ([`sixmax-preflop.md`](../sixmax-preflop.md)). Trust the value 3-bets above, not
-3-bets with trash.
+The engine still leans towards 3-betting facing an open. Trash 3-bets went from "clear" to
+"close" with the fix, but Gate Z2 found too few stable hands to pass its chart bar
+([`sixmax-preflop.md`](../sixmax-preflop.md)). Trust the value 3-bets above; treat a close
+3-bet with a weak hand as a fold.
 
 ## Links
 
