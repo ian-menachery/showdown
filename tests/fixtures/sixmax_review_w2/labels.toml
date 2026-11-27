@@ -1,0 +1,445 @@
+# Gate W2 (DECISIONS 63): labels written by make_fixture.py from its own construction.
+# Hands: Hero's family, seat, limpers, ante, opener, open bucket, engine action and
+# class, or the skip cause. Players: DECISIONS 63's stats and type.
+
+["w01"]
+seat = "BTN"
+ante = 0.0
+family = "open"
+opener = "CO"
+open = 2.5
+action = "3-bet to 7.5"
+hand = "AJo"
+
+["w02"]
+seat = "BTN"
+ante = 0.0
+family = "open"
+opener = "CO"
+open = 2.5
+action = "call"
+hand = "99"
+
+["w03"]
+seat = "BB"
+ante = 0.0
+family = "open"
+opener = "BTN"
+open = 2.5
+action = "call"
+hand = "K7o"
+
+["w04"]
+seat = "BB"
+ante = 0.5
+family = "open"
+opener = "UTG"
+open = 3.0
+action = "fold"
+hand = "72o"
+
+["w05"]
+seat = "SB"
+ante = 0.0
+family = "open"
+opener = "BTN"
+open = 2.5
+action = "3-bet to 10"
+hand = "AKs"
+
+["w06"]
+seat = "CO"
+ante = 0.0
+family = "open"
+opener = "UTG"
+open = 2.5
+action = "fold"
+hand = "QJs"
+
+["w07"]
+seat = "HJ"
+ante = 0.5
+family = "open"
+opener = "UTG"
+open = 3.0
+action = "3-bet to 9"
+hand = "QQ"
+
+["w08"]
+seat = "BTN"
+ante = 0.0
+family = "open"
+opener = "HJ"
+open = 3.0
+action = "jam"
+hand = "AA"
+
+["w09"]
+seat = "SB"
+ante = 0.0
+family = "open"
+opener = "CO"
+open = 2.5
+action = "fold"
+hand = "T9s"
+
+["w10"]
+seat = "BB"
+ante = 0.0
+family = "open"
+opener = "SB"
+open = 3.0
+action = "3-bet to 9"
+hand = "ATo"
+
+["w11"]
+seat = "CO"
+ante = 0.5
+family = "open"
+opener = "HJ"
+open = 2.5
+action = "call"
+hand = "KQs"
+
+["w12"]
+seat = "BTN"
+ante = 0.0
+family = "open"
+opener = "UTG"
+open = 2.5
+action = "call"
+hand = "65s"
+
+["w13"]
+seat = "BB"
+ante = 0.0
+family = "open"
+opener = "CO"
+open = 2.5
+action = "call"
+hand = "JTs"
+
+["w14"]
+seat = "SB"
+ante = 0.5
+family = "open"
+opener = "HJ"
+open = 3.0
+action = "3-bet to 9"
+hand = "88"
+
+["w15"]
+seat = "BTN"
+ante = 0.0
+family = "open"
+opener = "CO"
+open = 3.0
+action = "3-bet to 12"
+hand = "KJo"
+
+["w16"]
+seat = "BB"
+ante = 0.0
+family = "open"
+opener = "BTN"
+open = 2.5
+action = "3-bet to 7.5"
+hand = "A5s"
+
+["w17"]
+cause = "raised before you"
+
+["w18"]
+cause = "open called before you"
+
+["w19"]
+cause = "open size"
+
+["w20"]
+seat = "BTN"
+ante = 0.0
+family = "sixmax"
+limpers = 1
+action = "iso to 5"
+hand = "KJs"
+
+["w21"]
+seat = "BTN"
+ante = 0.5
+family = "sixmax"
+limpers = 2
+action = "overlimp"
+hand = "76s"
+
+["w22"]
+seat = "CO"
+ante = 0.0
+family = "sixmax"
+limpers = 1
+action = "iso to 5"
+hand = "AQo"
+
+["w23"]
+seat = "SB"
+ante = 0.0
+family = "sixmax"
+limpers = 2
+action = "complete"
+hand = "Q8o"
+
+["w24"]
+seat = "BB"
+ante = 0.0
+family = "sixmax"
+limpers = 1
+action = "raise to 6"
+hand = "AKo"
+
+["w25"]
+seat = "HJ"
+ante = 0.5
+family = "sixmax"
+limpers = 1
+action = "overlimp"
+hand = "44"
+
+["w26"]
+seat = "BTN"
+ante = 0.0
+family = "sixmax"
+limpers = 3
+action = "fold"
+hand = "J4o"
+
+["w27"]
+seat = "BB"
+ante = 0.0
+family = "sixmax"
+limpers = 2
+action = "check"
+hand = "83o"
+
+["w28"]
+seat = "BTN"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "open to 2.5"
+hand = "K8o"
+
+["w29"]
+seat = "UTG"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "open to 3"
+hand = "AKs"
+
+["w30"]
+seat = "HJ"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "fold"
+hand = "97o"
+
+["w31"]
+seat = "CO"
+ante = 0.5
+family = "sixmax"
+limpers = 0
+action = "open to 2.5"
+hand = "T9s"
+
+["w32"]
+seat = "SB"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "complete"
+hand = "K5o"
+
+["w33"]
+seat = "UTG"
+ante = 0.5
+family = "sixmax"
+limpers = 0
+action = "limp"
+hand = "22"
+
+["w34"]
+seat = "SB"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "open to 3"
+hand = "QJo"
+
+["w35"]
+seat = "BTN"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "fold"
+hand = "83o"
+
+["w36"]
+seat = "CO"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "open to 4"
+hand = "ATo"
+
+["w37"]
+seat = "HJ"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "open to 2.5"
+hand = "JJ"
+
+["w38"]
+seat = "UTG"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "fold"
+hand = "T8s"
+
+["w39"]
+seat = "CO"
+ante = 0.0
+family = "open"
+opener = "UTG"
+open = 2.5
+action = "3-bet to 7.5"
+hand = "AJs"
+
+["w40"]
+seat = "BTN"
+ante = 0.5
+family = "open"
+opener = "HJ"
+open = 2.5
+action = "fold"
+hand = "QTo"
+
+["w41"]
+seat = "BB"
+ante = 0.0
+family = "open"
+opener = "UTG"
+open = 2.5
+action = "call"
+hand = "66"
+
+["w42"]
+seat = "BTN"
+ante = 0.0
+family = "sixmax"
+limpers = 2
+action = "iso to 6"
+hand = "A9o"
+
+["w43"]
+seat = "CO"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "open to 3"
+hand = "K9s"
+
+["w44"]
+seat = "SB"
+ante = 0.0
+family = "open"
+opener = "BTN"
+open = 2.5
+action = "jam"
+hand = "A4s"
+
+["w45"]
+seat = "CO"
+ante = 0.0
+family = "sixmax"
+limpers = 1
+action = "iso to 5"
+hand = "QTo"
+
+["session#1"]
+seat = "BTN"
+ante = 0.0
+family = "open"
+opener = "CO"
+open = 2.5
+action = "3-bet to 7.5"
+hand = "KQs"
+
+["session#2"]
+seat = "BTN"
+ante = 0.0
+family = "sixmax"
+limpers = 0
+action = "open to 2.5"
+hand = "A7o"
+
+["session#3"]
+seat = "CO"
+ante = 0.0
+family = "sixmax"
+limpers = 1
+action = "iso to 5"
+hand = "AJs"
+
+["player.Fay"]
+hands = 20
+vpip = 0.0
+pfr = 0.0
+limp = 0.0
+type = "standard"
+
+["player.Hero"]
+hands = 48
+vpip = 0.7708333333333334
+pfr = 0.5208333333333334
+limp = 0.09090909090909091
+type = "maniac"
+
+["player.Lou"]
+hands = 28
+vpip = 0.0
+pfr = 0.0
+limp = 0.0
+type = "standard"
+
+["player.Mo"]
+hands = 48
+vpip = 0.4166666666666667
+pfr = 0.20833333333333334
+limp = 0.1
+iso_fold = 0.0
+type = "maniac"
+
+["player.Ned"]
+hands = 48
+vpip = 0.08333333333333333
+pfr = 0.0625
+limp = 0.0
+iso_fold = 1.0
+type = "weak-tight"
+
+["player.Sue"]
+hands = 48
+vpip = 0.4583333333333333
+pfr = 0.08333333333333333
+limp = 0.38461538461538464
+iso_fold = 0.4
+type = "station"
+
+["player.Tom"]
+hands = 48
+vpip = 0.25
+pfr = 0.16666666666666666
+limp = 0.0
+type = "tag"

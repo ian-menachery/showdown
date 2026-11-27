@@ -1,0 +1,8 @@
+variant = 'NT'
+ante_trimming_status = true
+antes = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+blinds_or_straddles = [1, 2, 0, 0, 0, 0]
+min_bet = 2
+starting_stacks = [200, 200, 200, 200, 200, 200]
+actions = ['d dh p1 8sKc', 'd dh p2 6d2c', 'd dh p3 8hAc', 'd dh p4 QhQd', 'd dh p5 2hAs', 'd dh p6 7h7d', 'p3 cbr 6', 'p4 cbr 18', 'p5 f', 'p6 f', 'p1 f', 'p2 f', 'p3 cc']
+players = ['Fay', 'Ned', 'Tom', 'Hero', 'Sue', 'Mo']
